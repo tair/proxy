@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<project default="javadoc">
+	<property file="build.properties" />
+
+	<property name="root" value="WebRoot" />
+	<property name="web-inf" value="${root}/WEB-INF" />
+	<property name="build" value="${web-inf}/classes" />
+	<property name="src" value="src" />
+	<property name="web-lib" value="${web-inf}/lib" />
+	<property name="project-lib" value="lib" />
+	<property name="tomcat" value="/opt/apache-tomcat-7.0.42/lib" />
+	<property name="eclipse" value="/Applications/MyEclipse/Common/plugins" />
+	<property name="dist" value="dist" />
+
+	<!-- The classpath for javadoc -->
+	<path id="project-classpath">
+		<fileset dir="${tomcat}">
+			<include name="*.jar" />
+		</fileset>
+		<fileset dir="${eclipse}">
+			<include name="*.jar" />
+		</fileset>
+		<fileset dir="${project-lib}">
+			<include name="*.jar" />
+		</fileset>
+		<fileset dir="${web-lib}">
+			<include name="*.jar" />
+		</fileset>
+		<path path="${build}" />
+	</path>
+    <target name="javadoc">
+        <javadoc access="private" author="true" destdir="doc" nodeprecated="false" nodeprecatedlist="false" noindex="false" nonavbar="false" notree="false" packagenames="org.phoenixbioinformatics.proxy.faces,org.phoenixbioinformatics.proxy.model" source="1.7" sourcefiles="src/org/phoenixbioinformatics/proxy/controller/Proxy.java,src/org/phoenixbioinformatics/proxy/cache/InternetAddress.java,src/org/phoenixbioinformatics/proxy/cache/OrganizationCache.java,src/org/phoenixbioinformatics/proxy/cache/LoginRequiredContentCache.java,src/org/phoenixbioinformatics/proxy/cache/IpMeter.java,src/org/phoenixbioinformatics/proxy/cache/FreeContentCache.java,src/org/phoenixbioinformatics/proxy/controller/LoggerManager.java,src/org/phoenixbioinformatics/proxy/cache/CacheManager.java,src/org/phoenixbioinformatics/proxy/controller/VisitLogger.java" sourcepath="src:test" splitindex="true" use="true" version="true">
+        	<classpath refid="project-classpath" />
+        </javadoc>
+    </target>
+</project>

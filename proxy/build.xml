@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+
+<project basedir="." default="war-test" name="paywall">
+	<property file="build.properties" />
+
+	<property name="root" value="WebRoot" />
+	<property name="web-inf" value="${root}/WEB-INF" />
+	<property name="build" value="${web-inf}/classes" />
+	<property name="src" value="src" />
+	<property name="lib" value="${web-inf}/lib" />
+	<property name="dist" value="dist" />
+	<property name="properties-src-dir" value="${src}/org/phoenixbioinformatics/properties/" />
+	<property name="properties-build-dir" value="${build}/org/phoenixbioinformatics/properties/" />
+	<property name="prod-war-file" value="prod.war" />
+	<property name="test-war-file" value="test.war" />
+	<property name="deployment-dir" value="/usr/share/tomcat/webapps" />
+
+
+	<!-- The classpath for Java compilation -->
+	<path id="project-classpath">
+		<fileset dir="${lib}">
+			<include name="*.jar" />
+		</fileset>
+		<fileset dir="lib">
+		  <include name="*.jar" />
+		</fileset>
+		<path path="${build}" />
+	</path>
+
+	<!-- ================================= 
+          target: compile Compiles the Java classes              
+         ================================= -->
+	<target name="compile" description="Compiles the Java classes and copies data files to classes hierarchy">
+		<javac source="1.7" target="1.7" destdir="${build}" debug="on" memoryMaximumSize="512m" fork="true" includeantruntime="false">
+			<classpath refid="project-classpath" />
+			<src path="${src}" />
+			<include name="**/*.java" />
+		</javac>
+	</target>
+
+	<!-- ================================= 
+      target: war-prod Builds deployable production web application archive file 
+      after compiling and puts it into the dist directory.
+     ================================= -->
+	<target name="war-prod" depends="compile" description="Creates a deployable war file for the production TAIR paywall web application">
+		<copy file="${src}/log4j2.xml" todir="${build}" overwrite="true" verbose="true" />
+		<copy file="${properties-src-dir}proxy.properties.prod" tofile="${properties-build-dir}proxy.properties" overwrite="true" />
+		<war destfile="${dist}/${prod-war-file}" webxml="${web-inf}/web.xml">
+			<classes dir="${build}" />
+			<webinf dir="${web-inf}" excludes="**/web.xml,classes/**,lib/**" />
+			<fileset dir="${root}" excludes="WEB-INF/**" />
+			<lib dir="${lib}" includes="*.jar" />
+		</war>
+	</target>
+
+	<!-- ================================= 
+      target: war-test Builds deployable test web application archive file 
+      after compiling and puts it into the dist directory.
+     ================================= -->
+	<target name="war-test" depends="compile" description="Creates a deployable war file for the test TAIR paywall web application">
+		<copy file="${src}/log4j2.xml" todir="${build}" overwrite="true" verbose="true" />
+		<copy file="${properties-src-dir}proxy.properties.test" tofile="${properties-build-dir}proxy.properties" overwrite="true" />
+		<war destfile="${dist}/${test-war-file}" webxml="${web-inf}/web.xml">
+			<classes dir="${build}" />
+			<webinf dir="${web-inf}" excludes="**/web.xml,classes/**,lib/**" />
+			<fileset dir="${root}" excludes="WEB-INF/**" />
+			<lib dir="${lib}" includes="*.jar" />
+		</war>
+	</target>
+
+	<!-- ================================= 
+          target: deploy-prod deploys the dist/prod.war file to the Tomcat webapps directory ROOT.war file
+         ================================= -->
+	<target name="deploy-prod" depends="war-prod" description="Deploys the production war file to Tomcat">
+		<copy file="${dist}/${prod-war-file}" tofile="${deployment-dir}/ROOT.war" overwrite="true" verbose="true" />
+	</target>
+
+	<!-- ================================= 
+          target: deploy-test deploys the dist/prod.war file to the Tomcat webapps directory ROOT.war file
+         ================================= -->
+	<target name="deploy-test" depends="war-test" description="Deploys the test war file to Tomcat">
+		<copy file="${dist}/${test-war-file}" tofile="${deployment-dir}/ROOT.war" overwrite="true" verbose="true" />
+	</target>
+
+	<!-- ================================= 
+          target: clean Remove compiled classes and the war archive file.       
+         ================================= -->
+	<target name="clean" description="Removes compiled classes and war files">
+		<delete dir="${build}/org" />
+		<delete dir="${build}/com" />
+		<delete dir="${dist}/*.war" />
+	</target>
+</project>

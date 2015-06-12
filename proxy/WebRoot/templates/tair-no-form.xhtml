@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" 
+    xmlns:h="http://java.sun.com/jsf/html" 
+    xmlns:f="http://java.sun.com/jsf/core"
+    xmlns:ui="http://java.sun.com/jsf/facelets">
+<h:head></h:head>
+<h:body>
+    <ui:composition>
+        <ui:insert name="head">
+            <ui:include src="/includes/head.xhtml" />
+        </ui:insert>
+        <div id="header" class="header">
+            <h:outputLink value="/">
+                <h:graphicImage library="default" name="images/tairlogo.png" alt="TAIR web site"></h:graphicImage>
+            </h:outputLink>
+            <ui:insert name="title">TAIR</ui:insert>
+        </div>
+        <h:body>
+            <ui:insert name="body">Default content</ui:insert>
+            <ui:insert name="footer">
+                <ui:include src="/includes/footer.xhtml" />
+            </ui:insert>
+        </h:body>
+    </ui:composition>
+</h:body>
+</html>

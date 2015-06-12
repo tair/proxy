@@ -1,0 +1,179 @@
+@CHARSET "UTF-8";
+
+.header {
+	font-size: large;
+	font-weight: bold;
+	font-family: Ariel, Helvetica, sans-serif;
+	padding-left: 1em;
+	border: thin;
+	border-color: silver;
+	border-style: inset;
+	background-color: #e7e7e2;
+}
+
+.form {
+	margin: 1em;
+}
+
+.content {
+	font-family: Ariel, Helvetica, sans-serif;
+	font-size: 10pt;
+	background-color: #e7e7e2;
+	padding-left: 1em;
+	padding-right: 1em;
+}
+
+.content-white {
+	font-family: Ariel, Helvetica, sans-serif;
+	font-size: 10pt;
+	background-color: white;
+	padding-left: 1em;
+	padding-right: 1em;
+}
+
+#content.content-white {
+	font-family: Ariel, Helvetica, sans-serif;
+	font-size: 10pt;
+	background-color: white;
+	padding-left: 1em;
+	padding-right: 1em;
+}
+
+div.content-notice {
+	font-family: Ariel, Helvetica, sans-serif;
+	font-size: 11pt;
+	font-weight: bold;
+	background-color: white;
+	padding: 1em 1em 1em 1em;
+	margin: 1em 1em 1em 1em;
+	border-width: thin;
+	border-style: solid;
+	border-color: black;
+}
+
+table.content {
+	font-family: Ariel, Helvetica, sans-serif;
+	font-size: 10pt;
+	background-color: #e7e7e2;
+	padding-left: 1em;
+	padding-right: 1em;
+	table-layout: fixed;
+}
+
+.mainheader {
+	font-size: 12pt;
+	font-weight: bold;
+	color: #930;
+}
+
+.topAlignedCol {
+	vertical-align: top;
+}
+
+.rightAligned {
+	text-align: right;
+	width: 10%;
+}
+
+.footer {
+	font-family: Ariel, Helvetica, sans-serif;
+	font-size: 10pt;
+	background-color: #e7e7e2;
+	height: 40px;
+	border: thin;
+	border-color: silver;
+	border-style: inset;
+}
+
+.footerText {
+	padding-left: 1em;
+}
+
+.rightIcon {
+	float: right;
+}
+
+.leftIcon {
+	float: left;
+}
+
+.errorText {
+	color: red;
+}
+
+.errorMessage {
+	font-family: Ariel, Helvetica, sans-serif;
+	color: red;
+	background-color: white;
+	font-size: 10pt;
+	font-weight: bolder;
+	text-align: left;
+}
+
+.warningMessage {
+	font-family: Ariel, Helvetica, sans-serif;
+	color: #682900;
+	background-color: white;
+	font-size: 10pt;
+}
+
+.infoMessage {
+	font-family: Ariel, Helvetica, sans-serif;
+	color: black;
+	background-color: white;
+	font-size: 10pt;
+	font-weight: bold;
+}
+
+.columnLabel {
+	font-family: Ariel, Helvetica, sans-serif;
+	text-align: right;
+	padding-right: 1em;
+	font-size: 10pt;
+	font-weight: bold;
+}
+
+.radioLabel td {
+	text-align: left;
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 10pt;
+	font-weight: bold;
+	padding-right: .5em
+}
+
+.headerLabel {
+	font-family: Ariel, Helvetica, sans-serif;
+	text-align: center;
+	font-size: 10pt;
+	font-weight: bold;
+}
+
+.textArea {
+	font-family: Arial, Verdana, sans-serif;
+	font-size: 11pt;
+	text-align: left;
+	border: thin inset;
+}
+
+.inputText {
+	font-family: Ariel, Helvetica, sans-serif;
+	text-align: left;
+	padding-left: .5em;
+}
+
+.outputText {
+	font-family: Ariel, Helvetica, sans-serif;
+	text-align: left;
+	padding-left: .5em;
+	font-weight: normal;
+	font-size: 10pt;
+}
+
+.linkButton {
+	width: 100%;
+	text-align: center;
+	text-decoration: none;
+	cursor: default;
+	box-sizing: border-box;
+	-webkit-appearance: push-button;
+}

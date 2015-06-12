@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<Configuration name="Paywall 2">
+	
+    <!-- ================================
+          Append messages to the console 
+         ================================ -->
+  <Appenders>
+  
+    <Console name="Console" target="SYSTEM_OUT">
+      <PatternLayout pattern="%d{MM/dd/yyyy HH:mm:ss,SSS} %-5p [%C] %m%n"/>
+    </Console>
+    
+    <File name="File" fileName="${sys:catalina.home}/logs/paywall.log">
+      <PatternLayout>
+        <Pattern>%d{MM/dd/yyyy HH:mm:ss,SSS} %-5p [%C] %m%n</Pattern>
+      </PatternLayout>
+    </File>
+    
+    <RollingFile name="Debug" fileName="${sys:catalina.home}/logs/paywall-debug.log"
+                 filePattern="logs/$${date:yyyy-MM}/app-%d{MM-dd-yyyy}-%i.log.gz">
+      <PatternLayout>
+        <Pattern>%d{MM/dd/yyyy HH:mm:ss,SSS} %-5p [%C] %m%n</Pattern>
+      </PatternLayout>
+      <Policies>
+        <SizeBasedTriggeringPolicy size="500 MB"/>
+      </Policies>
+    </RollingFile>
+    
+   </Appenders>
+	
+	<!-- ================ -->
+	<!-- Limit categories -->
+	<!-- ================ -->
+	
+	<!-- Note: if you want to set the priority for only one appender, add <appender-ref
+		ref="CONSOLE"/> or whatever; but note that you also have the root appending, so
+		you'll get two messages unless you also set log4j.additivity.<package>.<class>=false
+		-->
+	
+	<!-- Apache logging -->
+	<category name="org.apache.coyote">
+		<priority value="WARN" />
+	</category>
+	
+	<category name="org.apache.catalina">
+		<priority value="WARN" />
+	</category>
+	
+	<category name="org.apache.http">
+		<priority value="WARN" />
+	</category>
+	
+		<!-- TAIR logging -->
+	<category name="org.tair">
+		<priority value="INFO" />
+	</category>
+	
+	<!-- Poesys/DB logging -->
+	<category name="com.poesys">
+		<priority value="WARN" />
+	</category>
+	
+	<!-- connection logging -->
+	<category name="com.poesys.bs.delegate.AbstractConnectionDelegate">
+		<priority value="INFO" />
+	</category>
+	
+	<!-- connection logging -->
+	<category name="com.poesys.db.connection.JndiConnectionFactory">
+		<priority value="INFO" />
+	</category>
+	
+	<category name="com.poesys.db.dao.CacheDaoManager">
+		<priority value="INFO" />
+	</category>
+	
+	<category name="com.poesys.db.dao.CacheListenerExecutor">
+		<priority value="INFO" />
+	</category>
+	
+	<category name="com.poesys.db.dao.CacheMessageListener">
+		<priority value="INFO" />
+	</category>
+	
+	<category name="com.poesys.db.dto.DtoCacheWithMessaging">
+		<priority value="INFO" />
+	</category>
+	
+	<category name="javax.faces">
+		<priority value="WARN" />
+	</category>
+	
+	<!-- SQL logging -->
+	
+	<category name="com.poesys.db.dao.insert">
+		<priority value="INFO" />
+	</category>
+	
+	<category name="com.poesys.db.dao.update">
+		<priority value="INFO" />
+	</category>
+	
+	<category name="com.poesys.db.dao.delete">
+		<priority value="INFO" />
+	</category>
+	
+	<category name="com.poesys.db.dao.query">
+		<priority value="INFO" />
+	</category>
+	
+	<!-- Proxy Servlet logging -->
+	<category name="org.phoenixbioinformatics.proxy.controller">
+		<priority value="DEBUG" />
+	</category>
+	
+	<category name="org.phoenixbioinformatics.proxy.model">
+		<priority value="DEBUG" />
+	</category>
+	
+    <category name="org.phoenixbioinformatics.proxy.cache">
+        <priority value="DEBUG" />
+    </category>
+    
+    <category name="org.phoenixbioinformatics.api">
+        <priority value="DEBUG" />
+    </category>
+    
+  <Loggers>
+    <Root level="debug">
+      <AppenderRef ref="Console" level="debug"/>
+      <AppenderRef ref="File" level="error"/>
+      <AppenderRef ref="Debug" level="debug"/>
+    </Root>
+  </Loggers>
+	
+</Configuration>
+

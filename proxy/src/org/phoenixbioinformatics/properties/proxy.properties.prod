@@ -1,0 +1,3 @@
+proxy.server=https://www.arabidopsis.org
+proxy.webapp=
+proxy.target=https://prod.arabidopsis.org
