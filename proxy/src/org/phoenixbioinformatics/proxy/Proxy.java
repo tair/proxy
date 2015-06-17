@@ -38,12 +38,13 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.phoenixbioinformatics.http.RequestFactory;
 import org.phoenixbioinformatics.http.UnsupportedHttpMethodException;
-import org.phoenixbioinformatics.properties.ProxyProperties;
 
 import org.phoenixbioinformatics.api.ApiService;
 
 import java.io.PrintWriter;
 import javax.servlet.http.Cookie;
+import java.lang.StringBuilder;
+
 /**
  * A servlet that proxies HTTP requests to another server and handles the
  * response.
@@ -149,28 +150,53 @@ public class Proxy extends HttpServlet {
     // Get the complete URI including original domain and query string.
     String uri = servletRequest.getRequestURI().toString();
     logger.debug("Incoming URI: " + uri);
-    
+    // printAllHeaders(servletRequest);
     try {
-      // Determine whether to proxy the request.
-      if (authorizeProxyRequest(servletRequest, servletResponse)) {
+      String protocol = getProtocol(servletRequest);
+      String queryString = servletRequest.getQueryString();
+      String requestPath = servletRequest.getPathInfo();
+      if (queryString != null) {
+        requestPath = requestPath + "?"+queryString;
+      }
+      String requestUrl = getHostUrl(servletRequest);
+      String fullRequestUri = protocol+"://"+requestUrl+requestPath;
+      ApiService.PartnerOutput partnerInfo = ApiService.getPartnerInfo(requestUrl);
+      if (partnerInfo == null) {
+        // Invalid partnerInfo based on the url, return false for now.
+        // TODO: redirect to error page.
+        logger.error("invalid partnerInfo from requestUrl="+requestUrl);
+        return;
+      }
+      String remoteIp = getIpAddress(servletRequest);
 
-        // TODO Disable the rest of the code until we have the proxying working
-        // development effort are on authorizeProxyRequest()
-        if (true) {
-          PrintWriter respWriter = servletResponse.getWriter();
-          respWriter.write("you have access");
-          return;
+      // populate loginKey and partyId from cookie if available
+      String partyId = null;
+      String loginKey = null;
+      Cookie cookies[] = servletRequest.getCookies();
+      if (cookies != null) {
+        for (Cookie c : Arrays.asList(cookies)) {
+          String cookieName = c.getName();
+          if (cookieName.equals("loginKey")) {
+            loginKey = c.getValue();
+          } else if (cookieName.equals("partyId")) {
+            partyId = c.getValue();
+          }
         }
-        
+      }
+
+      // Determine whether to proxy the request.
+      if (authorizeProxyRequest(requestPath, loginKey, partnerInfo.partnerId, partyId,
+                                fullRequestUri, remoteIp, servletResponse)) {
+
         // Initialize the proxy request.
         ProxyRequest proxyRequest =
           new ProxyRequest(targetObject,
                            servletRequest.getMethod(),
-                           servletRequest.getRequestURI().toString(),
-                           getIpAddress(servletRequest));
+                           uri,
+                           remoteIp);
         
         HttpUriRequest requestToProxy =
-          RequestFactory.getUriRequest(servletRequest);
+          RequestFactory.getUriRequest(servletRequest, partnerInfo.targetUri);
         
         // TODO reenable printing targetObject.toString() when targetObject is not null.
         logger.debug("Proxying request from " + proxyRequest.getIp() + "-->"
@@ -180,7 +206,7 @@ public class Proxy extends HttpServlet {
         configureProxyRequest(servletRequest, proxyRequest, requestToProxy);
         if (proxyRequest != null) {
           // request approved, proxy to the target server
-          proxy(servletRequest.getSession(), servletResponse, proxyRequest);
+          proxy(servletRequest.getSession(), servletResponse, proxyRequest, protocol+"://"+requestUrl);
         } else {
           // request refused, redirect to another page
           redirectToRefusedUri(servletResponse,
@@ -202,48 +228,25 @@ public class Proxy extends HttpServlet {
    * Redirection path in servletResponse will be set if the client does not
    * allow to access partner's server.
    * 
-   * @param servletRequest     client's request to partner's server
+   * @param requestPath        client's request path. example: /news/news.html
+   * @param loginKey           client's login key to be used for authentication service
+   * @param partnerId          partner associated with client's request
+   * @param partyId            client's partyId to be used for authentication service
+   * @param fullUri            client's full request path. example: https://test.arabidopsis.org/test/test.html
+   * @param remoteIp           client's IP address
    * @param servletResponse    client's response to be modified if ther request to
    *                           partner's server is denied.
    * @return Boolean indicates if client has access to partner' server.
    */
-  private Boolean authorizeProxyRequest(HttpServletRequest servletRequest,
+  private Boolean authorizeProxyRequest(String requestPath, String loginKey, String partnerId,
+                                        String partyId, String fullUri, String remoteIp,
                                         HttpServletResponse servletResponse) throws IOException{
-    
+
     Boolean authorized = false;
     String redirectPath = "";
     
-    //printAllHeaders(servletRequest);
-    
-    String requestPath = servletRequest.getPathInfo();
-    String requestUrl = getHostUrl(servletRequest);
-    String partnerId = ApiService.getPartnerId(requestUrl);
-    String loginKey = null;
-    String partyId = null;
-    String remoteIp = getIpAddress(servletRequest);
-
-    if (partnerId == null) {
-      // Invalid partnerId based on the url, return false for now. 
-      // TODO: redirect to error page.
-      logger.error("invalid partnerId from requestUrl="+requestUrl);
-      return false;
-    }
-    
-    // populate loginKey and partyId from cookie
-    Cookie cookies[] = servletRequest.getCookies();
-    if (cookies != null) {
-      for (Cookie c : Arrays.asList(cookies)) {
-        String cookieName = c.getName();
-        if (cookieName.equals("loginKey")) {
-          loginKey = c.getValue();
-        } else if (cookieName.equals("partyId")) {
-          partyId = c.getValue();
-        }
-      }
-    }
-    
     // debugging string
-    logger.debug("parameters used to call API services are "+requestUrl+
+    logger.debug("parameters used to call API services are "+fullUri+
                  ", "+requestPath+", "+partnerId+", "+loginKey+", "+
                  partyId+", "+remoteIp);
     
@@ -258,7 +261,7 @@ public class Proxy extends HttpServlet {
         String meteringResponse = ApiService.incrementMeteringCount(remoteIp);
       } else if (meter.equals("Warning")) {
         authorized = false;
-        redirectPath = ApiService.apiUrl+"/subscriptions/templates/warn/?redirectUrl=https://"+requestUrl+requestPath;
+        redirectPath = ApiService.apiUrl+"/subscriptions/templates/warn/?redirectUrl="+fullUri;
         String meteringResponse = ApiService.incrementMeteringCount(remoteIp);
       } else {
         authorized = false;
@@ -299,7 +302,7 @@ public class Proxy extends HttpServlet {
       throws ClientProtocolException, IOException {
     CloseableHttpClient client = null;
     // Get cookie store from session if it's there.
-    CookieStore cookieStore =
+    CookieStore cookieStore = 
       (CookieStore)session.getAttribute(COOKIES_ATTRIBUTE);
     // Create a local HTTP context to contain the cookie store.
     HttpClientContext localContext = HttpClientContext.create();
@@ -314,8 +317,8 @@ public class Proxy extends HttpServlet {
       // Execute the request on the proxied server. Ignore returned string.
       client.execute(request, responseHandler, localContext);
     }
-
-    // Put the cookie store with any returned session cookie into the session.
+    
+    //    Put the cookie store with any returned session cookie into the session.
     cookieStore = localContext.getCookieStore();
     session.setAttribute(COOKIES_ATTRIBUTE, localContext.getCookieStore());
   }
@@ -389,9 +392,9 @@ public class Proxy extends HttpServlet {
 
     URI uri = new URI(uriString);
 
-    String targetHost = getHost();
+    String targetHost = originalHost;
 
-    if (targetHost.equals(uri.getHost())) {
+    if (!targetHost.equals(uri.getHost())) {
       StringBuilder builder = new StringBuilder();
       if (originalHost != null) {
         builder.append(originalHost);
@@ -439,11 +442,13 @@ public class Proxy extends HttpServlet {
    */
   private void proxy(final HttpSession session,
                      final HttpServletResponse servletResponse,
-                     final ProxyRequest proxyRequest) throws ServletException {
+                     final ProxyRequest proxyRequest,
+                     final String originalHost) throws ServletException {
     logger.info("Proxying " + proxyRequest.getMethod()
                 + " URI from IP address " + proxyRequest.getIp() + ": "
                 + proxyRequest.getCurrentUri() + " -- "
-                + proxyRequest.getRequestToProxy().getRequestLine().getUri());
+                + proxyRequest.getRequestToProxy().getRequestLine().getUri() + " ... "
+                + originalHost);
 
     // Create a custom response handler to ensure all resources get freed.
     // Note: ignore the returned response, it is always null.
@@ -460,7 +465,7 @@ public class Proxy extends HttpServlet {
         if (statusCode >= HttpServletResponse.SC_MULTIPLE_CHOICES /* 300 */
             && statusCode < HttpServletResponse.SC_NOT_MODIFIED /* 304 */) {
           try {
-            redirectUri(proxyResponse);
+            redirectUri(proxyResponse, originalHost);
           } catch (URISyntaxException e) {
             logger.error(URI_SYNTAX_ERROR, e);
             throw new ClientProtocolException(URI_SYNTAX_ERROR, e);
@@ -526,7 +531,7 @@ public class Proxy extends HttpServlet {
        * @throws ServletException when there is a checked exception thrown by a
        *           called method
        */
-      private void redirectUri(HttpResponse proxyResponse)
+      private void redirectUri(HttpResponse proxyResponse, String originalHost)
           throws URISyntaxException, IOException, ServletException {
         // If there is no location header, the method throws an exception.
         Header locationHeader =
@@ -537,8 +542,7 @@ public class Proxy extends HttpServlet {
 
         // Rewrite the location header URI to go to the proxy server.
         String rewrittenUri =
-          rewriteUriFromString(locationHeader.getValue(),
-                               ProxyProperties.getProperty(PROXY_SERVER_PROPERTY));
+        rewriteUriFromString(locationHeader.getValue(), originalHost);
 
         logger.debug("Redirecting URI "
                      + proxyRequest.getRequestToProxy().getRequestLine().getUri());
@@ -645,10 +649,14 @@ public class Proxy extends HttpServlet {
     }
   }
 
-    public static String getHostUrl(HttpServletRequest request) {
-	return request.getHeader("x-forwarded-host");
-    }
+  public static String getHostUrl(HttpServletRequest request) {
+    return request.getHeader("x-forwarded-host");
+  }
 
+  public static String getProtocol(HttpServletRequest request) {
+    return request.getHeader("X-Forwarded-Proto");
+  }
+  
   /**
    * Get the remote IP address of the requester from the request. This method
    * gets, in order, the Remote_Addr header value, the x-forwarded-for header
@@ -672,18 +680,18 @@ public class Proxy extends HttpServlet {
     return ipAddress;
   }
     
-    public static void printAllHeaders(HttpServletRequest request) {
-	Enumeration<String> headerNames = request.getHeaderNames();
-	while (headerNames.hasMoreElements()) {
+  public static void printAllHeaders(HttpServletRequest request) {
+    Enumeration<String> headerNames = request.getHeaderNames();
+    while (headerNames.hasMoreElements()) {
 	    String headerName = headerNames.nextElement();
 	    logger.debug(headerName);
 	    Enumeration<String> headers = request.getHeaders(headerName);
 	    logger.debug("----");
 	    while (headers.hasMoreElements()) {
-		String headerValue = headers.nextElement();
-		logger.debug(headerValue);
+        String headerValue = headers.nextElement();
+        logger.debug(headerValue);
 	    }
 	    logger.debug("------------------");
-	}
     }
+  }
 }

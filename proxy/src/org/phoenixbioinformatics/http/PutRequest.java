@@ -21,8 +21,8 @@ import org.apache.http.client.methods.HttpUriRequest;
 public class PutRequest extends AbstractRequest {
 
   @Override
-  public HttpUriRequest getUriRequest(HttpServletRequest servletRequest)
-      throws IOException {
+    public HttpUriRequest getUriRequest(HttpServletRequest servletRequest, String partnerHostUri)
+    throws IOException {
     // Check method for servlet request
     if (!RequestFactory.HttpMethod.valueOf(servletRequest.getMethod()).equals(RequestFactory.HttpMethod.PUT)) {
       throw new RuntimeException("Wrong HTTP method for PUT class: "
@@ -31,8 +31,8 @@ public class PutRequest extends AbstractRequest {
 
     // Create the PUT request from the rewritten servlet request URI.
     HttpPut request =
-      new HttpPut(rewriteUriFromRequest(servletRequest, TARGET));
-
+      new HttpPut(rewriteUriFromRequest(servletRequest, partnerHostUri));
+    
     // Set the request entity from the entity in the servlet request.
     request.setEntity(getEntity(servletRequest));
 

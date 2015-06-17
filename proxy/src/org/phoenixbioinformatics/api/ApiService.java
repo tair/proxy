@@ -39,9 +39,10 @@ public class ApiService extends AbstractApiService {
   }
   
   // Output from partner/ API call 
-  private class PartnerOutput {
-    private String partnerId;
-    private String name;
+  public class PartnerOutput {
+    public String partnerId;
+    public String sourceUri;
+    public String targetUri;
   }
 
   /**
@@ -53,7 +54,7 @@ public class ApiService extends AbstractApiService {
    * @param url                url of client's request
    * @return String indicating the partnerId that the client intends to talk to.
    */
-  public static String getPartnerId(String url) {
+  public static PartnerOutput getPartnerInfo(String url) {
     String urn = partnerUrn+"/?uri="+url;
     try {
 	    String content = callApi(urn, RequestFactory.HttpMethod.GET);
@@ -69,7 +70,7 @@ public class ApiService extends AbstractApiService {
       }
       else {
         for (PartnerOutput entry : out) {
-          return entry.partnerId;
+          return entry;
         }
       }
       

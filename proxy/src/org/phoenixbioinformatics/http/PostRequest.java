@@ -21,8 +21,8 @@ import org.apache.http.client.methods.HttpUriRequest;
 public class PostRequest extends AbstractRequest {
 
   @Override
-  public HttpUriRequest getUriRequest(HttpServletRequest servletRequest)
-      throws IOException {
+    public HttpUriRequest getUriRequest(HttpServletRequest servletRequest, String partnerHostUri)
+    throws IOException {
     // Check method for servlet request
     if (!RequestFactory.HttpMethod.valueOf(servletRequest.getMethod()).equals(RequestFactory.HttpMethod.POST)) {
       throw new RuntimeException("Wrong HTTP method for POST class: "
@@ -31,11 +31,11 @@ public class PostRequest extends AbstractRequest {
 
     // Create the POST request from the rewritten servlet request URI.
     HttpPost request =
-      new HttpPost(rewriteUriFromRequest(servletRequest, TARGET));
-
+      new HttpPost(rewriteUriFromRequest(servletRequest, partnerHostUri));
+    
     // Set the request entity from the entity in the servlet request.
     request.setEntity(getEntity(servletRequest));
-
+    
     return request;
   }
 }

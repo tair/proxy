@@ -19,13 +19,13 @@ import org.apache.http.client.methods.HttpUriRequest;
 public class DeleteRequest extends AbstractRequest {
 
   @Override
-  public HttpUriRequest getUriRequest(HttpServletRequest servletRequest) {
+    public HttpUriRequest getUriRequest(HttpServletRequest servletRequest, String partnerHostUri) {
     // Check method for servlet request
     if (!RequestFactory.HttpMethod.valueOf(servletRequest.getMethod()).equals(RequestFactory.HttpMethod.DELETE)) {
       throw new RuntimeException("Wrong HTTP method for DELETE class: "
                                  + servletRequest.getMethod());
     }
-
-    return new HttpDelete(rewriteUriFromRequest(servletRequest, TARGET));
+    
+    return new HttpDelete(rewriteUriFromRequest(servletRequest, partnerHostUri));
   }
 }

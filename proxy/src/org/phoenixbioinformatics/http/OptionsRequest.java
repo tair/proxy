@@ -19,13 +19,13 @@ import org.apache.http.client.methods.HttpUriRequest;
 public class OptionsRequest extends AbstractRequest {
 
   @Override
-  public HttpUriRequest getUriRequest(HttpServletRequest servletRequest) {
+    public HttpUriRequest getUriRequest(HttpServletRequest servletRequest, String partnerHostUri) {
     // Check method for servlet request
     if (!RequestFactory.HttpMethod.valueOf(servletRequest.getMethod()).equals(RequestFactory.HttpMethod.OPTIONS)) {
       throw new RuntimeException("Wrong HTTP method for OPTIONS class: "
                                  + servletRequest.getMethod());
     }
 
-    return new HttpOptions(rewriteUriFromRequest(servletRequest, TARGET));
+    return new HttpOptions(rewriteUriFromRequest(servletRequest, partnerHostUri));
   }
 }

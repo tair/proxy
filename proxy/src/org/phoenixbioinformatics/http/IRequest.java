@@ -25,6 +25,6 @@ public interface IRequest {
    * @throws IOException when there is a problem streaming an entity or the
    *           entity character set is not a supported character set
    */
-  HttpUriRequest getUriRequest(HttpServletRequest servletRequest)
+  HttpUriRequest getUriRequest(HttpServletRequest servletRequest, String partnerHostUri)
       throws IOException;
 }

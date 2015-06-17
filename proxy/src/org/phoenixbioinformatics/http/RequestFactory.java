@@ -72,7 +72,7 @@ public class RequestFactory {
    * @throws UnsupportedHttpMethodException
    * @throws IOException
    */
-  public static HttpUriRequest getUriRequest(HttpServletRequest servletRequest)
+  public static HttpUriRequest getUriRequest(HttpServletRequest servletRequest, String partnerHostUri)
       throws UnsupportedHttpMethodException, IOException {
     IRequest proxyRequest = null;
     HttpMethod method = HttpMethod.valueOf(servletRequest.getMethod());
@@ -97,6 +97,6 @@ public class RequestFactory {
       throw new UnsupportedHttpMethodException("Unsupported HTTP method for proxying: "
                                                + method);
     }
-    return proxyRequest.getUriRequest(servletRequest);
+    return proxyRequest.getUriRequest(servletRequest, partnerHostUri);
   }
 }
