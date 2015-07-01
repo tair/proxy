@@ -255,17 +255,17 @@ public class Proxy extends HttpServlet {
       // grant access
       authorized = true;
     } else if (auth.equals("NeedSubscription")) {
-      String meter = ApiService.checkMeteringLimit(remoteIp);
+      String meter = ApiService.checkMeteringLimit(remoteIp, partnerId);
       if (meter.equals("OK")) {
         authorized = true;
-        String meteringResponse = ApiService.incrementMeteringCount(remoteIp);
+        String meteringResponse = ApiService.incrementMeteringCount(remoteIp, partnerId);
       } else if (meter.equals("Warning")) {
         authorized = false;
-        redirectPath = ApiService.apiUrl+"/subscriptions/templates/warn/?redirectUrl="+fullUri;
-        String meteringResponse = ApiService.incrementMeteringCount(remoteIp);
+        redirectPath = "http://testui.steveatgetexp.com/pw2UI/#/metering?partnerId="+partnerId+"&redirect="+fullUri;
+        String meteringResponse = ApiService.incrementMeteringCount(remoteIp, partnerId);
       } else {
         authorized = false;
-        redirectPath = ApiService.apiUrl+"/subscriptions/templates/block";
+        redirectPath = "http://testui.steveatgetexp.com/pw2UI/#/subscription?partnerId="+partnerId+"&redirect="+fullUri;
       }
     } else if (auth.equals("NeedLogin")) {
       authorized = false;

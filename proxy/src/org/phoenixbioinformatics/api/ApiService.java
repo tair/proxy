@@ -110,8 +110,8 @@ public class ApiService extends AbstractApiService {
    * @param ip                  client's IP address.
    * @return String indicating client's metering status. (OK, Warn, Blocked)
    */
-  public static String checkMeteringLimit(String ip) {
-    String urn = metersUrn+"/ip/"+ip+"/limit/";
+  public static String checkMeteringLimit(String ip, String partnerId) {
+    String urn = metersUrn+"/ip/"+ip+"/limit/?partnerId="+partnerId;
     
     try {
       String content = callApi(urn, RequestFactory.HttpMethod.GET);
@@ -126,16 +126,14 @@ public class ApiService extends AbstractApiService {
   }
   
   /**
-   * Retrieves the access status of the client in respect to path. At this point,
-   * client's partyId, partnerId, and loginKey should be specified.
-   * @param path                resource path that the client tries to access. (e.g: "/news/2015/07/01")
-   * @param partyId             client's partyId if path that the client tries to access is not free.
-   * @param loginKey            client's login key, if login is required.
+   * Increase metering count associated with the given ip address and partnerId by
+   * one.
+   * @param ip                  remote IP address
    * @param partnerId           partnerId that the client tries to access.
    * @return String indicating the access status. (example: OK, NeedSubscription, NeedLogin)
    */
-  public static String incrementMeteringCount(String ip) {
-    String urn = metersUrn+"/ip/"+ip+"/increment/";
+  public static String incrementMeteringCount(String ip, String partnerId) {
+    String urn = metersUrn+"/ip/"+ip+"/increment/?partnerId="+partnerId;
     
     try {
       String content = callApi(urn, RequestFactory.HttpMethod.POST);
