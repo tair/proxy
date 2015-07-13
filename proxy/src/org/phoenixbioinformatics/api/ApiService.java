@@ -9,6 +9,8 @@ import com.google.gson.Gson;
 
 import java.util.List;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 import com.google.gson.reflect.TypeToken;
 import java.lang.reflect.Type;
@@ -39,10 +41,39 @@ public class ApiService extends AbstractApiService {
   }
   
   // Output from partner/ API call 
-  public class PartnerOutput {
+  public static class PartnerOutput {
     public String partnerId;
     public String sourceUri;
     public String targetUri;
+  }
+
+  /**
+   * Retrieves all of the partner's information from API serverand store 
+   * the information into a HashMap.
+   *
+   * @param None
+   * @return HashMap that contain all of the partner's information, with
+   *         sourceUri as the key of the map.
+   */
+  public static HashMap<String, PartnerOutput> getAllPartnerInfo() {
+    HashMap<String, ApiService.PartnerOutput> partnerMap = 
+      new HashMap<String, ApiService.PartnerOutput>();
+    String urn = partnerUrn+"/patterns/";
+    try {
+      String content = callApi(urn, RequestFactory.HttpMethod.GET);
+      Gson gson = new Gson();
+      Type type = new TypeToken<List<PartnerOutput>>(){}.getType();
+
+      ArrayList<PartnerOutput> out  = gson.fromJson(content, type);
+      for (PartnerOutput entry : out) {
+        partnerMap.put(entry.sourceUri, entry);
+      }
+    } catch (IOException e) {
+      logger.error("Get All Partner API Call Failure ", e);
+      return null;
+    }
+    
+    return partnerMap;
   }
 
   /**
@@ -91,7 +122,7 @@ public class ApiService extends AbstractApiService {
    * @return String indicating the access status. (example: OK, NeedSubscription, NeedLogin)
    */
   public static String checkAccess(String path, String loginKey, String partnerId, String partyId) {	
-    String urn = authorizationUrn+"/access/?loginKey="+loginKey+
+    String urn = authorizationUrn+"/access/?secret_key="+loginKey+
 	    "&partnerId="+partnerId+"&url="+path+"&partyId="+partyId;
     try {
       String content = callApi(urn, RequestFactory.HttpMethod.GET);

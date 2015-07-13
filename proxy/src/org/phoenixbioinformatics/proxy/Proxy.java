@@ -13,6 +13,8 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.HashMap;
+import java.util.Map;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
@@ -81,6 +83,13 @@ public class Proxy extends HttpServlet {
   /** IPv6 localhost address */
   private static final String LOCALHOST_V6 = "0:0:0:0:0:0:0:1";
 
+  /** URI for UI server */
+  private static final String UIURI = "http://azeemui.steveatgetexp.com/pw2/dev/#/";
+
+  /** HashMap that contains partner's information, with sourceUri as the key */
+  protected Map<String, ApiService.PartnerOutput> partnerMap =
+    new HashMap<String, ApiService.PartnerOutput>();
+
   /** proxy server property name */
   private static final String PROXY_SERVER_PROPERTY = "proxy.server";
 
@@ -99,14 +108,15 @@ public class Proxy extends HttpServlet {
   /** error constant for redirect response, no location header */
   private static final String REDIRECT_ERROR =
     "Redirect status code but no location header in response";
-
   /** the session attribute for the cookie store */
   public static final String COOKIES_ATTRIBUTE = "cookies";
 
   @Override
   public void init(ServletConfig servletConfig) throws ServletException {
     super.init(servletConfig);
-    // TODO set up target data structure for multiple-partner approach
+    // Initialize the partnerMap static variable.
+    // TODO: Add codes to periodically sync the map with database.
+    partnerMap = ApiService.getAllPartnerInfo();
   }
 
   @Override
@@ -160,13 +170,16 @@ public class Proxy extends HttpServlet {
       }
       String requestUrl = getHostUrl(servletRequest);
       String fullRequestUri = protocol+"://"+requestUrl+requestPath;
-      ApiService.PartnerOutput partnerInfo = ApiService.getPartnerInfo(requestUrl);
+      
+      ApiService.PartnerOutput partnerInfo = partnerMap.get(requestUrl);
       if (partnerInfo == null) {
         // Invalid partnerInfo based on the url, return false for now.
         // TODO: redirect to error page.
         logger.error("invalid partnerInfo from requestUrl="+requestUrl);
         return;
       }
+      String partnerId = partnerInfo.partnerId;
+      String targetUri = partnerInfo.targetUri;
       String remoteIp = getIpAddress(servletRequest);
 
       // populate loginKey and partyId from cookie if available
@@ -176,7 +189,7 @@ public class Proxy extends HttpServlet {
       if (cookies != null) {
         for (Cookie c : Arrays.asList(cookies)) {
           String cookieName = c.getName();
-          if (cookieName.equals("loginKey")) {
+          if (cookieName.equals("secret_key")) {
             loginKey = c.getValue();
           } else if (cookieName.equals("partyId")) {
             partyId = c.getValue();
@@ -185,7 +198,7 @@ public class Proxy extends HttpServlet {
       }
 
       // Determine whether to proxy the request.
-      if (authorizeProxyRequest(requestPath, loginKey, partnerInfo.partnerId, partyId,
+      if (authorizeProxyRequest(requestPath, loginKey, partnerId, partyId,
                                 fullRequestUri, remoteIp, servletResponse)) {
 
         // Initialize the proxy request.
@@ -196,7 +209,7 @@ public class Proxy extends HttpServlet {
                            remoteIp);
         
         HttpUriRequest requestToProxy =
-          RequestFactory.getUriRequest(servletRequest, partnerInfo.targetUri);
+          RequestFactory.getUriRequest(servletRequest, targetUri);
         
         // TODO reenable printing targetObject.toString() when targetObject is not null.
         logger.debug("Proxying request from " + proxyRequest.getIp() + "-->"
@@ -242,6 +255,15 @@ public class Proxy extends HttpServlet {
                                         String partyId, String fullUri, String remoteIp,
                                         HttpServletResponse servletResponse) throws IOException{
 
+    // Skip authorization check and metering incrementation for following static file
+    // types. 
+    // TODO: This is just a temporary solution similar to how Proxy 1.0 skipping checks 
+    // for these file types. Need a permanent solution for this -SC
+    if (requestPath.endsWith(".jpg") || requestPath.endsWith(".png") || requestPath.endsWith(".css") ||
+        requestPath.endsWith("js") || requestPath.endsWith(".gif")) {
+      return true;
+    }
+
     Boolean authorized = false;
     String redirectPath = "";
     
@@ -261,15 +283,15 @@ public class Proxy extends HttpServlet {
         String meteringResponse = ApiService.incrementMeteringCount(remoteIp, partnerId);
       } else if (meter.equals("Warning")) {
         authorized = false;
-        redirectPath = "http://testui.steveatgetexp.com/pw2UI/#/metering?partnerId="+partnerId+"&redirect="+fullUri;
+        redirectPath = UIURI+"metering?partnerId="+partnerId+"&redirect="+fullUri;
         String meteringResponse = ApiService.incrementMeteringCount(remoteIp, partnerId);
       } else {
         authorized = false;
-        redirectPath = "http://testui.steveatgetexp.com/pw2UI/#/subscription?partnerId="+partnerId+"&redirect="+fullUri;
+        redirectPath = UIURI+"subscription?partnerId="+partnerId+"&redirect="+fullUri;
       }
     } else if (auth.equals("NeedLogin")) {
       authorized = false;
-      redirectPath = ApiService.apiUrl+"/subscriptions/templates/login";
+      redirectPath = UIURI+"login?partnerId=tair&redirect="+fullUri;
     }
     
     if (!authorized) {
