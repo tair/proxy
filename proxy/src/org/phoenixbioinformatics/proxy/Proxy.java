@@ -84,7 +84,7 @@ public class Proxy extends HttpServlet {
   private static final String LOCALHOST_V6 = "0:0:0:0:0:0:0:1";
 
   /** URI for UI server */
-  private static final String UIURI = "http://azeemui.steveatgetexp.com/pw2/dev/#/";
+  private static final String UIURI = "http://steveui.steveatgetexp.com";
 
   /** HashMap that contains partner's information, with sourceUri as the key */
   protected Map<String, ApiService.PartnerOutput> partnerMap =
@@ -147,6 +147,33 @@ public class Proxy extends HttpServlet {
   }
 
   /**
+   * This function checks if the request is intended solely for setting cookies.
+   * If so, then set the cookie with the given partyId and secret_key, and 
+   * set the appropriate cross origin parameters.
+   *
+   * @param servletRequest the HTTP servlet request
+   * @param servletResponse the HTTP servlet response
+   *
+   * @return Boolean to indicate if this is a set cookie request
+   */
+  private Boolean handleSetCookieRequest(HttpServletRequest servletRequest, 
+                                      HttpServletResponse servletResponse) {
+    String action = servletRequest.getParameter("action");
+
+    if (action != null && action.equals("setCookies")) {
+      Cookie partyIdCookie = new Cookie("partyId", servletRequest.getParameter("partyId"));
+      Cookie secret_keyCookie = new Cookie("secret_key", servletRequest.getParameter("secret_key"));
+      servletResponse.addCookie(partyIdCookie);
+      servletResponse.addCookie(secret_keyCookie);
+      servletResponse.setHeader("Access-Control-Allow-Origin", UIURI);
+      servletResponse.setHeader("Access-Control-Allow-Credentials", "true");
+      logger.debug("Setting Cookies for partyId="+partyIdCookie.getValue()+" and secret_key="+secret_keyCookie.getValue());
+      return true;
+    }
+    return false;
+  }
+
+  /**
    * Handle a request by configuring the request, authorizing it, then proxying
    * or refusing it.
    * 
@@ -157,6 +184,12 @@ public class Proxy extends HttpServlet {
   private void handleProxyRequest(HttpServletRequest servletRequest,
                                   HttpServletResponse servletResponse,
                                   URI targetObject) {
+
+    // skips proxying if the request is a simple set cookie request
+    if (handleSetCookieRequest(servletRequest, servletResponse)) {
+      return;
+    }
+
     // Get the complete URI including original domain and query string.
     String uri = servletRequest.getRequestURI().toString();
     logger.debug("Incoming URI: " + uri);
@@ -283,15 +316,15 @@ public class Proxy extends HttpServlet {
         String meteringResponse = ApiService.incrementMeteringCount(remoteIp, partnerId);
       } else if (meter.equals("Warning")) {
         authorized = false;
-        redirectPath = UIURI+"metering?partnerId="+partnerId+"&redirect="+fullUri;
+        redirectPath = UIURI+"/steve/#/metering?partnerId="+partnerId+"&redirect="+fullUri;
         String meteringResponse = ApiService.incrementMeteringCount(remoteIp, partnerId);
       } else {
         authorized = false;
-        redirectPath = UIURI+"subscription?partnerId="+partnerId+"&redirect="+fullUri;
+        redirectPath = UIURI+"/steve/#/metering?exceed=true&partnerId="+partnerId+"&redirect="+fullUri;
       }
     } else if (auth.equals("NeedLogin")) {
       authorized = false;
-      redirectPath = UIURI+"login?partnerId=tair&redirect="+fullUri;
+      redirectPath = UIURI+"/steve/#/login?partnerId="+partnerId+"&redirect="+fullUri;
     }
     
     if (!authorized) {

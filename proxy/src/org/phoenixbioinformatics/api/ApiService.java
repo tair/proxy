@@ -122,10 +122,9 @@ public class ApiService extends AbstractApiService {
    * @return String indicating the access status. (example: OK, NeedSubscription, NeedLogin)
    */
   public static String checkAccess(String path, String loginKey, String partnerId, String partyId) {	
-    String urn = authorizationUrn+"/access/?secret_key="+loginKey+
-	    "&partnerId="+partnerId+"&url="+path+"&partyId="+partyId;
+    String urn = authorizationUrn+"/access/?partnerId="+partnerId+"&url="+path;
     try {
-      String content = callApi(urn, RequestFactory.HttpMethod.GET);
+      String content = callApi(urn, RequestFactory.HttpMethod.GET, "secret_key="+loginKey+";partyId="+partyId+";");
 	    Gson gson = new Gson();
 	    AccessOutput out = gson.fromJson(content, AccessOutput.class);
       

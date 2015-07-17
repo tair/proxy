@@ -27,25 +27,33 @@ public abstract class AbstractApiService {
   /** logger for this class */
   public static final Logger logger = LogManager.getLogger(AbstractApiService.class);
 
+
+  public static String callApi(String urn, RequestFactory.HttpMethod method) throws IOException {
+    return AbstractApiService.callApi(urn, method, "");
+  }
+
   /**
    * This method handles the actual call to API services. 
    * @param urn                 path to the resource to be retrieved. example: (/access?partyId=5)
    * @param method              request method based on RequestFactory.HttpMethod
    * @return CloseableHttpResponse that clients can extract.
    */
-  public static String callApi(String urn, RequestFactory.HttpMethod method) throws IOException {
+  public static String callApi(String urn, RequestFactory.HttpMethod method, String cookieString) throws IOException {
     CloseableHttpResponse response = null;
     HttpUriRequest request = null;
+    String methodString = null;
     if (method == RequestFactory.HttpMethod.GET) {
 	    request = new HttpGet(apiUrl+urn);
+      methodString = "GET";
     } else if (method == RequestFactory.HttpMethod.POST) {
       request = new HttpPost(apiUrl+urn);
+      methodString = "POST";
     }
 
-    request.addHeader("Cookie", "apiKey="+apiKey);
+    request.addHeader("Cookie", "apiKey="+apiKey+";"+cookieString);
     CloseableHttpClient client = HttpClientBuilder.create().build();
     // debug statement. TODO: remove in final produce to reduce spam
-    logger.debug("Making post request: "+apiUrl+urn);
+    logger.debug("Making "+methodString+" request: "+apiUrl+urn);
     response = client.execute(request);
     
     int status = response.getStatusLine().getStatusCode();
