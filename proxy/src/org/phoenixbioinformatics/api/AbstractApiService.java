@@ -76,7 +76,7 @@ public abstract class AbstractApiService {
     response = client.execute(request);
     
     int status = response.getStatusLine().getStatusCode();
-    if (status != HttpStatus.SC_OK) {
+    if (status != HttpStatus.SC_OK && status != HttpStatus.SC_CREATED) {
       logger.debug("Status code is not OK: "+status);
       throw new IOException("Bad status code: "+String.valueOf(status));
     }

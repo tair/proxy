@@ -101,7 +101,6 @@ public class ApiService extends AbstractApiService {
     params.add(new BasicNameValuePair("sessionId", sessionId));
     params.add(new BasicNameValuePair("partyId", partyId));
     params.add(new BasicNameValuePair("ip", ip));
-    logger.debug(partyId+", " + ip + ", " + sessionId+ ", " + uri);
 
     try {
       String content = callApi(urn, RequestFactory.HttpMethod.POST, "", params);
