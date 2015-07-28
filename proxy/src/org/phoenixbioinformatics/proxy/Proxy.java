@@ -193,7 +193,7 @@ public class Proxy extends HttpServlet {
     // Get the complete URI including original domain and query string.
     String uri = servletRequest.getRequestURI().toString();
     logger.debug("Incoming URI: " + uri);
-    // printAllHeaders(servletRequest);
+    //printAllHeaders(servletRequest);
     try {
       String protocol = getProtocol(servletRequest);
       String queryString = servletRequest.getQueryString();
@@ -218,6 +218,7 @@ public class Proxy extends HttpServlet {
       // populate loginKey and partyId from cookie if available
       String partyId = null;
       String loginKey = null;
+      String jSessionId = null;
       Cookie cookies[] = servletRequest.getCookies();
       if (cookies != null) {
         for (Cookie c : Arrays.asList(cookies)) {
@@ -226,9 +227,13 @@ public class Proxy extends HttpServlet {
             loginKey = c.getValue();
           } else if (cookieName.equals("partyId")) {
             partyId = c.getValue();
+          } else if (cookieName.equals("JSESSIONID")) {
+            jSessionId = c.getValue();
           }
         }
       }
+
+      ApiService.createPageView(remoteIp, fullRequestUri, partyId, jSessionId);
 
       // Determine whether to proxy the request.
       if (authorizeProxyRequest(requestPath, loginKey, partnerId, partyId,
@@ -293,7 +298,7 @@ public class Proxy extends HttpServlet {
     // TODO: This is just a temporary solution similar to how Proxy 1.0 skipping checks 
     // for these file types. Need a permanent solution for this -SC
     if (requestPath.endsWith(".jpg") || requestPath.endsWith(".png") || requestPath.endsWith(".css") ||
-        requestPath.endsWith("js") || requestPath.endsWith(".gif")) {
+        requestPath.endsWith("js") || requestPath.endsWith(".gif") || requestPath.endsWith(".wsgi")) {
       return true;
     }
 

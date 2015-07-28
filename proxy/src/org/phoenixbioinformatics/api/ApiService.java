@@ -3,7 +3,11 @@
  */
 package org.phoenixbioinformatics.api;
 
+import java.util.Date;
+import java.text.SimpleDateFormat;
+
 import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.NameValuePair;
 import java.io.IOException;
 import com.google.gson.Gson;
 
@@ -16,6 +20,7 @@ import com.google.gson.reflect.TypeToken;
 import java.lang.reflect.Type;
 
 import org.phoenixbioinformatics.http.RequestFactory;
+import org.apache.http.message.BasicNameValuePair;
 
 /**
  * This class handles all of the requests to API services
@@ -24,7 +29,8 @@ public class ApiService extends AbstractApiService {
   public static String authorizationUrn = "/authorizations";
   public static String metersUrn = "/meters";
   public static String partnerUrn = "/partners";
-  
+  public static String pageViewsUrn = "/session-logs/page-views";
+
   // Output from authorizations/access API call
   private class AccessOutput {
     private String status;
@@ -74,6 +80,36 @@ public class ApiService extends AbstractApiService {
     }
     
     return partnerMap;
+  }
+
+  /**
+   * Calls the API service and creates a page view entry
+   *
+   * @param None
+   * @return None
+   */
+  public static void createPageView(String ip, String uri, String partyId, String sessionId) {
+    String urn = pageViewsUrn+"/";
+    Date curDate = new Date();
+    SimpleDateFormat format = new SimpleDateFormat();
+    format = new SimpleDateFormat("yyyy-MM-dd hh:mm:ssZ");
+    String pageViewDate = format.format(curDate);
+
+    List<NameValuePair> params = new ArrayList<NameValuePair>(2);
+    params.add(new BasicNameValuePair("pageViewDate", pageViewDate));
+    params.add(new BasicNameValuePair("uri", uri));
+    params.add(new BasicNameValuePair("sessionId", sessionId));
+    params.add(new BasicNameValuePair("partyId", partyId));
+    params.add(new BasicNameValuePair("ip", ip));
+    logger.debug(partyId+", " + ip + ", " + sessionId+ ", " + uri);
+
+    try {
+      String content = callApi(urn, RequestFactory.HttpMethod.POST, "", params);
+      return;
+    } catch (IOException e) {
+      logger.debug("Session logging API Call Failure", e);
+      return;
+    }
   }
 
   /**
