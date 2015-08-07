@@ -32,8 +32,9 @@ public class ApiService extends AbstractApiService {
   public static String pageViewsUrn = "/session-logs/page-views";
 
   // Output from authorizations/access API call
-  private class AccessOutput {
-    private String status;
+  public class AccessOutput {
+    public String status;
+    public String userIdentifier;
   }
   
   // Output from ip/<pk>/increment API call 
@@ -156,17 +157,15 @@ public class ApiService extends AbstractApiService {
    * @param partnerId           partnerId that the client tries to access.
    * @return String indicating the access status. (example: OK, NeedSubscription, NeedLogin)
    */
-  public static String checkAccess(String path, String loginKey, String partnerId, String partyId) {	
+  public static AccessOutput checkAccess(String path, String loginKey, String partnerId, String partyId) {	
     String urn = authorizationUrn+"/access/?partnerId="+partnerId+"&url="+path;
     try {
       String content = callApi(urn, RequestFactory.HttpMethod.GET, "secret_key="+loginKey+";partyId="+partyId+";");
 	    Gson gson = new Gson();
-	    AccessOutput out = gson.fromJson(content, AccessOutput.class);
-      
-	    return out.status;
+	    return gson.fromJson(content, AccessOutput.class);
     } catch (IOException e) {
 	    logger.debug("Check Access API Call Failure", e);
-	    return e.getMessage();
+	    return null;
     }
   }
 

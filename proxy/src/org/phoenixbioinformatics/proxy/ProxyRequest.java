@@ -158,6 +158,10 @@ public class ProxyRequest implements Serializable {
     requestToProxy.setHeader(headerName, newHeader);
   }
 
+  public void setUserIdentifier(String userIdentifier) {
+    requestToProxy.addHeader("Cookie", "userIdentifier="+userIdentifier);
+  }
+
   /**
    * Get the method.
    * 

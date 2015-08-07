@@ -30,6 +30,7 @@ import org.apache.http.HttpHeaders;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.CookieStore;
+import org.apache.http.impl.client.BasicCookieStore;
 import org.apache.http.client.ResponseHandler;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.client.protocol.HttpClientContext;
@@ -234,10 +235,11 @@ public class Proxy extends HttpServlet {
       }
 
       ApiService.createPageView(remoteIp, fullRequestUri, partyId, jSessionId);
+      StringBuilder userIdentifier = new StringBuilder();
 
       // Determine whether to proxy the request.
       if (authorizeProxyRequest(requestPath, loginKey, partnerId, partyId,
-                                fullRequestUri, remoteIp, servletResponse)) {
+                                fullRequestUri, remoteIp, servletResponse, userIdentifier)) {
 
         // Initialize the proxy request.
         ProxyRequest proxyRequest =
@@ -254,10 +256,10 @@ public class Proxy extends HttpServlet {
                      //                   + targetObject.toString() + " as \""
                      + requestToProxy.getRequestLine().getUri() + "\"");
         
-        configureProxyRequest(servletRequest, proxyRequest, requestToProxy);
+        configureProxyRequest(servletRequest, proxyRequest, requestToProxy, userIdentifier.toString());
         if (proxyRequest != null) {
           // request approved, proxy to the target server
-          proxy(servletRequest.getSession(), servletResponse, proxyRequest, protocol+"://"+requestUrl);
+          proxy(servletRequest.getSession(), servletResponse, proxyRequest, protocol+"://"+requestUrl, userIdentifier.toString());
         } else {
           // request refused, redirect to another page
           redirectToRefusedUri(servletResponse,
@@ -291,7 +293,7 @@ public class Proxy extends HttpServlet {
    */
   private Boolean authorizeProxyRequest(String requestPath, String loginKey, String partnerId,
                                         String partyId, String fullUri, String remoteIp,
-                                        HttpServletResponse servletResponse) throws IOException{
+                                        HttpServletResponse servletResponse, StringBuilder userIdentifier) throws IOException{
 
     // Skip authorization check and metering incrementation for following static file
     // types. 
@@ -309,8 +311,11 @@ public class Proxy extends HttpServlet {
     logger.debug("parameters used to call API services are "+fullUri+
                  ", "+requestPath+", "+partnerId+", "+loginKey+", "+
                  partyId+", "+remoteIp);
-    
-    String auth = ApiService.checkAccess(requestPath, loginKey, partnerId, partyId);
+
+    ApiService.AccessOutput accessOutput = ApiService.checkAccess(requestPath, loginKey, partnerId, partyId);
+    String auth = accessOutput.status;
+    userIdentifier.append(accessOutput.userIdentifier);
+
     if (auth.equals("OK")) {
       // grant access
       authorized = true;
@@ -358,26 +363,34 @@ public class Proxy extends HttpServlet {
    * @throws ClientProtocolException when there is a syntax error in the URI
    */
   private void sendRequestToServer(HttpUriRequest request, HttpSession session,
-                                   ResponseHandler<String> responseHandler)
+                                   ResponseHandler<String> responseHandler,
+                                   String userIdentifier)
       throws ClientProtocolException, IOException {
     CloseableHttpClient client = null;
     // Get cookie store from session if it's there.
     CookieStore cookieStore = 
       (CookieStore)session.getAttribute(COOKIES_ATTRIBUTE);
+    if (cookieStore == null) {
+      cookieStore = new BasicCookieStore();
+    }
+    org.apache.http.impl.cookie.BasicClientCookie cookie = new org.apache.http.impl.cookie.BasicClientCookie("userIdentifier", userIdentifier);
+    cookie.setPath("");
+    cookie.setDomain("");
+    cookieStore.addCookie(cookie);
     // Create a local HTTP context to contain the cookie store.
     HttpClientContext localContext = HttpClientContext.create();
-
     if (cookieStore == null) {
       client = HttpClientBuilder.create().disableRedirectHandling().build();
       client.execute(request, responseHandler, localContext);
     } else {
+      logger.debug(cookieStore.toString());
       // Bind custom cookie store to the local context
       localContext.setCookieStore(cookieStore);
       client = HttpClientBuilder.create().disableRedirectHandling().build();
       // Execute the request on the proxied server. Ignore returned string.
       client.execute(request, responseHandler, localContext);
     }
-    
+
     //    Put the cookie store with any returned session cookie into the session.
     cookieStore = localContext.getCookieStore();
     session.setAttribute(COOKIES_ATTRIBUTE, localContext.getCookieStore());
@@ -422,7 +435,8 @@ public class Proxy extends HttpServlet {
    */
   private void configureProxyRequest(HttpServletRequest servletRequest,
                                      ProxyRequest proxyRequest,
-                                     HttpUriRequest requestToProxy) {
+                                     HttpUriRequest requestToProxy,
+                                     String userIdentifier) {
     // Set the actual request before setting its options.
     proxyRequest.setRequestToProxy(requestToProxy);
 
@@ -434,6 +448,7 @@ public class Proxy extends HttpServlet {
     // Set up the request headers based on the current request.
     proxyRequest.copyRequestHeaders(servletRequest);
     proxyRequest.setXForwardedForHeader(servletRequest);
+    proxyRequest.setUserIdentifier(userIdentifier);
   }
 
   /**
@@ -503,12 +518,13 @@ public class Proxy extends HttpServlet {
   private void proxy(final HttpSession session,
                      final HttpServletResponse servletResponse,
                      final ProxyRequest proxyRequest,
-                     final String originalHost) throws ServletException {
+                     final String originalHost,
+                     final String userIdentifier) throws ServletException {
     logger.info("Proxying " + proxyRequest.getMethod()
                 + " URI from IP address " + proxyRequest.getIp() + ": "
                 + proxyRequest.getCurrentUri() + " -- "
                 + proxyRequest.getRequestToProxy().getRequestLine().getUri() + " ... "
-                + originalHost);
+                + originalHost + " ... " + userIdentifier);
 
     // Create a custom response handler to ensure all resources get freed.
     // Note: ignore the returned response, it is always null.
@@ -619,7 +635,8 @@ public class Proxy extends HttpServlet {
     try {
       sendRequestToServer(proxyRequest.getRequestToProxy(),
                           session,
-                          responseHandler);
+                          responseHandler,
+                          userIdentifier);
     } catch (IOException e) {
       // Syntax error or other problem handling the URI, package into servlet
       // exception
