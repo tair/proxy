@@ -194,7 +194,7 @@ public class Proxy extends HttpServlet {
     // Get the complete URI including original domain and query string.
     String uri = servletRequest.getRequestURI().toString();
     logger.debug("Incoming URI: " + uri);
-    //printAllHeaders(servletRequest);
+    //printAllRequestHeaders(servletRequest);
     try {
       String protocol = getProtocol(servletRequest);
       String queryString = servletRequest.getQueryString();
@@ -536,6 +536,9 @@ public class Proxy extends HttpServlet {
         int statusCode = proxyResponse.getStatusLine().getStatusCode();
         logger.debug("Proxy returned status " + statusCode);
 
+        // printAllResponseHeaders(proxyResponse);
+        handleLogoutHeader(servletResponse, proxyResponse);
+
         // Check the status code to determine whether the proxied server's
         // response is a redirect (300-303).
         if (statusCode >= HttpServletResponse.SC_MULTIPLE_CHOICES /* 300 */
@@ -756,8 +759,14 @@ public class Proxy extends HttpServlet {
 
     return ipAddress;
   }
-    
-  public static void printAllHeaders(HttpServletRequest request) {
+  
+  /**
+   * Prints out all headers of a HttpServletRequest object
+   *
+   * @param request the HTTP servlet request whose header is to print out
+   * @return none
+   */
+  public static void printAllRequestHeaders(HttpServletRequest request) {
     Enumeration<String> headerNames = request.getHeaderNames();
     while (headerNames.hasMoreElements()) {
 	    String headerName = headerNames.nextElement();
@@ -769,6 +778,49 @@ public class Proxy extends HttpServlet {
         logger.debug(headerValue);
 	    }
 	    logger.debug("------------------");
+    }
+  }
+
+  /**
+   * Prints out all headers of a HttpResponse object
+   *
+   * @param request the HTTP response whose header is to print out
+   * @return none
+   */
+  public static void printAllResponseHeaders(HttpResponse response) {
+    Header[] headers = response.getAllHeaders();
+    Header header = null;
+    for (int i=0; i<headers.length; i++) {
+      header = headers[i];
+      logger.debug(header.getName());
+      logger.debug(header.getValue());
+      logger.debug("----");
+    }
+    logger.debug("------------------");
+  }
+
+  /**
+   * This function loops thorugh all headers of an response 
+   * object from a partner server, and identify if a "Phoenix-Proxy-Logout" 
+   * object exists. If so, then logs out a user by resetting the 
+   * login related cookies.
+   *
+   * @param request the HTTP response whose header is to print out
+   * @return none
+   */
+  public static void handleLogoutHeader(HttpServletResponse clientResponse, HttpResponse proxyResponse) {
+    Header[] headers = proxyResponse.getAllHeaders();
+    Header header = null;
+    for (int i=0; i<headers.length; i++) {
+      header = headers[i];
+      if (headers[i].getName().equals("Phoenix-Proxy-Logout")){
+        Cookie partyCookie = new Cookie("partyId", null);
+        partyCookie.setPath("/");
+        Cookie secret_keyCookie = new Cookie("secret_key", null);
+        secret_keyCookie.setPath("/");
+        clientResponse.addCookie(partyCookie);
+        clientResponse.addCookie(secret_keyCookie);
+      }
     }
   }
 }
