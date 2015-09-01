@@ -22,6 +22,9 @@ import java.lang.reflect.Type;
 import org.phoenixbioinformatics.http.RequestFactory;
 import org.apache.http.message.BasicNameValuePair;
 
+import java.net.URLEncoder;
+import java.io.UnsupportedEncodingException;
+
 /**
  * This class handles all of the requests to API services
  */
@@ -158,6 +161,12 @@ public class ApiService extends AbstractApiService {
    * @return String indicating the access status. (example: OK, NeedSubscription, NeedLogin)
    */
   public static AccessOutput checkAccess(String path, String loginKey, String partnerId, String partyId) {	
+    try {
+      path = URLEncoder.encode(path, "UTF-8");
+    } catch (UnsupportedEncodingException e) {
+      logger.debug("Encoding faiure", e);
+    }
+
     String urn = authorizationUrn+"/access/?partnerId="+partnerId+"&url="+path;
     try {
       String content = callApi(urn, RequestFactory.HttpMethod.GET, "secret_key="+loginKey+";partyId="+partyId+";");
