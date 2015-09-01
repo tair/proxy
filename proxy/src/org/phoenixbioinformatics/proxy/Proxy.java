@@ -85,7 +85,7 @@ public class Proxy extends HttpServlet {
   private static final String LOCALHOST_V6 = "0:0:0:0:0:0:0:1";
 
   /** URI for UI server */
-  private static final String UIURI = "http://steveui.steveatgetexp.com";
+  private static final String UIURI = "http://demoui.arabidopsis.org";
 
   /** HashMap that contains partner's information, with sourceUri as the key */
   protected Map<String, ApiService.PartnerOutput> partnerMap =
@@ -326,15 +326,15 @@ public class Proxy extends HttpServlet {
         String meteringResponse = ApiService.incrementMeteringCount(remoteIp, partnerId);
       } else if (meter.equals("Warning")) {
         authorized = false;
-        redirectPath = UIURI+"/steve/#/metering?partnerId="+partnerId+"&redirect="+fullUri;
+        redirectPath = UIURI+"/#/metering?partnerId="+partnerId+"&redirect="+fullUri;
         String meteringResponse = ApiService.incrementMeteringCount(remoteIp, partnerId);
       } else {
         authorized = false;
-        redirectPath = UIURI+"/steve/#/metering?exceed=true&partnerId="+partnerId+"&redirect="+fullUri;
+        redirectPath = UIURI+"/#/metering?exceed=true&partnerId="+partnerId+"&redirect="+fullUri;
       }
     } else if (auth.equals("NeedLogin")) {
       authorized = false;
-      redirectPath = UIURI+"/steve/#/login?partnerId="+partnerId+"&redirect="+fullUri;
+      redirectPath = UIURI+"/#/login?partnerId="+partnerId+"&redirect="+fullUri;
     }
     
     if (!authorized) {
@@ -452,50 +452,6 @@ public class Proxy extends HttpServlet {
   }
 
   /**
-   * Rewrite a URI in string format to go to a specific host. The returned
-   * string preserves the path, query, and fragment of the original URI, just
-   * changing the host to the specified host.
-   * 
-   * @param uriString the original URI as a string
-   * @param originalHost the host to which to rewrite the URI
-   * @return the rewritten URI
-   * @throws URISyntaxException if the original URI has a syntax problem
-   */
-  private String rewriteUriFromString(String uriString, String originalHost)
-      throws URISyntaxException {
-    String rewrittenUri = uriString;
-
-    URI uri = new URI(uriString);
-
-    String targetHost = originalHost;
-
-    if (!targetHost.equals(uri.getHost())) {
-      StringBuilder builder = new StringBuilder();
-      if (originalHost != null) {
-        builder.append(originalHost);
-      }
-
-      if (uri.getPath() != null) {
-        builder.append(uri.getPath());
-      }
-
-      if (uri.getQuery() != null) {
-        builder.append("?");
-        builder.append(uri.getQuery());
-      }
-
-      if (uri.getFragment() != null) {
-        builder.append("#");
-        builder.append(uri.getFragment());
-      }
-      rewrittenUri = builder.toString();
-      logger.debug("Rewrote URI " + uriString + " to " + rewrittenUri);
-    }
-
-    return rewrittenUri;
-  }
-
-  /**
    * Get the host to which to proxy.
    * 
    * @return the host name as a string
@@ -539,23 +495,9 @@ public class Proxy extends HttpServlet {
         // printAllResponseHeaders(proxyResponse);
         handleLogoutHeader(servletResponse, proxyResponse);
 
-        // Check the status code to determine whether the proxied server's
-        // response is a redirect (300-303).
-        if (statusCode >= HttpServletResponse.SC_MULTIPLE_CHOICES /* 300 */
-            && statusCode < HttpServletResponse.SC_NOT_MODIFIED /* 304 */) {
-          try {
-            redirectUri(proxyResponse, originalHost);
-          } catch (URISyntaxException e) {
-            logger.error(URI_SYNTAX_ERROR, e);
-            throw new ClientProtocolException(URI_SYNTAX_ERROR, e);
-          } catch (ServletException e) {
-            logger.error(RESPONSE_HANDLING_ERROR, e);
-          }
-        } else if (statusCode == HttpServletResponse.SC_NOT_MODIFIED) {
-          refuseUri(proxyResponse);
-        } else {
-          respond(proxyResponse, statusCode);
-        }
+	// Sends response to caller based on partner server's response.
+	respond(proxyResponse, statusCode);
+
         // Return a null string instead of the response string, not used here;
         // instead the content gets copied into the servlet response.
         return null;
@@ -576,61 +518,6 @@ public class Proxy extends HttpServlet {
           throws IOException {
         servletResponse.setStatus(statusCode);
         copyProxyResponseToServletResponse(servletResponse, proxyResponse);
-      }
-
-      /**
-       * Handle a status 304 by refusing the request. A 304 occurs when there is
-       * a 'If-Modified-Since' header and the data on disk has not changed;
-       * server responds with a 304 saying I'm not going to send the body
-       * because the file has not changed. The method sets the content-length
-       * header to zero and sets the response status to NOT_MODIFIED.
-       * 
-       * @param proxyResponse the response from the proxied server
-       * @throws IOException when there is a problem copying the headers or
-       *           entity
-       */
-      private void refuseUri(final HttpResponse proxyResponse)
-          throws IOException {
-        logger.debug("Refusing proxy request with 304 response, URI "
-                     + proxyRequest.getCurrentUri());
-        servletResponse.setIntHeader(HttpHeaders.CONTENT_LENGTH, 0);
-        servletResponse.setStatus(HttpServletResponse.SC_NOT_MODIFIED);
-        // Ensure entity content is fully consumed and any stream is closed.
-        EntityUtils.consume(proxyResponse.getEntity());
-      }
-
-      /**
-       * Handle a redirect status code by redirecting the URI.
-       * 
-       * @param proxyResponse the response from the proxied server
-       * @throws URISyntaxException when there is a problem with the redirect
-       *           URI
-       * @throws IOException when there is a problem copying the headers or
-       *           entity
-       * @throws ServletException when there is a checked exception thrown by a
-       *           called method
-       */
-      private void redirectUri(HttpResponse proxyResponse, String originalHost)
-          throws URISyntaxException, IOException, ServletException {
-        // If there is no location header, the method throws an exception.
-        Header locationHeader =
-          proxyResponse.getLastHeader(HttpHeaders.LOCATION);
-        if (locationHeader == null) {
-          throw new ClientProtocolException(REDIRECT_ERROR);
-        }
-
-        // Rewrite the location header URI to go to the proxy server.
-        String rewrittenUri =
-        rewriteUriFromString(locationHeader.getValue(), originalHost);
-
-        logger.debug("Redirecting URI "
-                     + proxyRequest.getRequestToProxy().getRequestLine().getUri());
-        logger.debug("Based on proxy target response, redirecting to "
-                     + rewrittenUri);
-        servletResponse.sendRedirect(rewrittenUri);
-
-        // Ensure entity content is fully consumed and any stream is closed.
-        EntityUtils.consume(proxyResponse.getEntity());
       }
     };
 
@@ -715,8 +602,10 @@ public class Proxy extends HttpServlet {
     InputStream input = null;
     OutputStream output = null;
     try {
-      input = proxyResponse.getEntity().getContent();
-      if (input != null) {
+      if (proxyResponse != null &&
+	proxyResponse.getEntity() != null &&
+	proxyResponse.getEntity().getContent() != null) {
+	input = proxyResponse.getEntity().getContent();
         output = response.getOutputStream();
         IOUtils.copy(input, output);
       }

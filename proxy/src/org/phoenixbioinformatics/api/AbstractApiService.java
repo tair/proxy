@@ -24,7 +24,7 @@ import java.util.List;
  * API service subclasses
  */
 public abstract class AbstractApiService {
-  public static final String apiUrl = "http://steveapi.steveatgetexp.com";
+  public static final String apiUrl = "https://demoapi.arabidopsis.org";
   public static final String apiKey = "test123"; //test api key
   
   /** logger for this class */
