@@ -48,6 +48,9 @@ import java.io.PrintWriter;
 import javax.servlet.http.Cookie;
 import java.lang.StringBuilder;
 
+import java.net.URLEncoder;
+import java.io.UnsupportedEncodingException;
+
 /**
  * A servlet that proxies HTTP requests to another server and handles the
  * response.
@@ -315,6 +318,12 @@ public class Proxy extends HttpServlet {
     ApiService.AccessOutput accessOutput = ApiService.checkAccess(requestPath, loginKey, partnerId, partyId);
     String auth = accessOutput.status;
     userIdentifier.append(accessOutput.userIdentifier);
+    String redirectUri = "";
+    try {
+	redirectUri = URLEncoder.encode(fullUri, "UTF-8");
+    } catch (UnsupportedEncodingException e) {
+	logger.debug("Encoding faiure", e);
+    }
 
     if (auth.equals("OK")) {
       // grant access
@@ -326,15 +335,15 @@ public class Proxy extends HttpServlet {
         String meteringResponse = ApiService.incrementMeteringCount(remoteIp, partnerId);
       } else if (meter.equals("Warning")) {
         authorized = false;
-        redirectPath = UIURI+"/#/metering?partnerId="+partnerId+"&redirect="+fullUri;
+        redirectPath = UIURI+"/#/metering?partnerId="+partnerId+"&redirect="+redirectUri;
         String meteringResponse = ApiService.incrementMeteringCount(remoteIp, partnerId);
       } else {
         authorized = false;
-        redirectPath = UIURI+"/#/metering?exceed=true&partnerId="+partnerId+"&redirect="+fullUri;
+        redirectPath = UIURI+"/#/metering?exceed=true&partnerId="+partnerId+"&redirect="+redirectUri;
       }
     } else if (auth.equals("NeedLogin")) {
       authorized = false;
-      redirectPath = UIURI+"/#/login?partnerId="+partnerId+"&redirect="+fullUri;
+      redirectPath = UIURI+"/#/login?partnerId="+partnerId+"&redirect="+redirectUri;
     }
     
     if (!authorized) {
