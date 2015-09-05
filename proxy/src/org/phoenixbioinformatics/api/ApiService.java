@@ -160,14 +160,14 @@ public class ApiService extends AbstractApiService {
    * @param partnerId           partnerId that the client tries to access.
    * @return String indicating the access status. (example: OK, NeedSubscription, NeedLogin)
    */
-  public static AccessOutput checkAccess(String path, String loginKey, String partnerId, String partyId) {	
+  public static AccessOutput checkAccess(String path, String loginKey, String partnerId, String partyId, String remoteIp) {	
     try {
       path = URLEncoder.encode(path, "UTF-8");
     } catch (UnsupportedEncodingException e) {
       logger.debug("Encoding faiure", e);
     }
 
-    String urn = authorizationUrn+"/access/?partnerId="+partnerId+"&url="+path;
+    String urn = authorizationUrn+"/access/?partnerId="+partnerId+"&url="+path+"&ip="+remoteIp;
     try {
       String content = callApi(urn, RequestFactory.HttpMethod.GET, "secret_key="+loginKey+";partyId="+partyId+";");
 	    Gson gson = new Gson();

@@ -315,7 +315,7 @@ public class Proxy extends HttpServlet {
                  ", "+requestPath+", "+partnerId+", "+loginKey+", "+
                  partyId+", "+remoteIp);
 
-    ApiService.AccessOutput accessOutput = ApiService.checkAccess(requestPath, loginKey, partnerId, partyId);
+    ApiService.AccessOutput accessOutput = ApiService.checkAccess(requestPath, loginKey, partnerId, partyId, remoteIp);
     String auth = accessOutput.status;
     userIdentifier.append(accessOutput.userIdentifier);
     String redirectUri = "";
