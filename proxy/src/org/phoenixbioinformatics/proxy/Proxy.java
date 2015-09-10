@@ -88,7 +88,7 @@ public class Proxy extends HttpServlet {
   private static final String LOCALHOST_V6 = "0:0:0:0:0:0:0:1";
 
   /** URI for UI server */
-  private static final String UIURI = "http://demoui.arabidopsis.org";
+  private static final String UIURI = "https://demoui.arabidopsis.org";
 
   /** HashMap that contains partner's information, with sourceUri as the key */
   protected Map<String, ApiService.PartnerOutput> partnerMap =
