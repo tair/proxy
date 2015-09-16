@@ -505,11 +505,78 @@ public class Proxy extends HttpServlet {
         handleLogoutHeader(servletResponse, proxyResponse);
 
 	// Sends response to caller based on partner server's response.
-	respond(proxyResponse, statusCode);
+	if (statusCode >= HttpServletResponse.SC_MULTIPLE_CHOICES
+	    && statusCode < HttpServletResponse.SC_NOT_MODIFIED) {
 
+	    try {
+		Header locationHeader =
+		    proxyResponse.getLastHeader(HttpHeaders.LOCATION);
+		if (locationHeader == null) {
+		    throw new ClientProtocolException(REDIRECT_ERROR);
+		}
+		String uriString = locationHeader.getValue();
+		URI uri = new URI(uriString);
+		
+		// Does a proxy rewrite if target host is redirecting 
+		// to localhost. See issue PW-110 for detail. -SC
+		if (uri.getHost() != null &&
+		  !originalHost.equals(uri.getHost()) &&
+		  uri.getHost().matches(".*localhost.*")) {
+		    // Rewrite the location header URI to go to the proxy server.
+		    String rewrittenUri = rewriteUriFromString(uri, originalHost);
+		    logger.debug("Based on proxy target response, redirecting to "
+				 + rewrittenUri);
+		    servletResponse.sendRedirect(rewrittenUri);
+
+		    // Ensure entity content is fully consumed and any stream is closed.
+		    EntityUtils.consume(proxyResponse.getEntity());
+		} else {
+		    respond(proxyResponse, statusCode);
+		}
+	    } catch (URISyntaxException e) {
+		logger.error(URI_SYNTAX_ERROR, e);
+		throw new ClientProtocolException(URI_SYNTAX_ERROR, e);
+	    }
+	} else {
+	    respond(proxyResponse, statusCode);
+	}
         // Return a null string instead of the response string, not used here;
         // instead the content gets copied into the servlet response.
         return null;
+      }
+
+      /**
+       * Rewrite a URI in string format to go to a specific host. The returned
+       * string preserves the path, query, and fragment of the original URI, just
+       * changing the host to the specified host.
+       * 
+       * @param uri the original URI
+       * @param host the host to which to rewrite the URI
+       * @return the rewritten URI
+       * @throws URISyntaxException if the original URI has a syntax problem
+       */
+      private String rewriteUriFromString(URI uri, String host)
+        throws URISyntaxException {
+	  StringBuilder builder = new StringBuilder();
+	  if (host != null) {
+	      builder.append(host);
+	  }
+	  
+	  if (uri.getPath() != null) {
+	      builder.append(uri.getPath());
+	  }
+	  
+	  if (uri.getQuery() != null) {
+	      builder.append("?");
+	      builder.append(uri.getQuery());
+	  }
+	      
+	  if (uri.getFragment() != null) {
+	      builder.append("#");
+	      builder.append(uri.getFragment());
+	  }
+
+	  return builder.toString();
       }
 
       /**
