@@ -164,6 +164,14 @@ public class Proxy extends HttpServlet {
                                       HttpServletResponse servletResponse) {
     String action = servletRequest.getParameter("action");
 
+    if (servletRequest.getMethod().equals("OPTIONS")) {
+      servletResponse.setHeader("Access-Control-Allow-Origin", UIURI);
+      servletResponse.setHeader("Access-Control-Allow-Credentials", "true");
+      servletResponse.setHeader("Access-Control-Allow-Headers", "x-requested-with, content-type, accept, origin, authorization, x-csrftoken");
+      servletResponse.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE");
+      return true;
+    }
+
     if (action != null && action.equals("setCookies")) {
       Cookie partyIdCookie = new Cookie("partyId", servletRequest.getParameter("partyId"));
       Cookie secret_keyCookie = new Cookie("secret_key", servletRequest.getParameter("secret_key"));
@@ -335,15 +343,15 @@ public class Proxy extends HttpServlet {
         String meteringResponse = ApiService.incrementMeteringCount(remoteIp, partnerId);
       } else if (meter.equals("Warning")) {
         authorized = false;
-        redirectPath = UIURI+"/#/metering?partnerId="+partnerId+"&redirect="+redirectUri;
+        redirectPath = UIURI+"/#/contentaccess/metering?partnerId="+partnerId+"&redirect="+fullUri;
         String meteringResponse = ApiService.incrementMeteringCount(remoteIp, partnerId);
       } else {
         authorized = false;
-        redirectPath = UIURI+"/#/metering?exceed=true&partnerId="+partnerId+"&redirect="+redirectUri;
+        redirectPath = UIURI+"/#/contentaccess/metering?exceed=true&partnerId="+partnerId+"&redirect="+fullUri;
       }
     } else if (auth.equals("NeedLogin")) {
       authorized = false;
-      redirectPath = UIURI+"/#/login?partnerId="+partnerId+"&redirect="+redirectUri;
+      redirectPath = UIURI+"/#/contentaccess/login?partnerId="+partnerId+"&redirect="+fullUri;
     }
     
     if (!authorized) {
