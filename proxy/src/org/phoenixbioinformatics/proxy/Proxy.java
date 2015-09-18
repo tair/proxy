@@ -343,15 +343,15 @@ public class Proxy extends HttpServlet {
         String meteringResponse = ApiService.incrementMeteringCount(remoteIp, partnerId);
       } else if (meter.equals("Warning")) {
         authorized = false;
-        redirectPath = UIURI+"/#/contentaccess/metering?partnerId="+partnerId+"&redirect="+fullUri;
+        redirectPath = UIURI+"/#/metering?partnerId="+partnerId+"&redirect="+redirectUri;
         String meteringResponse = ApiService.incrementMeteringCount(remoteIp, partnerId);
       } else {
         authorized = false;
-        redirectPath = UIURI+"/#/contentaccess/metering?exceed=true&partnerId="+partnerId+"&redirect="+fullUri;
+        redirectPath = UIURI+"/#/metering?exceed=true&partnerId="+partnerId+"&redirect="+redirectUri;
       }
     } else if (auth.equals("NeedLogin")) {
       authorized = false;
-      redirectPath = UIURI+"/#/contentaccess/login?partnerId="+partnerId+"&redirect="+fullUri;
+      redirectPath = UIURI+"/#/login?partnerId="+partnerId+"&redirect="+redirectUri;
     }
     
     if (!authorized) {
@@ -707,7 +707,8 @@ public class Proxy extends HttpServlet {
   }
 
   public static String getProtocol(HttpServletRequest request) {
-    return request.getHeader("X-Forwarded-Proto");
+      return "https";
+      //    return request.getHeader("X-Forwarded-Proto");
   }
   
   /**
