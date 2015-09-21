@@ -213,14 +213,21 @@ public class Proxy extends HttpServlet {
       if (queryString != null) {
         requestPath = requestPath + "?"+queryString;
       }
-      String requestUrl = getHostUrl(servletRequest);
-      String fullRequestUri = protocol+"://"+requestUrl+requestPath;
+      String requestUri = getHostUrl(servletRequest);
+      String fullRequestUri = protocol+"://"+requestUri+requestPath;
       
-      ApiService.PartnerOutput partnerInfo = partnerMap.get(requestUrl);
+      ApiService.PartnerOutput partnerInfo = partnerMap.get(requestUri);
       if (partnerInfo == null) {
         // Invalid partnerInfo based on the url, return false for now.
-        // TODO: redirect to error page.
-        logger.error("invalid partnerInfo from requestUrl="+requestUrl);
+        // TODO: redirect to error page. RJM: throw checked exception for handling at top level
+        logger.error("No partner information for URI " + requestUri);
+        StringBuilder builder = new StringBuilder();
+        String sep = "";
+        for (String mapUri : partnerMap.keySet()) {
+          builder.append(sep);
+          builder.append(mapUri);
+          sep = ", ";
+        }
         return;
       }
       String partnerId = partnerInfo.partnerId;
@@ -270,7 +277,7 @@ public class Proxy extends HttpServlet {
         configureProxyRequest(servletRequest, proxyRequest, requestToProxy, userIdentifier.toString());
         if (proxyRequest != null) {
           // request approved, proxy to the target server
-          proxy(servletRequest.getSession(), servletResponse, proxyRequest, protocol+"://"+requestUrl, userIdentifier.toString());
+          proxy(servletRequest.getSession(), servletResponse, proxyRequest, protocol+"://"+requestUri, userIdentifier.toString());
         } else {
           // request refused, redirect to another page
           redirectToRefusedUri(servletResponse,
