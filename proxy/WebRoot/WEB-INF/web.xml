@@ -5,14 +5,13 @@
     <display-name>Phoenix Paywall</display-name>
 
     <session-config>
+        <session-timeout>60</session-timeout>
         <cookie-config>
             <http-only>true</http-only>
             <secure>false</secure>
-            <comment>Phoenix Paywall tracking cookie</comment>
             <max-age>3600</max-age>
         </cookie-config>
         <tracking-mode>COOKIE</tracking-mode>
-        <session-timeout>60</session-timeout>
     </session-config>
 
 </web-app>
