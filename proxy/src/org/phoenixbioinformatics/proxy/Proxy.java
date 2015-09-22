@@ -330,14 +330,23 @@ public class Proxy extends HttpServlet {
                  ", "+requestPath+", "+partnerId+", "+loginKey+", "+
                  partyId+", "+remoteIp);
 
-    ApiService.AccessOutput accessOutput = ApiService.checkAccess(requestPath, loginKey, partnerId, partyId, remoteIp);
-    String auth = accessOutput.status;
-    userIdentifier.append(accessOutput.userIdentifier);
+    ApiService.AccessOutput accessOutput =
+      ApiService.checkAccess(requestPath,
+                             loginKey,
+                             partnerId,
+                             partyId,
+                             remoteIp);
+    String auth = "NOT OK";
+    if (accessOutput != null) {
+      auth = accessOutput.status;
+      userIdentifier.append(accessOutput.userIdentifier);
+    }
+
     String redirectUri = "";
     try {
-	redirectUri = URLEncoder.encode(fullUri, "UTF-8");
+      redirectUri = URLEncoder.encode(fullUri, "UTF-8");
     } catch (UnsupportedEncodingException e) {
-	logger.debug("Encoding faiure", e);
+      logger.debug("Encoding faiure", e);
     }
 
     if (auth.equals("OK")) {
