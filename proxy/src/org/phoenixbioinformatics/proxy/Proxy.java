@@ -340,6 +340,8 @@ public class Proxy extends HttpServlet {
     if (accessOutput != null) {
       auth = accessOutput.status;
       userIdentifier.append(accessOutput.userIdentifier);
+    } else {
+      logger.warn("API could not resolve access");
     }
 
     String redirectUri = "";
