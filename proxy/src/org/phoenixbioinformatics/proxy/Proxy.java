@@ -496,7 +496,8 @@ public class Proxy extends HttpServlet {
       public String handleResponse(final HttpResponse proxyResponse)
           throws ClientProtocolException, IOException {
         int statusCode = proxyResponse.getStatusLine().getStatusCode();
-        logger.debug("Proxy returned status " + statusCode);
+        logger.debug("Proxy returned status " + statusCode + " for URI "
+                     + proxyRequest.getCurrentUri());
 
         // printAllResponseHeaders(proxyResponse);
         handleLogoutHeader(servletResponse, proxyResponse);
