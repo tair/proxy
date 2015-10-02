@@ -79,7 +79,7 @@ public class ApiService extends AbstractApiService {
         partnerMap.put(entry.sourceUri, entry);
       }
     } catch (IOException e) {
-      logger.error("Get All Partner API Call Failure ", e);
+      logger.error("Get All Partner API Call error", e);
       return null;
     }
     
@@ -107,11 +107,9 @@ public class ApiService extends AbstractApiService {
     params.add(new BasicNameValuePair("ip", ip));
 
     try {
-      String content = callApi(urn, RequestFactory.HttpMethod.POST, "", params);
-      return;
+      callApi(urn, RequestFactory.HttpMethod.POST, "", params);
     } catch (IOException e) {
-      logger.debug("Session logging API Call Failure", e);
-      return;
+      logger.error("Page view logging API Call error", e);
     }
   }
 
