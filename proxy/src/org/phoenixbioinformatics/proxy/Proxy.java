@@ -346,31 +346,35 @@ public class Proxy extends HttpServlet {
     if (auth.equals(OK_CODE)) {
       // grant access
       authorized = true;
-      logger.debug("Party " + partyId + " authorized for " + fullUri
+      logger.debug("Party " + partyId + " authorized for free content " + fullUri
                    + " at partner " + partnerId);
     } else if (auth.equals("NeedSubscription")) {
+      logger.debug("Party " + partyId
+                   + " needs to subscribe to see paid content " + fullUri
+                   + " at partner " + partnerId);
       String meter = ApiService.checkMeteringLimit(remoteIp, partnerId);
       if (meter.equals(OK_CODE)) {
+        logger.debug("Allowed free access to content by metering");
         authorized = true;
         ApiService.incrementMeteringCount(remoteIp, partnerId);
       } else if (meter.equals(METER_WARNING_CODE)) {
+        logger.debug("Warned to subscribe by meter limit");
         authorized = false;
         redirectPath =
           UIURI + METER_WARNING_URI + partnerId + REDIRECT_PARAM + redirectUri;
         ApiService.incrementMeteringCount(remoteIp, partnerId);
       } else {
+        logger.debug("Blocked from paid content by meter block");
         authorized = false;
         redirectPath =
           UIURI + METER_BLOCKING_URI + partnerId + REDIRECT_PARAM + redirectUri;
       }
-      logger.debug("Party " + partyId + " needs a subscription for " + fullUri
-                   + " at partner " + partnerId);
     } else if (auth.equals(NEED_LOGIN_CODE)) {
+      logger.debug("Party " + partyId + " needs to login to access " + fullUri
+                   + " at partner " + partnerId);
       authorized = false;
       redirectPath =
         UIURI + LOGIN_URI + partnerId + REDIRECT_PARAM + redirectUri;
-      logger.debug("Party " + partyId + " needs to login to access " + fullUri
-                   + " at partner " + partnerId);
     }
 
     if (!authorized) {
