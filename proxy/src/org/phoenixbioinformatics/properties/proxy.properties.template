@@ -8,6 +8,6 @@ mail.password=${aws.mail.password}
 mail.from=${proxy.mail.from}
 metering.email.to=${proxy.mail.to}
 ui.uri=https\://${proxy.ui.uri}
-ui.meter.warning=/#/contentaccess/login?partnerId=
-ui.meter.blocking=/#/contentaccess/metering?partnerId=
-ui.login=/#/contentaccess/metering?exceed=true&partnerId=
+ui.meter.warning=/#/contentaccess/metering?partnerId=
+ui.meter.blocking=/#/contentaccess/metering?exceed=true&partnerId=
+ui.login=/#/contentaccess/login?partnerId=
