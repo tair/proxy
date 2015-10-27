@@ -297,19 +297,17 @@ public class Proxy extends HttpServlet {
    *          partner's server is denied.
    * @return Boolean indicates if client has access to partner' server.
    */
-  private Boolean authorizeProxyRequest(String requestPath, String loginKey,
-                                        String partnerId, String partyId,
-                                        String fullUri, String remoteIp,
-                                        HttpServletResponse servletResponse,
-                                        StringBuilder userIdentifier)
-      throws IOException {
+  private Boolean authorizeProxyRequest(String requestPath, String loginKey, String partnerId,
+                                        String partyId, String fullUri, String remoteIp,
+                                        HttpServletResponse servletResponse, StringBuilder userIdentifier) throws IOException{
 
-    // Skip authorization check for common file types.
-    // TODO: configure from API, perhaps on a partner basis
-    if (requestPath.endsWith(".jpg") || requestPath.endsWith(".png")
-        || requestPath.endsWith(".css") || requestPath.endsWith("js")
-        || requestPath.endsWith(".gif") || requestPath.endsWith(".wsgi")
-        || requestPath.endsWith(".ico")) {
+    // Skip authorization check and metering incrementation for following static file
+    // types. 
+    // TODO: This is just a temporary solution similar to how Proxy 1.0 skipping checks 
+    // for these file types. Need a permanent solution for this -SC
+    if (requestPath.endsWith(".jpg") || requestPath.endsWith(".png") || requestPath.endsWith(".css") ||
+        requestPath.endsWith(".js") || requestPath.endsWith(".gif") || requestPath.endsWith(".wsgi") ||
+	requestPath.endsWith(".ico")) {
       return true;
     }
 
