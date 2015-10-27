@@ -16,6 +16,8 @@ import java.util.List;
 
 import org.apache.http.NameValuePair;
 import org.apache.http.message.BasicNameValuePair;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.phoenixbioinformatics.http.RequestFactory;
 
 import com.google.gson.Gson;
@@ -26,6 +28,8 @@ import com.google.gson.reflect.TypeToken;
  * Handles all requests to API services
  */
 public class ApiService extends AbstractApiService {
+  /** logger for this class */
+  private static final Logger logger = LogManager.getLogger(ApiService.class);
   private static final String INCREMENT_METERING_COUNT_ERROR = "Increment Metering Count API Call Failure";
   private static final String METERING_LIMIT_ERROR =
     "Check Metering Limit API Call Failure";

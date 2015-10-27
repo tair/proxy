@@ -11,3 +11,5 @@ ui.uri=https\://${proxy.ui.uri}
 ui.meter.warning=/#/contentaccess/metering?partnerId=
 ui.meter.blocking=/#/contentaccess/metering?exceed=true&partnerId=
 ui.login=/#/contentaccess/login?partnerId=
+api.uri=https\://${proxy.api.uri}
+api.key=${proxy.api.key}
