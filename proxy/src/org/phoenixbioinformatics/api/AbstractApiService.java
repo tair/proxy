@@ -1,23 +1,21 @@
 package org.phoenixbioinformatics.api;
 
+import java.io.IOException;
+import java.util.List;
+
+import org.apache.http.HttpStatus;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
-import org.apache.http.client.methods.HttpUriRequest;
+import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
-import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.LogManager;
-import java.io.IOException;
-import com.google.gson.Gson;
-import org.apache.http.HttpStatus;
-import org.phoenixbioinformatics.http.RequestFactory;
-
-import org.apache.http.HttpEntity;
 import org.apache.http.util.EntityUtils;
-import java.util.List;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.phoenixbioinformatics.http.RequestFactory;
 
 /**
  * An abstract superclass with shared implementation methods for the individual

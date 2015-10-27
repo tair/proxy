@@ -24,7 +24,6 @@ import org.apache.http.entity.InputStreamEntity;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.phoenixbioinformatics.properties.ProxyProperties;
 
 
 /**
@@ -40,10 +39,10 @@ public abstract class AbstractRequest implements IRequest {
     LogManager.getLogger(AbstractRequest.class);
 
   /** proxy server property name */
-  //private static final String PROXY_TARGET_PROPERTY = "proxy.target";
+  // private static final String PROXY_TARGET_PROPERTY = "proxy.target";
   /** the string corresponding to the target host */
-  //protected static String TARGET =
-  //  ProxyProperties.getProperty(PROXY_TARGET_PROPERTY);
+  // protected static String TARGET =
+  // ProxyProperties.getProperty(PROXY_TARGET_PROPERTY);
 
   /** query-encoding characters */
   private static final BitSet asciiQueryChars;
@@ -72,9 +71,10 @@ public abstract class AbstractRequest implements IRequest {
   }
 
   @Override
-    abstract public HttpUriRequest getUriRequest(HttpServletRequest servletRequest, String partnerHostUri)
-    throws IOException;
-  
+  abstract public HttpUriRequest getUriRequest(HttpServletRequest servletRequest,
+                                               String partnerHostUri)
+      throws IOException;
+
   /**
    * Encodes characters in the query or fragment part of the URI.
    * 
