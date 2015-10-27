@@ -2,3 +2,7 @@
 .project
 .settings/
 .tern-project
+
+/dist
+/build.properties
+
