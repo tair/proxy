@@ -3,6 +3,5 @@
 .settings/
 .tern-project
 
-/dist
-/build.properties
+build.properties
 
