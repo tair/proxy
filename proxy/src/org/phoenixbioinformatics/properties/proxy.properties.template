@@ -1,0 +1,13 @@
+mail.smtp.starttls.enable=true
+mail.transport.protocol=smtp
+mail.smtp.host=${aws.smtp.host}
+mail.smtp.port=25
+mail.smtp.auth=true
+mail.username=${aws.mail.username}
+mail.password=${aws.mail.password}
+mail.from=${proxy.mail.from}
+metering.email.to=${proxy.mail.to}
+ui.uri=https\://${proxy.ui.uri}
+ui.meter.warning=/#/contentaccess/login?partnerId=
+ui.meter.blocking=/#/contentaccess/metering?partnerId=
+ui.login=/#/contentaccess/metering?exceed=true&partnerId=
