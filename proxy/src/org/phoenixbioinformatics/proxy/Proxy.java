@@ -81,9 +81,9 @@ public class Proxy extends HttpServlet {
   /** name of the tomcat session cookie */
   private static final String TOMCAT_SESSION_COOKIE = "JSESSIONID";
   /** name of the Phoenix party id cookie */
-  private static final String PARTY_ID_COOKIE = "partyId";
+  private static final String CREDENTIAL_ID_COOKIE = "credentialId";
   /** name of the Phoenix secret key cookie */
-  private static final String SECRET_KEY_COOKIE = "secret_key";
+  private static final String SECRET_KEY_COOKIE = "secretKey";
   /** IPv4 localhost address */
   private static final String LOCALHOST_V4 = "127.0.0.1";
   /** IPv6 localhost address */
@@ -207,7 +207,7 @@ public class Proxy extends HttpServlet {
           String cookieName = c.getName();
           if (cookieName.equals(SECRET_KEY_COOKIE)) {
             loginKey = c.getValue();
-          } else if (cookieName.equals(PARTY_ID_COOKIE)) {
+          } else if (cookieName.equals(CREDENTIAL_ID_COOKIE)) {
             partyId = c.getValue();
           } else if (cookieName.equals(TOMCAT_SESSION_COOKIE)) {
             // Tomcat/Apache session support
@@ -642,7 +642,7 @@ public class Proxy extends HttpServlet {
   }
 
   /**
-   * Create partyId and secret_key cookies and add them to the response,
+   * Create credentialId and secretKey cookies and add them to the response,
    * and set the headers for access control
    *
    * @param servletRequest the HTTP request
@@ -650,16 +650,16 @@ public class Proxy extends HttpServlet {
    */
   private void handleSetCookieRequest(HttpServletRequest servletRequest,
                                        HttpServletResponse servletResponse) {
-    Cookie partyIdCookie =
-      new Cookie(PARTY_ID_COOKIE, servletRequest.getParameter(PARTY_ID_COOKIE));
-    Cookie secret_keyCookie =
+    Cookie credentialIdCookie =
+      new Cookie(CREDENTIAL_ID_COOKIE, servletRequest.getParameter(CREDENTIAL_ID_COOKIE));
+    Cookie keyCookie =
       new Cookie(SECRET_KEY_COOKIE, servletRequest.getParameter(SECRET_KEY_COOKIE));
-    servletResponse.addCookie(partyIdCookie);
-    servletResponse.addCookie(secret_keyCookie);
+    servletResponse.addCookie(credentialIdCookie);
+    servletResponse.addCookie(keyCookie);
     servletResponse.setHeader("Access-Control-Allow-Origin", UIURI);
     servletResponse.setHeader("Access-Control-Allow-Credentials", "true");
-    logger.debug("Setting Cookies for partyId=" + partyIdCookie.getValue()
-                 + " and secret_key=" + secret_keyCookie.getValue());
+    logger.debug("Setting Cookies for credentialId=" + credentialIdCookie.getValue()
+                 + " and secretKey=" + keyCookie.getValue());
   }
 
   /**
@@ -820,7 +820,7 @@ public class Proxy extends HttpServlet {
     Header[] headers = proxyResponse.getAllHeaders();
     for (int i = 0; i < headers.length; i++) {
       if (headers[i].getName().equals("Phoenix-Proxy-Logout")) {
-        Cookie partyCookie = new Cookie(PARTY_ID_COOKIE, null);
+        Cookie partyCookie = new Cookie(CREDENTIAL_ID_COOKIE, null);
         partyCookie.setPath("/");
         Cookie secret_keyCookie = new Cookie(SECRET_KEY_COOKIE, null);
         secret_keyCookie.setPath("/");

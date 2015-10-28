@@ -187,7 +187,7 @@ public class ApiService extends AbstractApiService {
    * 
    * @param path resource path that the client tries to access. (e.g:
    *          "/news/2015/07/01")
-   * @param partyId client's party ID if resource that the client tries to
+   * @param credentialId client's party ID if resource that the client tries to
    *          access is paid content
    * @param loginKey client's login key, if login is required to access the
    *          resource
@@ -197,7 +197,7 @@ public class ApiService extends AbstractApiService {
    *         NeedLogin)
    */
   public static AccessOutput checkAccess(String path, String loginKey,
-                                         String partnerId, String partyId,
+                                         String partnerId, String credentialId,
                                          String remoteIp) {
     try {
       path = URLEncoder.encode(path, "UTF-8");
@@ -210,8 +210,8 @@ public class ApiService extends AbstractApiService {
           + "&ip=" + remoteIp;
     try {
       String content =
-        callApi(urn, RequestFactory.HttpMethod.GET, "secret_key=" + loginKey
-                                                    + ";partyId=" + partyId
+        callApi(urn, RequestFactory.HttpMethod.GET, "secretKey=" + loginKey
+                                                    + ";credentialId=" + credentialId
                                                     + ";");
       Gson gson = new Gson();
       return gson.fromJson(content, AccessOutput.class);
