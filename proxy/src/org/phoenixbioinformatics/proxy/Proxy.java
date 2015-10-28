@@ -90,7 +90,7 @@ public class Proxy extends HttpServlet {
   private static final String LOCALHOST_V6 = "0:0:0:0:0:0:0:1";
   /** code for UTF8 */
   private static final String UTF_8 = "UTF-8";
-  
+
   // API codes
   private static final String NEED_LOGIN_CODE = "NeedLogin";
   private static final String METER_WARNING_CODE = "Warning";
@@ -98,13 +98,16 @@ public class Proxy extends HttpServlet {
   private static final String NOT_OK_CODE = "NOT OK";
 
   /** URI for UI server */
-  private static final String UIURI = ProxyProperties.getProperty("ui.uri");
+  private static final String UI_URI = ProxyProperties.getProperty("ui.uri");
   /** UI URI for login page */
-  private static final String LOGIN_URI = ProxyProperties.getProperty("ui.login");
+  private static final String LOGIN_URI =
+    ProxyProperties.getProperty("ui.login");
   /** UI URI for meter warning page */
-  private static final String METER_WARNING_URI = ProxyProperties.getProperty("ui.meter.warning");
+  private static final String METER_WARNING_URI =
+    ProxyProperties.getProperty("ui.meter.warning");
   /** UI URI for meter blocking page */
-  private static final String METER_BLOCKING_URI = ProxyProperties.getProperty("ui.meter.blocking");
+  private static final String METER_BLOCKING_URI =
+    ProxyProperties.getProperty("ui.meter.blocking");
 
   /** HashMap that contains partner's information, with sourceUri as the key */
   protected Map<String, ApiService.PartnerOutput> partnerMap =
@@ -112,12 +115,15 @@ public class Proxy extends HttpServlet {
 
   // warning messages
   private static final String OUTPUT_STREAM_IO_WARN =
-      "IO Error writing entity to output stream";
-  private static final String LOCALHOST_REDIRECT_WARN = "Partner response redirected to localhost, redirecting to ";
-  private static final String NO_AUTH_CODE_WARN = "checkAccess API returned no authorization code";
+    "IO Error writing entity to output stream";
+  private static final String LOCALHOST_REDIRECT_WARN =
+    "Partner response redirected to localhost, redirecting to ";
+  private static final String NO_AUTH_CODE_WARN =
+    "checkAccess API returned no authorization code";
 
   // error messages
-  private static final String ENCODING_FAIURE_ERROR = "Encoding faiure for URI ";
+  private static final String ENCODING_FAIURE_ERROR =
+    "Encoding faiure for URI ";
   private static final String NO_PARTNER_ERROR =
     "No partner information for URI ";
   private static final String URI_SYNTAX_ERROR = "URI syntax error";
@@ -168,98 +174,99 @@ public class Proxy extends HttpServlet {
     String action = servletRequest.getParameter("action");
     if (servletRequest.getMethod().equals("OPTIONS")) {
       handleOptionsRequest(servletResponse);
-      return;
     } else if (action != null && action.equals("setCookies")) {
+      logger.debug("Setting cookies");
       handleSetCookieRequest(servletRequest, servletResponse);
-      return;
-    }
+    } else {
 
-    // Get the complete URI including original domain and query string.
-    String uri = servletRequest.getRequestURI().toString();
-    logger.debug("Incoming URI: " + uri);
-    try {
-      String protocol = getProtocol(servletRequest);
-      String queryString = servletRequest.getQueryString();
-      String requestPath = servletRequest.getPathInfo();
-      if (queryString != null) {
-        requestPath = requestPath + "?" + queryString;
-      }
-      String requestUri = getHostUrl(servletRequest);
-      String fullRequestUri = protocol + "://" + requestUri + requestPath;
+      // Get the complete URI including original domain and query string.
+      String uri = servletRequest.getRequestURI().toString();
+      logger.debug("Incoming URI: " + uri);
+      try {
+        String protocol = getProtocol(servletRequest);
+        String queryString = servletRequest.getQueryString();
+        String requestPath = servletRequest.getPathInfo();
+        if (queryString != null) {
+          requestPath = requestPath + "?" + queryString;
+        }
+        String requestUri = getHostUrl(servletRequest);
+        String fullRequestUri = protocol + "://" + requestUri + requestPath;
 
-      ApiService.PartnerOutput partnerInfo = partnerMap.get(requestUri);
-      if (partnerInfo == null) {
-        logger.error(NO_PARTNER_ERROR + requestUri);
-        logPartnerMap();
-        throw new InvalidPartnerException(NO_PARTNER_ERROR + requestUri);
-      }
-      String partnerId = partnerInfo.partnerId;
-      String targetUri = partnerInfo.targetUri;
-      String remoteIp = getIpAddress(servletRequest);
+        ApiService.PartnerOutput partnerInfo = partnerMap.get(requestUri);
+        if (partnerInfo == null) {
+          logger.error(NO_PARTNER_ERROR + requestUri);
+          logPartnerMap();
+          throw new InvalidPartnerException(NO_PARTNER_ERROR + requestUri);
+        }
+        String partnerId = partnerInfo.partnerId;
+        String targetUri = partnerInfo.targetUri;
+        String remoteIp = getIpAddress(servletRequest);
 
-      // populate loginKey and partyId from cookie if available
-      String partyId = null;
-      String loginKey = null;
-      String sessionId = null;
-      Cookie cookies[] = servletRequest.getCookies();
-      if (cookies != null) {
-        for (Cookie c : Arrays.asList(cookies)) {
-          String cookieName = c.getName();
-          if (cookieName.equals(SECRET_KEY_COOKIE)) {
-            loginKey = c.getValue();
-          } else if (cookieName.equals(CREDENTIAL_ID_COOKIE)) {
-            partyId = c.getValue();
-          } else if (cookieName.equals(TOMCAT_SESSION_COOKIE)) {
-            // Tomcat/Apache session support
-            sessionId = c.getValue();
-          } else if (cookieName.equals(PTOOLS_SESSION_COOKIE)) {
-            // PW-71 cdiff integration--ptools sessions support
-            sessionId = c.getValue();
+        // populate loginKey and partyId from cookie if available
+        String partyId = null;
+        String loginKey = null;
+        String sessionId = null;
+        Cookie cookies[] = servletRequest.getCookies();
+        if (cookies != null) {
+          for (Cookie c : Arrays.asList(cookies)) {
+            String cookieName = c.getName();
+            if (cookieName.equals(SECRET_KEY_COOKIE)) {
+              loginKey = c.getValue();
+            } else if (cookieName.equals(CREDENTIAL_ID_COOKIE)) {
+              partyId = c.getValue();
+            } else if (cookieName.equals(TOMCAT_SESSION_COOKIE)) {
+              // Tomcat/Apache session support
+              sessionId = c.getValue();
+            } else if (cookieName.equals(PTOOLS_SESSION_COOKIE)) {
+              // PW-71 cdiff integration--ptools sessions support
+              sessionId = c.getValue();
+            }
           }
         }
+
+        ApiService.createPageView(remoteIp, fullRequestUri, partyId, sessionId);
+        StringBuilder userIdentifier = new StringBuilder();
+
+        // Determine whether to proxy the request.
+        if (authorizeProxyRequest(requestPath,
+                                  loginKey,
+                                  partnerId,
+                                  partyId,
+                                  fullRequestUri,
+                                  remoteIp,
+                                  servletResponse,
+                                  userIdentifier)) {
+
+          // Initialize the proxy request.
+          // TODO null for target URI object, check whether and how used in
+          // Proxy
+          // Request
+          ProxyRequest proxyRequest =
+            new ProxyRequest(null, servletRequest.getMethod(), uri, remoteIp);
+
+          HttpUriRequest requestToProxy =
+            RequestFactory.getUriRequest(servletRequest, targetUri);
+
+          logger.debug("Proxying request from " + proxyRequest.getIp() + "-->"
+                       + requestToProxy.getRequestLine().getUri() + "\"");
+
+          configureProxyRequest(servletRequest,
+                                proxyRequest,
+                                requestToProxy,
+                                userIdentifier.toString());
+          if (proxyRequest != null) {
+            // request approved, proxy to the target server
+            proxy(servletRequest.getSession(),
+                  servletResponse,
+                  proxyRequest,
+                  protocol + "://" + requestUri,
+                  userIdentifier.toString());
+          }
+        } // end of if(authorizeProxyRequest()){}
+      } catch (ServletException | UnsupportedHttpMethodException | IOException e) {
+        // Log checked exceptions here, then ignore.
+        logger.error(REQUEST_HANDLING_ERROR, e);
       }
-
-      ApiService.createPageView(remoteIp, fullRequestUri, partyId, sessionId);
-      StringBuilder userIdentifier = new StringBuilder();
-
-      // Determine whether to proxy the request.
-      if (authorizeProxyRequest(requestPath,
-                                loginKey,
-                                partnerId,
-                                partyId,
-                                fullRequestUri,
-                                remoteIp,
-                                servletResponse,
-                                userIdentifier)) {
-
-        // Initialize the proxy request.
-        // TODO null for target URI object, check whether and how used in Proxy
-        // Request
-        ProxyRequest proxyRequest =
-          new ProxyRequest(null, servletRequest.getMethod(), uri, remoteIp);
-
-        HttpUriRequest requestToProxy =
-          RequestFactory.getUriRequest(servletRequest, targetUri);
-
-        logger.debug("Proxying request from " + proxyRequest.getIp() + "-->"
-                     + requestToProxy.getRequestLine().getUri() + "\"");
-
-        configureProxyRequest(servletRequest,
-                              proxyRequest,
-                              requestToProxy,
-                              userIdentifier.toString());
-        if (proxyRequest != null) {
-          // request approved, proxy to the target server
-          proxy(servletRequest.getSession(),
-                servletResponse,
-                proxyRequest,
-                protocol + "://" + requestUri,
-                userIdentifier.toString());
-        }
-      } // end of if(authorizeProxyRequest()){}
-    } catch (ServletException | UnsupportedHttpMethodException | IOException e) {
-      // Log checked exceptions here, then ignore.
-      logger.error(REQUEST_HANDLING_ERROR, e);
     }
   }
 
@@ -297,17 +304,23 @@ public class Proxy extends HttpServlet {
    *          partner's server is denied.
    * @return Boolean indicates if client has access to partner' server.
    */
-  private Boolean authorizeProxyRequest(String requestPath, String loginKey, String partnerId,
-                                        String partyId, String fullUri, String remoteIp,
-                                        HttpServletResponse servletResponse, StringBuilder userIdentifier) throws IOException{
+  private Boolean authorizeProxyRequest(String requestPath, String loginKey,
+                                        String partnerId, String partyId,
+                                        String fullUri, String remoteIp,
+                                        HttpServletResponse servletResponse,
+                                        StringBuilder userIdentifier)
+      throws IOException {
 
-    // Skip authorization check and metering incrementation for following static file
-    // types. 
-    // TODO: This is just a temporary solution similar to how Proxy 1.0 skipping checks 
+    // Skip authorization check and metering incrementation for following static
+    // file
+    // types.
+    // TODO: This is just a temporary solution similar to how Proxy 1.0 skipping
+    // checks
     // for these file types. Need a permanent solution for this -SC
-    if (requestPath.endsWith(".jpg") || requestPath.endsWith(".png") || requestPath.endsWith(".css") ||
-        requestPath.endsWith(".js") || requestPath.endsWith(".gif") || requestPath.endsWith(".wsgi") ||
-	requestPath.endsWith(".ico")) {
+    if (requestPath.endsWith(".jpg") || requestPath.endsWith(".png")
+        || requestPath.endsWith(".css") || requestPath.endsWith(".js")
+        || requestPath.endsWith(".gif") || requestPath.endsWith(".wsgi")
+        || requestPath.endsWith(".ico")) {
       return true;
     }
 
@@ -344,8 +357,8 @@ public class Proxy extends HttpServlet {
     if (auth.equals(OK_CODE)) {
       // grant access
       authorized = true;
-      logger.debug("Party " + partyId + " authorized for free content " + fullUri
-                   + " at partner " + partnerId);
+      logger.debug("Party " + partyId + " authorized for free content "
+                   + fullUri + " at partner " + partnerId);
     } else if (auth.equals("NeedSubscription")) {
       logger.debug("Party " + partyId
                    + " needs to subscribe to see paid content " + fullUri
@@ -359,20 +372,21 @@ public class Proxy extends HttpServlet {
         logger.debug("Warned to subscribe by meter limit");
         authorized = false;
         redirectPath =
-          UIURI + METER_WARNING_URI + partnerId + REDIRECT_PARAM + redirectUri;
+          UI_URI + METER_WARNING_URI + partnerId + REDIRECT_PARAM + redirectUri;
         ApiService.incrementMeteringCount(remoteIp, partnerId);
       } else {
         logger.debug("Blocked from paid content by meter block");
         authorized = false;
         redirectPath =
-          UIURI + METER_BLOCKING_URI + partnerId + REDIRECT_PARAM + redirectUri;
+          UI_URI + METER_BLOCKING_URI + partnerId + REDIRECT_PARAM
+              + redirectUri;
       }
     } else if (auth.equals(NEED_LOGIN_CODE)) {
       logger.debug("Party " + partyId + " needs to login to access " + fullUri
                    + " at partner " + partnerId);
       authorized = false;
       redirectPath =
-        UIURI + LOGIN_URI + partnerId + REDIRECT_PARAM + redirectUri;
+        UI_URI + LOGIN_URI + partnerId + REDIRECT_PARAM + redirectUri;
     }
 
     if (!authorized) {
@@ -411,12 +425,12 @@ public class Proxy extends HttpServlet {
     // Get cookie store from session if it's there.
     CookieStore cookieStore =
       (CookieStore)session.getAttribute(COOKIES_ATTRIBUTE);
-    
+
     // Otherwise, create a basic store.
     if (cookieStore == null) {
       cookieStore = new BasicCookieStore();
     }
-    
+
     org.apache.http.impl.cookie.BasicClientCookie cookie =
       new org.apache.http.impl.cookie.BasicClientCookie(USER_IDENTIFIER_COOKIE,
                                                         userIdentifier);
@@ -461,7 +475,7 @@ public class Proxy extends HttpServlet {
     // Set up the request headers based on the current request.
     proxyRequest.copyRequestHeaders(servletRequest);
     proxyRequest.setXForwardedForHeader(servletRequest);
-    
+
     // Set up the partner user identifier cookie.
     proxyRequest.setUserIdentifier(userIdentifier);
   }
@@ -642,24 +656,27 @@ public class Proxy extends HttpServlet {
   }
 
   /**
-   * Create credentialId and secretKey cookies and add them to the response,
-   * and set the headers for access control
+   * Create credentialId and secretKey cookies and add them to the response, and
+   * set the headers for access control
    *
    * @param servletRequest the HTTP request
    * @param servletResponse the HTTP response
    */
   private void handleSetCookieRequest(HttpServletRequest servletRequest,
-                                       HttpServletResponse servletResponse) {
+                                      HttpServletResponse servletResponse) {
     Cookie credentialIdCookie =
-      new Cookie(CREDENTIAL_ID_COOKIE, servletRequest.getParameter(CREDENTIAL_ID_COOKIE));
+      new Cookie(CREDENTIAL_ID_COOKIE,
+                 servletRequest.getParameter(CREDENTIAL_ID_COOKIE));
     Cookie keyCookie =
-      new Cookie(SECRET_KEY_COOKIE, servletRequest.getParameter(SECRET_KEY_COOKIE));
+      new Cookie(SECRET_KEY_COOKIE,
+                 servletRequest.getParameter(SECRET_KEY_COOKIE));
     servletResponse.addCookie(credentialIdCookie);
     servletResponse.addCookie(keyCookie);
-    servletResponse.setHeader("Access-Control-Allow-Origin", UIURI);
+    servletResponse.setHeader("Access-Control-Allow-Origin", UI_URI);
     servletResponse.setHeader("Access-Control-Allow-Credentials", "true");
-    logger.debug("Setting Cookies for credentialId=" + credentialIdCookie.getValue()
-                 + " and secretKey=" + keyCookie.getValue());
+    logger.debug("Setting Cookies for credentialId="
+                 + credentialIdCookie.getValue() + " and secretKey="
+                 + keyCookie.getValue());
   }
 
   /**
@@ -668,7 +685,7 @@ public class Proxy extends HttpServlet {
    * @param servletResponse the HTTP response
    */
   private void handleOptionsRequest(HttpServletResponse servletResponse) {
-    servletResponse.setHeader("Access-Control-Allow-Origin", UIURI);
+    servletResponse.setHeader("Access-Control-Allow-Origin", UI_URI);
     servletResponse.setHeader("Access-Control-Allow-Credentials", "true");
     servletResponse.setHeader("Access-Control-Allow-Headers",
                               "x-requested-with, content-type, accept, origin, authorization, x-csrftoken");
