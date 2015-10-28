@@ -172,13 +172,15 @@ public class Proxy extends HttpServlet {
 
     // skips proxy if the request is a simple OPTIONS or set cookie request
     String action = servletRequest.getParameter("action");
+    logger.debug("Action: " + action);
     if (servletRequest.getMethod().equals("OPTIONS")) {
+      logger.debug("Getting options...");
       handleOptionsRequest(servletResponse);
     } else if (action != null && action.equals("setCookies")) {
-      logger.debug("Setting cookies");
+      logger.debug("Setting cookies...");
       handleSetCookieRequest(servletRequest, servletResponse);
     } else {
-
+      logger.debug("Proxying request...");
       // Get the complete URI including original domain and query string.
       String uri = servletRequest.getRequestURI().toString();
       logger.debug("Incoming URI: " + uri);
