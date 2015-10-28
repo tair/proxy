@@ -180,7 +180,6 @@ public class Proxy extends HttpServlet {
       logger.debug("Setting cookies...");
       handleSetCookieRequest(servletRequest, servletResponse);
     } else {
-      logger.debug("Proxying request...");
       // Get the complete URI including original domain and query string.
       String uri = servletRequest.getRequestURI().toString();
       logger.debug("Incoming URI: " + uri);
@@ -212,6 +211,7 @@ public class Proxy extends HttpServlet {
         if (cookies != null) {
           for (Cookie c : Arrays.asList(cookies)) {
             String cookieName = c.getName();
+            logger.debug("Processing cookie " + cookieName);
             if (cookieName.equals(SECRET_KEY_COOKIE)) {
               loginKey = c.getValue();
             } else if (cookieName.equals(CREDENTIAL_ID_COOKIE)) {
