@@ -110,22 +110,17 @@
 	</category>
 	
 	<!-- Proxy Servlet logging -->
-	<category name="org.phoenixbioinformatics.proxy.controller">
+	<category name="org.phoenixbioinformatics.proxy">
 		<priority value="DEBUG" />
 	</category>
 	
-	<category name="org.phoenixbioinformatics.proxy.model">
+	<category name="org.phoenixbioinformatics.api">
 		<priority value="DEBUG" />
 	</category>
 	
-    <category name="org.phoenixbioinformatics.proxy.cache">
+    <category name="org.phoenixbioinformatics.proxy.http">
         <priority value="DEBUG" />
     </category>
-    
-    <category name="org.phoenixbioinformatics.api">
-        <priority value="DEBUG" />
-    </category>
-    
   <Loggers>
     <Root level="debug">
       <AppenderRef ref="Console" level="debug"/>
