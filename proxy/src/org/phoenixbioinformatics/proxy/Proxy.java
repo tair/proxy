@@ -859,9 +859,9 @@ public class Proxy extends HttpServlet {
         
         logger.debug("Possible change of password: " + header.getValue());
           
-        //Cookie secretKeyCookie = new Cookie(SECRET_KEY_COOKIE, header.getValue());
-        //secretKeyCookie.setPath("/");
-        //clientResponse.addCookie(secretKeyCookie);
+        Cookie secretKeyCookie = new Cookie(SECRET_KEY_COOKIE, header.getValue());
+        secretKeyCookie.setPath("/");
+        clientResponse.addCookie(secretKeyCookie);
 
       }
       
