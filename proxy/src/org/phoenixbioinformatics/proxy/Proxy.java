@@ -857,9 +857,9 @@ public class Proxy extends HttpServlet {
       
       if (header.getName().equals("Phoenix-Proxy-PasswordUpdate") && header.getValue() != "") {
         
-        Cookie secretKeyCookie = new Cookie(SECRET_KEY_COOKIE, header.getValue());
-        secretKeyCookie.setPath("/");
-        clientResponse.addCookie(secretKeyCookie);
+        //Cookie secretKeyCookie = new Cookie(SECRET_KEY_COOKIE, header.getValue());
+        //secretKeyCookie.setPath("/");
+        //clientResponse.addCookie(secretKeyCookie);
 
       }
       
