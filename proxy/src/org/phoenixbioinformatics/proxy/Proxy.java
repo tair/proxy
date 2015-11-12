@@ -665,9 +665,11 @@ public class Proxy extends HttpServlet {
    */
   private void handleSetCookieRequest(HttpServletRequest servletRequest, HttpServletResponse servletResponse) {
     Cookie credentialIdCookie = new Cookie(CREDENTIAL_ID_COOKIE, servletRequest.getParameter(CREDENTIAL_ID_COOKIE));
-    Cookie keyCookie          = new Cookie(SECRET_KEY_COOKIE   , servletRequest.getParameter(SECRET_KEY_COOKIE));
+    credentialIdCookie.setPath("/");
     servletResponse.addCookie(credentialIdCookie);
-    servletResponse.addCookie(keyCookie);
+    Cookie secretKeyCookie = new Cookie(SECRET_KEY_COOKIE, servletRequest.getParameter(SECRET_KEY_COOKIE));
+    secretKeyCookie.setPath("/");
+    servletResponse.addCookie(secretKeyCookie);
     servletResponse.setHeader("Access-Control-Allow-Origin", UI_URI);
     servletResponse.setHeader("Access-Control-Allow-Credentials", "true");
     logger.debug("Setting Cookies for credentialId="
@@ -833,16 +835,19 @@ public class Proxy extends HttpServlet {
     Header[] headers = proxyResponse.getAllHeaders();
     for (int i = 0; i < headers.length; i++) {
       if (headers[i].getName().equals("Phoenix-Proxy-Logout")) {
-        Cookie credentialIdCookie = new Cookie(CREDENTIAL_ID_COOKIE, null); credentialIdCookie.setMaxAge(0);
-        //partyCookie.setPath("/");
-        Cookie secretKeyCookie = new Cookie(SECRET_KEY_COOKIE, null); secretKeyCookie.setMaxAge(0); 
-        //secret_keyCookie.setPath("/");
+        Cookie credentialIdCookie = new Cookie(CREDENTIAL_ID_COOKIE, null); 
+        credentialIdCookie.setPath("/");
+        credentialIdCookie.setMaxAge(0);
         clientResponse.addCookie(credentialIdCookie);
+        Cookie secretKeyCookie = new Cookie(SECRET_KEY_COOKIE, null);  
+        secretKeyCookie.setPath("/");
+        secretKeyCookie.setMaxAge(0);
         clientResponse.addCookie(secretKeyCookie);
       }
       if (headers[i].getName().equals("Phoenix-Proxy-PasswordUpdate")) {
         if(headers[i].getValue() != "") {
           Cookie secretKeyCookie = new Cookie(SECRET_KEY_COOKIE, headers[i].getValue());
+          secretKeyCookie.setPath("/");
           clientResponse.addCookie(secretKeyCookie);
         }
       }
