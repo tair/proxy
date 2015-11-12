@@ -674,7 +674,7 @@ public class Proxy extends HttpServlet {
     servletResponse.setHeader("Access-Control-Allow-Credentials", "true");
     logger.debug("Setting Cookies for credentialId="
                  + credentialIdCookie.getValue() + " and secretKey="
-                 + keyCookie.getValue());
+                 + secretKeyCookie.getValue());
   }
 
   /**
