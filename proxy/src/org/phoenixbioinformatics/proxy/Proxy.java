@@ -664,17 +664,20 @@ public class Proxy extends HttpServlet {
    * @param servletResponse the HTTP response
    */
   private void handleSetCookieRequest(HttpServletRequest servletRequest, HttpServletResponse servletResponse) {
+      
     Cookie credentialIdCookie = new Cookie(CREDENTIAL_ID_COOKIE, servletRequest.getParameter(CREDENTIAL_ID_COOKIE));
     credentialIdCookie.setPath("/");
     servletResponse.addCookie(credentialIdCookie);
+    
     Cookie secretKeyCookie = new Cookie(SECRET_KEY_COOKIE, servletRequest.getParameter(SECRET_KEY_COOKIE));
     secretKeyCookie.setPath("/");
     servletResponse.addCookie(secretKeyCookie);
+    
+    logger.debug("Setting cookies: credentialId = " + credentialIdCookie.getValue() + "; secretKey = " + secretKeyCookie.getValue());
+    
     servletResponse.setHeader("Access-Control-Allow-Origin", UI_URI);
     servletResponse.setHeader("Access-Control-Allow-Credentials", "true");
-    logger.debug("Setting Cookies for credentialId="
-                 + credentialIdCookie.getValue() + " and secretKey="
-                 + secretKeyCookie.getValue());
+    
   }
 
   /**
@@ -833,24 +836,33 @@ public class Proxy extends HttpServlet {
     // printAllResponseHeaders(proxyResponse);
 
     Header[] headers = proxyResponse.getAllHeaders();
+    
     for (int i = 0; i < headers.length; i++) {
-      if (headers[i].getName().equals("Phoenix-Proxy-Logout")) {
+
+      Header header = headers[i];
+      
+      if (header.getName().equals("Phoenix-Proxy-Logout")) {
+        
         Cookie credentialIdCookie = new Cookie(CREDENTIAL_ID_COOKIE, null); 
         credentialIdCookie.setPath("/");
         credentialIdCookie.setMaxAge(0);
         clientResponse.addCookie(credentialIdCookie);
+        
         Cookie secretKeyCookie = new Cookie(SECRET_KEY_COOKIE, null);  
         secretKeyCookie.setPath("/");
         secretKeyCookie.setMaxAge(0);
         clientResponse.addCookie(secretKeyCookie);
+
       }
-      if (headers[i].getName().equals("Phoenix-Proxy-PasswordUpdate")) {
-        if(headers[i].getValue() != "") {
-          Cookie secretKeyCookie = new Cookie(SECRET_KEY_COOKIE, headers[i].getValue());
-          secretKeyCookie.setPath("/");
-          clientResponse.addCookie(secretKeyCookie);
-        }
+      
+      if (header.getName().equals("Phoenix-Proxy-PasswordUpdate") && header.getValue() != "") {
+        
+        Cookie secretKeyCookie = new Cookie(SECRET_KEY_COOKIE, header.getValue());
+        secretKeyCookie.setPath("/");
+        clientResponse.addCookie(secretKeyCookie);
+
       }
+      
     }
   }
 }
