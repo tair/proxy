@@ -833,7 +833,7 @@ public class Proxy extends HttpServlet {
     Header[] headers = proxyResponse.getAllHeaders();
     for (int i = 0; i < headers.length; i++) {
       if (headers[i].getName().equals("Phoenix-Proxy-Logout")) {
-        Cookie credentialIdCookie = new Cookie(CREDENTIAL_ID_COOKIE, null); partyCookie.setMaxAge(0);
+        Cookie credentialIdCookie = new Cookie(CREDENTIAL_ID_COOKIE, null); credentialIdCookie.setMaxAge(0);
         //partyCookie.setPath("/");
         Cookie secretKeyCookie = new Cookie(SECRET_KEY_COOKIE, null); secretKeyCookie.setMaxAge(0); 
         //secret_keyCookie.setPath("/");
