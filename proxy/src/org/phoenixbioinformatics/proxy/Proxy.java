@@ -513,8 +513,7 @@ public class Proxy extends HttpServlet {
         logger.debug("Proxy returned status " + statusCode + " for URI "
                      + proxyRequest.getCurrentUri());
 
-        // printAllResponseHeaders(proxyResponse);
-        handleLogoutHeader(servletResponse, proxyResponse);
+        handleResponseHeaders(servletResponse, proxyResponse);
 
         // Sends response to caller based on partner server's response.
         if (statusCode >= HttpServletResponse.SC_MULTIPLE_CHOICES
@@ -664,14 +663,9 @@ public class Proxy extends HttpServlet {
    * @param servletRequest the HTTP request
    * @param servletResponse the HTTP response
    */
-  private void handleSetCookieRequest(HttpServletRequest servletRequest,
-                                      HttpServletResponse servletResponse) {
-    Cookie credentialIdCookie =
-      new Cookie(CREDENTIAL_ID_COOKIE,
-                 servletRequest.getParameter(CREDENTIAL_ID_COOKIE));
-    Cookie keyCookie =
-      new Cookie(SECRET_KEY_COOKIE,
-                 servletRequest.getParameter(SECRET_KEY_COOKIE));
+  private void handleSetCookieRequest(HttpServletRequest servletRequest, HttpServletResponse servletResponse) {
+    Cookie credentialIdCookie = new Cookie(CREDENTIAL_ID_COOKIE, servletRequest.getParameter(CREDENTIAL_ID_COOKIE));
+    Cookie keyCookie          = new Cookie(SECRET_KEY_COOKIE   , servletRequest.getParameter(SECRET_KEY_COOKIE));
     servletResponse.addCookie(credentialIdCookie);
     servletResponse.addCookie(keyCookie);
     servletResponse.setHeader("Access-Control-Allow-Origin", UI_URI);
@@ -689,10 +683,8 @@ public class Proxy extends HttpServlet {
   private void handleOptionsRequest(HttpServletResponse servletResponse) {
     servletResponse.setHeader("Access-Control-Allow-Origin", UI_URI);
     servletResponse.setHeader("Access-Control-Allow-Credentials", "true");
-    servletResponse.setHeader("Access-Control-Allow-Headers",
-                              "x-requested-with, content-type, accept, origin, authorization, x-csrftoken");
-    servletResponse.setHeader("Access-Control-Allow-Methods",
-                              "GET, POST, PUT, DELETE");
+    servletResponse.setHeader("Access-Control-Allow-Headers", "x-requested-with, content-type, accept, origin, authorization, x-csrftoken");
+    servletResponse.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE");
   }
 
   /**
@@ -834,8 +826,10 @@ public class Proxy extends HttpServlet {
    * @param request the HTTP response whose header is to print out
    * @return none
    */
-  public static void handleLogoutHeader(HttpServletResponse clientResponse,
-                                        HttpResponse proxyResponse) {
+  public static void handleResponseHeaders(HttpServletResponse clientResponse, HttpResponse proxyResponse) {
+      
+    // printAllResponseHeaders(proxyResponse);
+
     Header[] headers = proxyResponse.getAllHeaders();
     for (int i = 0; i < headers.length; i++) {
       if (headers[i].getName().equals("Phoenix-Proxy-Logout")) {
@@ -845,6 +839,12 @@ public class Proxy extends HttpServlet {
         secret_keyCookie.setPath("/");
         clientResponse.addCookie(partyCookie);
         clientResponse.addCookie(secret_keyCookie);
+      }
+      if (headers[i].getName().equals("Phoenix-Proxy-PasswordUpdate")) {
+        if(headers[i].getValue() != "") {
+          Cookie secret_keyCookie = new Cookie(SECRET_KEY_COOKIE, headers[i].getValue());
+          clientResponse.addCookie(secret_keyCookie);
+        }
       }
     }
   }
