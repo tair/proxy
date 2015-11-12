@@ -824,9 +824,8 @@ public class Proxy extends HttpServlet {
   }
 
   /**
-   * This function loops through all headers of an response object from a
-   * partner server, and identify if a "Phoenix-Proxy-Logout" object exists. If
-   * so, then logs out a user by resetting the login related cookies.
+   * Checks for special authentication-related headers in a partner's response
+   * and adjusts authentication-related cookies appropriately.
    *
    * @param request the HTTP response whose header is to print out
    * @return none
@@ -841,8 +840,11 @@ public class Proxy extends HttpServlet {
 
       Header header = headers[i];
       
+      // Check for the logout signal from the partner 
+      // (the value of the special header doesn't matter).
       if (header.getName().equals("Phoenix-Proxy-Logout")) {
         
+        // Remove the authentication-related cookies.
         Cookie credentialIdCookie = new Cookie(CREDENTIAL_ID_COOKIE, null); 
         credentialIdCookie.setPath("/");
         credentialIdCookie.setMaxAge(0);
@@ -855,7 +857,9 @@ public class Proxy extends HttpServlet {
 
       }
       
-      if (header.getName().equals("Phoenix-Proxy-PasswordUpdate") && ! header.getValue().isEmpty()) {
+      // Check for the password change signal from the partner
+      // (the value of the special header carries the new secret key (a.k.a. login key)
+      if (header.getName().equals("Phoenix-Proxy-PasswordUpdate")) {
         
         logger.debug("Possible change of password: " + header.getValue());
           
