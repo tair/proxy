@@ -185,7 +185,7 @@ public class ApiService extends AbstractApiService {
   /**
    * Retrieves the access status of the client for a resource request
    * 
-   * @param path resource path that the client tries to access. (e.g:
+   * @param url resource path that the client tries to access. (e.g:
    *          "/news/2015/07/01")
    * @param credentialId client's party ID if resource that the client tries to
    *          access is paid content
@@ -196,17 +196,17 @@ public class ApiService extends AbstractApiService {
    * @return String indicating the access status (OK, NeedSubscription,
    *         NeedLogin)
    */
-  public static AccessOutput checkAccess(String path, String loginKey,
+  public static AccessOutput checkAccess(String url, String loginKey,
                                          String partnerId, String credentialId,
                                          String remoteIp) {
     try {
-      path = URLEncoder.encode(path, "UTF-8");
+      url = URLEncoder.encode(url, "UTF-8");
     } catch (UnsupportedEncodingException e) {
       logger.debug("Encoding faiure", e);
     }
 
     String urn =
-      AUTHORIZATION_URN + "/access/?partnerId=" + partnerId + "&url=" + path
+      AUTHORIZATION_URN + "/access/?partnerId=" + partnerId + "&url=" + url
           + "&ip=" + remoteIp;
     try {
       String content =
