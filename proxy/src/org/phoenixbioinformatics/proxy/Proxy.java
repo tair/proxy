@@ -667,10 +667,14 @@ public class Proxy extends HttpServlet {
     Cookie credentialIdCookie = new Cookie(CREDENTIAL_ID_COOKIE, servletRequest.getParameter(CREDENTIAL_ID_COOKIE));
     credentialIdCookie.setPath("/");
     servletResponse.addCookie(credentialIdCookie);
+    // PW-165
+    setExperimentalCookies(servletResponse, credentialIdCookie);
     
     Cookie secretKeyCookie = new Cookie(SECRET_KEY_COOKIE, servletRequest.getParameter(SECRET_KEY_COOKIE));
     secretKeyCookie.setPath("/");
     servletResponse.addCookie(secretKeyCookie);
+    // PW-165
+    setExperimentalCookies(servletResponse, secretKeyCookie);
     
     logger.debug("Setting cookies: credentialId = " + credentialIdCookie.getValue() + "; secretKey = " + secretKeyCookie.getValue());
     
@@ -848,11 +852,15 @@ public class Proxy extends HttpServlet {
         credentialIdCookie.setPath("/");
         credentialIdCookie.setMaxAge(0);
         clientResponse.addCookie(credentialIdCookie);
+        // PW-165
+        setExperimentalCookies(clientResponse, credentialIdCookie);
         
         Cookie secretKeyCookie = new Cookie(SECRET_KEY_COOKIE, null);  
         secretKeyCookie.setPath("/");
         secretKeyCookie.setMaxAge(0);
         clientResponse.addCookie(secretKeyCookie);
+        // PW-165
+        setExperimentalCookies(clientResponse, secretKeyCookie);
 
       }
       
@@ -865,9 +873,20 @@ public class Proxy extends HttpServlet {
         Cookie secretKeyCookie = new Cookie(SECRET_KEY_COOKIE, header.getValue());
         secretKeyCookie.setPath("/");
         clientResponse.addCookie(secretKeyCookie);
+        // PW-165
+        setExperimentalCookies(clientResponse, secretKeyCookie);
 
       }
       
     }
   }
+  
+  private static void setExperimentalCookies(HttpServletResponse clientResponse, Cookie cookie) {
+      
+      //cookie.setDomain("demotair.arabidopsis.org");
+      //clientResponse.addCookie(cookie);
+      cookie.setDomain(".arabidopsis.org");
+      clientResponse.addCookie(cookie);
+  }
+  
 }
