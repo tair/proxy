@@ -231,8 +231,7 @@ public class Proxy extends HttpServlet {
         StringBuilder userIdentifier = new StringBuilder();
 
         // Determine whether to proxy the request.
-        if (authorizeProxyRequest(requestPath,
-                                  loginKey,
+        if (authorizeProxyRequest(loginKey,
                                   partnerId,
                                   partyId,
                                   fullRequestUri,
@@ -296,7 +295,6 @@ public class Proxy extends HttpServlet {
    * Redirection path in servletResponse will be set if the client does not
    * allow to access partner's server.
    * 
-   * @param requestPath client's request path. example: /news/news.html
    * @param loginKey client's login key to be used for authentication service
    * @param partnerId partner associated with client's request
    * @param partyId client's partyId to be used for authentication service
@@ -307,7 +305,7 @@ public class Proxy extends HttpServlet {
    *          partner's server is denied.
    * @return Boolean indicates if client has access to partner' server.
    */
-  private Boolean authorizeProxyRequest(String requestPath, String loginKey,
+  private Boolean authorizeProxyRequest(String loginKey,
                                         String partnerId, String partyId,
                                         String fullUri, String remoteIp,
                                         HttpServletResponse servletResponse,
@@ -320,22 +318,22 @@ public class Proxy extends HttpServlet {
     // TODO: This is just a temporary solution similar to how Proxy 1.0 skipping
     // checks
     // for these file types. Need a permanent solution for this -SC
-    if (requestPath.endsWith(".jpg") || requestPath.endsWith(".png")
-        || requestPath.endsWith(".css") || requestPath.endsWith(".js")
-        || requestPath.endsWith(".gif") || requestPath.endsWith(".wsgi")
-        || requestPath.endsWith(".ico")) {
+    if (fullUri.endsWith(".jpg") || fullUri.endsWith(".png")
+        || fullUri.endsWith(".css") || fullUri.endsWith(".js")
+        || fullUri.endsWith(".gif") || fullUri.endsWith(".wsgi")
+        || fullUri.endsWith(".ico")) {
       return true;
     }
 
     Boolean authorized = false;
     String redirectPath = "";
 
-    logger.debug("checkAccess API parameters: " + fullUri + ", " + requestPath
+    logger.debug("checkAccess API parameters: " + fullUri 
                  + ", " + partnerId + ", " + loginKey + ", " + partyId + ", "
                  + remoteIp);
 
     ApiService.AccessOutput accessOutput =
-      ApiService.checkAccess(requestPath,
+      ApiService.checkAccess(fullUri,
                              loginKey,
                              partnerId,
                              partyId,
