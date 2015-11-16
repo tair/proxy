@@ -883,14 +883,14 @@ public class Proxy extends HttpServlet {
     }
   }
   
-  private static void setExperimentalCookies(HttpServletResponse clientResponse, Cookie cookieToSetForAllPartnerDomains) {
+  private static void setExperimentalCookies(HttpServletResponse clientResponse, Cookie cookie) {
       
-      cookieToSetForAllPartnerDomains.setDomain("demotair.arabidopsis.org");
-      clientResponse.addCookie(cookieToSetForAllPartnerDomains);
-      cookieToSetForAllPartnerDomains.setDomain("testsv.arabidopsis.org");
-      clientResponse.addCookie(cookieToSetForAllPartnerDomains);
-      cookieToSetForAllPartnerDomains.setDomain("testgb.arabidopsis.org");
-      clientResponse.addCookie(cookieToSetForAllPartnerDomains);
+      //cookie.setDomain("demotair.arabidopsis.org");
+      //clientResponse.addCookie(cookie);
+      cookie.setDomain("testsv.arabidopsis.org");
+      clientResponse.addCookie(cookie);
+      cookie.setDomain("testgb.arabidopsis.org");
+      clientResponse.addCookie(cookie);
   }
   
 }
