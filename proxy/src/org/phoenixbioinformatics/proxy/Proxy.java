@@ -887,9 +887,7 @@ public class Proxy extends HttpServlet {
       
       //cookie.setDomain("demotair.arabidopsis.org");
       //clientResponse.addCookie(cookie);
-      cookie.setDomain("testsv.arabidopsis.org");
-      clientResponse.addCookie(cookie);
-      cookie.setDomain("testgb.arabidopsis.org");
+      cookie.setDomain(".arabidopsis.org");
       clientResponse.addCookie(cookie);
   }
   
