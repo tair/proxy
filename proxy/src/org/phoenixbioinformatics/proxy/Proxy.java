@@ -212,7 +212,7 @@ public class Proxy extends HttpServlet {
           for (Cookie c : Arrays.asList(cookies)) {
             String cookieName = c.getName();
             logger.debug("Processing cookie " + cookieName + " with value "
-                + c.getValue());
+                         + c.getValue());
             if (cookieName.equals(SECRET_KEY_COOKIE)) {
               loginKey = c.getValue();
             } else if (cookieName.equals(CREDENTIAL_ID_COOKIE)) {
@@ -227,7 +227,15 @@ public class Proxy extends HttpServlet {
           }
         }
 
-        ApiService.createPageView(remoteIp, fullRequestUri, partyId, sessionId);
+        // Log a page view for "real" URIs, exclude embedded images, js, etc.
+        // TODO: Same set of exclusions from access check, solve with same
+        // permanent solution
+        if (!isEmbeddedFile(fullRequestUri)) {
+          ApiService.createPageView(remoteIp,
+                                    fullRequestUri,
+                                    partyId,
+                                    sessionId);
+        }
         StringBuilder userIdentifier = new StringBuilder();
 
         // Determine whether to proxy the request.
@@ -273,8 +281,22 @@ public class Proxy extends HttpServlet {
   }
 
   /**
+   * Detect whether a URI is an "embedded" file by comparing the end of the
+   * string to a list of extensions like ".jpg" or ".js".
    *
-   *
+   * @param fullRequestUri the full URI
+   * @return true if the URI contains an "embedded" extension, otherwise false
+   */
+  private boolean isEmbeddedFile(String fullRequestUri) {
+    return fullRequestUri.endsWith(".jpg") || fullRequestUri.endsWith(".png")
+           || fullRequestUri.endsWith(".css") || fullRequestUri.endsWith(".js")
+           || fullRequestUri.endsWith(".gif")
+           || fullRequestUri.endsWith(".wsgi")
+           || fullRequestUri.endsWith(".ico");
+  }
+
+  /**
+   * Debug the partner map by building a string and logging it.
    */
   private void logPartnerMap() {
     StringBuilder builder = new StringBuilder();
@@ -305,9 +327,9 @@ public class Proxy extends HttpServlet {
    *          partner's server is denied.
    * @return Boolean indicates if client has access to partner' server.
    */
-  private Boolean authorizeProxyRequest(String loginKey,
-                                        String partnerId, String partyId,
-                                        String fullUri, String remoteIp,
+  private Boolean authorizeProxyRequest(String loginKey, String partnerId,
+                                        String partyId, String fullUri,
+                                        String remoteIp,
                                         HttpServletResponse servletResponse,
                                         StringBuilder userIdentifier)
       throws IOException {
@@ -318,26 +340,18 @@ public class Proxy extends HttpServlet {
     // TODO: This is just a temporary solution similar to how Proxy 1.0 skipping
     // checks
     // for these file types. Need a permanent solution for this -SC
-    if (fullUri.endsWith(".jpg") || fullUri.endsWith(".png")
-        || fullUri.endsWith(".css") || fullUri.endsWith(".js")
-        || fullUri.endsWith(".gif") || fullUri.endsWith(".wsgi")
-        || fullUri.endsWith(".ico")) {
+    if (isEmbeddedFile(fullUri)) {
       return true;
     }
 
     Boolean authorized = false;
     String redirectPath = "";
 
-    logger.debug("checkAccess API parameters: " + fullUri 
-                 + ", " + partnerId + ", " + loginKey + ", " + partyId + ", "
-                 + remoteIp);
+    logger.debug("checkAccess API parameters: " + fullUri + ", " + partnerId
+                 + ", " + loginKey + ", " + partyId + ", " + remoteIp);
 
     ApiService.AccessOutput accessOutput =
-      ApiService.checkAccess(fullUri,
-                             loginKey,
-                             partnerId,
-                             partyId,
-                             remoteIp);
+      ApiService.checkAccess(fullUri, loginKey, partnerId, partyId, remoteIp);
     String auth = NOT_OK_CODE;
     if (accessOutput != null) {
       auth = accessOutput.status;
@@ -662,25 +676,32 @@ public class Proxy extends HttpServlet {
    * @param servletRequest the HTTP request
    * @param servletResponse the HTTP response
    */
-  private void handleSetCookieRequest(HttpServletRequest servletRequest, HttpServletResponse servletResponse) {
-      
-    Cookie credentialIdCookie = new Cookie(CREDENTIAL_ID_COOKIE, servletRequest.getParameter(CREDENTIAL_ID_COOKIE));
+  private void handleSetCookieRequest(HttpServletRequest servletRequest,
+                                      HttpServletResponse servletResponse) {
+
+    Cookie credentialIdCookie =
+      new Cookie(CREDENTIAL_ID_COOKIE,
+                 servletRequest.getParameter(CREDENTIAL_ID_COOKIE));
     credentialIdCookie.setPath("/");
     servletResponse.addCookie(credentialIdCookie);
     // PW-165
     setExperimentalCookies(servletResponse, credentialIdCookie);
-    
-    Cookie secretKeyCookie = new Cookie(SECRET_KEY_COOKIE, servletRequest.getParameter(SECRET_KEY_COOKIE));
+
+    Cookie secretKeyCookie =
+      new Cookie(SECRET_KEY_COOKIE,
+                 servletRequest.getParameter(SECRET_KEY_COOKIE));
     secretKeyCookie.setPath("/");
     servletResponse.addCookie(secretKeyCookie);
     // PW-165
     setExperimentalCookies(servletResponse, secretKeyCookie);
-    
-    logger.debug("Setting cookies: credentialId = " + credentialIdCookie.getValue() + "; secretKey = " + secretKeyCookie.getValue());
-    
+
+    logger.debug("Setting cookies: credentialId = "
+                 + credentialIdCookie.getValue() + "; secretKey = "
+                 + secretKeyCookie.getValue());
+
     servletResponse.setHeader("Access-Control-Allow-Origin", UI_URI);
     servletResponse.setHeader("Access-Control-Allow-Credentials", "true");
-    
+
   }
 
   /**
@@ -691,8 +712,10 @@ public class Proxy extends HttpServlet {
   private void handleOptionsRequest(HttpServletResponse servletResponse) {
     servletResponse.setHeader("Access-Control-Allow-Origin", UI_URI);
     servletResponse.setHeader("Access-Control-Allow-Credentials", "true");
-    servletResponse.setHeader("Access-Control-Allow-Headers", "x-requested-with, content-type, accept, origin, authorization, x-csrftoken");
-    servletResponse.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE");
+    servletResponse.setHeader("Access-Control-Allow-Headers",
+                              "x-requested-with, content-type, accept, origin, authorization, x-csrftoken");
+    servletResponse.setHeader("Access-Control-Allow-Methods",
+                              "GET, POST, PUT, DELETE");
   }
 
   /**
@@ -833,29 +856,30 @@ public class Proxy extends HttpServlet {
    * @param request the HTTP response whose header is to print out
    * @return none
    */
-  public static void handleResponseHeaders(HttpServletResponse clientResponse, HttpResponse proxyResponse) {
-      
+  public static void handleResponseHeaders(HttpServletResponse clientResponse,
+                                           HttpResponse proxyResponse) {
+
     // printAllResponseHeaders(proxyResponse);
 
     Header[] headers = proxyResponse.getAllHeaders();
-    
+
     for (int i = 0; i < headers.length; i++) {
 
       Header header = headers[i];
-      
-      // Check for the logout signal from the partner 
+
+      // Check for the logout signal from the partner
       // (the value of the special header doesn't matter).
       if (header.getName().equals("Phoenix-Proxy-Logout")) {
-        
+
         // Remove the authentication-related cookies.
-        Cookie credentialIdCookie = new Cookie(CREDENTIAL_ID_COOKIE, null); 
+        Cookie credentialIdCookie = new Cookie(CREDENTIAL_ID_COOKIE, null);
         credentialIdCookie.setPath("/");
         credentialIdCookie.setMaxAge(0);
         clientResponse.addCookie(credentialIdCookie);
         // PW-165
         setExperimentalCookies(clientResponse, credentialIdCookie);
-        
-        Cookie secretKeyCookie = new Cookie(SECRET_KEY_COOKIE, null);  
+
+        Cookie secretKeyCookie = new Cookie(SECRET_KEY_COOKIE, null);
         secretKeyCookie.setPath("/");
         secretKeyCookie.setMaxAge(0);
         clientResponse.addCookie(secretKeyCookie);
@@ -863,30 +887,33 @@ public class Proxy extends HttpServlet {
         setExperimentalCookies(clientResponse, secretKeyCookie);
 
       }
-      
+
       // Check for the password change signal from the partner
-      // (the value of the special header carries the new secret key (a.k.a. login key)
+      // (the value of the special header carries the new secret key (a.k.a.
+      // login key)
       if (header.getName().equals("Phoenix-Proxy-PasswordUpdate")) {
-        
+
         logger.debug("Possible change of password: " + header.getValue());
-          
-        Cookie secretKeyCookie = new Cookie(SECRET_KEY_COOKIE, header.getValue());
+
+        Cookie secretKeyCookie =
+          new Cookie(SECRET_KEY_COOKIE, header.getValue());
         secretKeyCookie.setPath("/");
         clientResponse.addCookie(secretKeyCookie);
         // PW-165
         setExperimentalCookies(clientResponse, secretKeyCookie);
 
       }
-      
+
     }
   }
-  
-  private static void setExperimentalCookies(HttpServletResponse clientResponse, Cookie cookie) {
-      
-      //cookie.setDomain("demotair.arabidopsis.org");
-      //clientResponse.addCookie(cookie);
-      cookie.setDomain(".arabidopsis.org");
-      clientResponse.addCookie(cookie);
+
+  private static void setExperimentalCookies(HttpServletResponse clientResponse,
+                                             Cookie cookie) {
+
+    // cookie.setDomain("demotair.arabidopsis.org");
+    // clientResponse.addCookie(cookie);
+    cookie.setDomain(".arabidopsis.org");
+    clientResponse.addCookie(cookie);
   }
-  
+
 }
