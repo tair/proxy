@@ -231,6 +231,7 @@ public class Proxy extends HttpServlet {
         // TODO: Same set of exclusions from access check, solve with same
         // permanent solution
         if (!isEmbeddedFile(fullRequestUri)) {
+          logger.debug("Creating page view for URI " + fullRequestUri);
           ApiService.createPageView(remoteIp,
                                     fullRequestUri,
                                     partyId,
@@ -288,11 +289,13 @@ public class Proxy extends HttpServlet {
    * @return true if the URI contains an "embedded" extension, otherwise false
    */
   private boolean isEmbeddedFile(String fullRequestUri) {
-    return fullRequestUri.endsWith(".jpg") || fullRequestUri.endsWith(".png")
+    boolean embedded = fullRequestUri.endsWith(".jpg") || fullRequestUri.endsWith(".png")
            || fullRequestUri.endsWith(".css") || fullRequestUri.endsWith(".js")
            || fullRequestUri.endsWith(".gif")
            || fullRequestUri.endsWith(".wsgi")
            || fullRequestUri.endsWith(".ico");
+    logger.debug("URI " + fullRequestUri + " has embedded-file extension");
+    return embedded;
   }
 
   /**
