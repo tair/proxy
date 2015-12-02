@@ -30,12 +30,18 @@ import com.google.gson.reflect.TypeToken;
 public class ApiService extends AbstractApiService {
   /** logger for this class */
   private static final Logger logger = LogManager.getLogger(ApiService.class);
-  private static final String INCREMENT_METERING_COUNT_ERROR = "Increment Metering Count API Call Failure";
+
+  // error messages
+  private static final String INCREMENT_METERING_COUNT_ERROR =
+    "API call to increment metering count failed";
   private static final String METERING_LIMIT_ERROR =
-    "Check Metering Limit API Call Failure";
-  private static final String ACCESS_ERROR = "Check Access API Call Failure";
+    "API call to check metering limit failed";
+  private static final String ACCESS_ERROR =
+    "API call to check resource access failed";
+  private static final String UNEXPECTED_ERROR =
+    "API call failed with unexpected error";
   private static final String PARTNER_ID_ERROR =
-    "Get Partner Id API Call Failure";
+    "API call to get partner id failed";
   private static final String MULTIPLE_PARTNER_ERROR =
     "Multiple partner IDs detected for URI: ";
   // string constants
@@ -194,7 +200,7 @@ public class ApiService extends AbstractApiService {
    * @param partnerId unique identifier for the partner that owns the requested
    *          resource
    * @return String indicating the access status (OK, NeedSubscription,
-   *         NeedLogin)
+   *         NeedLogin) or an error message
    */
   public static AccessOutput checkAccess(String url, String loginKey,
                                          String partnerId, String credentialId,
@@ -216,8 +222,11 @@ public class ApiService extends AbstractApiService {
       Gson gson = new Gson();
       return gson.fromJson(content, AccessOutput.class);
     } catch (IOException e) {
-      logger.debug(ACCESS_ERROR, e);
-      return null;
+      logger.error(ACCESS_ERROR, e);
+      throw new RuntimeException(ACCESS_ERROR + ": " + e.getMessage(), e);
+    } catch (Exception e) {
+      logger.error(UNEXPECTED_ERROR, e);
+      throw new RuntimeException("Unexpected error making API call: " + e.getMessage(), e);
     }
   }
 

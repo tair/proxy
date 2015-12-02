@@ -118,8 +118,6 @@ public class Proxy extends HttpServlet {
     "IO Error writing entity to output stream";
   private static final String LOCALHOST_REDIRECT_WARN =
     "Partner response redirected to localhost, redirecting to ";
-  private static final String NO_AUTH_CODE_WARN =
-    "checkAccess API returned no authorization code";
 
   // error messages
   private static final String ENCODING_FAIURE_ERROR =
@@ -289,12 +287,15 @@ public class Proxy extends HttpServlet {
    * @return true if the URI contains an "embedded" extension, otherwise false
    */
   private boolean isEmbeddedFile(String fullRequestUri) {
-    boolean embedded = fullRequestUri.endsWith(".jpg") || fullRequestUri.endsWith(".png")
-           || fullRequestUri.endsWith(".css") || fullRequestUri.endsWith(".js")
-           || fullRequestUri.endsWith(".gif")
-           || fullRequestUri.endsWith(".wsgi")
-           || fullRequestUri.endsWith(".ico");
-    logger.debug("URI " + fullRequestUri + " has embedded-file extension");
+    boolean embedded =
+      fullRequestUri.endsWith(".jpg") || fullRequestUri.endsWith(".png")
+          || fullRequestUri.endsWith(".css") || fullRequestUri.endsWith(".js")
+          || fullRequestUri.endsWith(".gif")
+          || fullRequestUri.endsWith(".wsgi")
+          || fullRequestUri.endsWith(".ico");
+    if (embedded) {
+      logger.debug("URI " + fullRequestUri + " has embedded-file extension");
+    }
     return embedded;
   }
 
@@ -349,22 +350,23 @@ public class Proxy extends HttpServlet {
 
     Boolean authorized = false;
     String redirectPath = "";
+    String redirectUri = "";
+    String auth = NOT_OK_CODE;
 
     logger.debug("checkAccess API parameters: " + fullUri + ", " + partnerId
                  + ", " + loginKey + ", " + partyId + ", " + remoteIp);
 
-    ApiService.AccessOutput accessOutput =
-      ApiService.checkAccess(fullUri, loginKey, partnerId, partyId, remoteIp);
-    String auth = NOT_OK_CODE;
-    if (accessOutput != null) {
+    try {
+      ApiService.AccessOutput accessOutput =
+        ApiService.checkAccess(fullUri, loginKey, partnerId, partyId, remoteIp);
       auth = accessOutput.status;
       userIdentifier.append(accessOutput.userIdentifier);
-    } else {
-      // Log and continue
-      logger.warn(NO_AUTH_CODE_WARN);
+    } catch (Exception e1) {
+      // Problem making the API call, accept "Not OK" and continue
+      // Problem already logged
+      // TODO: redirect to error page in UI server with error message
     }
 
-    String redirectUri = "";
     try {
       redirectUri = URLEncoder.encode(fullUri, UTF_8);
     } catch (UnsupportedEncodingException e) {
@@ -793,7 +795,8 @@ public class Proxy extends HttpServlet {
   /**
    * Get the remote IP address of the requester from the request. This method
    * gets, in order, the Remote_Addr header value, the x-forwarded-for header
-   * value, or the HTTP request remote address.
+   * value, or the HTTP request remote address. If the resulting string is a
+   * list of comma-separated IP addresses, take the last one in the list.
    * 
    * @param request the HTTP servlet request containing the IP address
    * @return the remote IP address
@@ -809,8 +812,25 @@ public class Proxy extends HttpServlet {
         ipAddress = request.getRemoteAddr();
       }
     }
+    
+    ipAddress = canonicalizeIpAddress(ipAddress);
 
     return ipAddress;
+  }
+
+  /**
+   * Produce a standard IP address with no leading or trailing blanks. If the input string is a comma-delimited list of addresses, the result will be the last address in the list.
+   *
+   * @param ipAddress an IP address or list of IP addresses
+   * @return a single IP address with no leading or trailing blanks
+   */
+  public static String canonicalizeIpAddress(String ipAddress) {
+    if (ipAddress.contains(",")) {
+      String[] list = ipAddress.split(",");
+      // Set the returned address to the last address in the list.
+      ipAddress = list[list.length-1];
+    }
+    return ipAddress.trim();
   }
 
   /**
