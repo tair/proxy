@@ -188,14 +188,17 @@ public class Proxy extends HttpServlet {
         if (queryString != null) {
           requestPath = requestPath + "?" + queryString;
         }
-        String requestUri = getHostUrl(servletRequest);
-        String fullRequestUri = protocol + "://" + requestUri + requestPath;
+        // Get the x-forwarded-host authority and construct the partner URI
+        // from that rather than from the incoming URI, which is coming
+        // from the Apache mod_proxy reverse proxy.
+        String authority = getAuthority(servletRequest);
+        String fullRequestUri = protocol + "://" + authority + requestPath;
 
-        ApiService.PartnerOutput partnerInfo = partnerMap.get(requestUri);
+        ApiService.PartnerOutput partnerInfo = partnerMap.get(authority);
         if (partnerInfo == null) {
-          logger.error(NO_PARTNER_ERROR + requestUri);
+          logger.error(NO_PARTNER_ERROR + authority);
           logPartnerMap();
-          throw new InvalidPartnerException(NO_PARTNER_ERROR + requestUri);
+          throw new InvalidPartnerException(NO_PARTNER_ERROR + authority);
         }
         String partnerId = partnerInfo.partnerId;
         String targetUri = partnerInfo.targetUri;
@@ -268,7 +271,7 @@ public class Proxy extends HttpServlet {
             proxy(servletRequest.getSession(),
                   servletResponse,
                   proxyRequest,
-                  protocol + "://" + requestUri,
+                  protocol + "://" + authority,
                   userIdentifier.toString());
           }
         } // end of if(authorizeProxyRequest()){}
@@ -771,12 +774,12 @@ public class Proxy extends HttpServlet {
   }
 
   /**
-   * Get the host URI from the x-forwarded-host header.
+   * Get the host from the x-forwarded-host header.
    *
    * @param request the HTTP request
-   * @return
+   * @return the host from the x-forwarded-host header
    */
-  public static String getHostUrl(HttpServletRequest request) {
+  public static String getAuthority(HttpServletRequest request) {
     return request.getHeader("x-forwarded-host");
   }
 
