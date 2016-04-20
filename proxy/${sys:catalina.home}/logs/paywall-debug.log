@@ -1,0 +1,59 @@
+04/19/2016 17:05:26,320 DEBUG [org.phoenixbioinformatics.api.AbstractApiService] Making GET request: https://demoapi.arabidopsis.org/partners/?uri=www.arabidopsis.org
+04/19/2016 17:05:27,146 DEBUG [org.phoenixbioinformatics.api.AbstractApiService] Making GET request: https://demoapi.arabidopsis.org/partners/?uri=www.arabidopsis.org
+04/19/2016 17:06:32,699 DEBUG [org.phoenixbioinformatics.api.AbstractApiService] Making GET request: https://demoapi.arabidopsis.org/partners/?uri=www.arabidopsis.org
+04/19/2016 17:06:33,137 DEBUG [org.phoenixbioinformatics.api.AbstractApiService] Making GET request: https://demoapi.arabidopsis.org/partners/?uri=www.arabidopsis.org
+04/19/2016 17:07:37,257 DEBUG [org.phoenixbioinformatics.api.AbstractApiService] Making GET request: https://demoapi.arabidopsis.org/partners/?uri=www.arabidopsis.org
+04/19/2016 17:07:37,723 DEBUG [org.phoenixbioinformatics.api.AbstractApiService] Making GET request: https://demoapi.arabidopsis.org/partners/?uri=www.arabidopsis.org
+04/19/2016 17:09:08,997 DEBUG [org.phoenixbioinformatics.api.AbstractApiService] Making GET request: https://demoapi.arabidopsis.org/partners/?uri=www.arabidopsis.org
+04/19/2016 17:11:59,747 DEBUG [org.phoenixbioinformatics.api.AbstractApiService] Making GET request: https://demoapi.arabidopsis.org/partners/?sourceUri=www.arabidopsis.org
+04/19/2016 17:12:00,225 ERROR [org.phoenixbioinformatics.api.ApiService] Multiple partner IDs detected for URI: www.arabidopsis.org
+04/19/2016 17:12:00,226 DEBUG [org.phoenixbioinformatics.api.ApiService] biocyc
+04/19/2016 17:12:00,226 DEBUG [org.phoenixbioinformatics.api.ApiService] phoenix
+04/19/2016 17:12:00,226 DEBUG [org.phoenixbioinformatics.api.ApiService] tair
+04/19/2016 17:17:41,907 DEBUG [org.phoenixbioinformatics.api.AbstractApiService] Making GET request: https://demoapi.arabidopsis.org/partners/?sourceUri=demotair.arabidopsis.org
+04/19/2016 17:17:42,399 ERROR [org.phoenixbioinformatics.api.ApiService] Multiple partner IDs detected for URI: demotair.arabidopsis.org
+04/19/2016 17:17:42,400 DEBUG [org.phoenixbioinformatics.api.ApiService] biocyc
+04/19/2016 17:17:42,400 DEBUG [org.phoenixbioinformatics.api.ApiService] phoenix
+04/19/2016 17:17:42,400 DEBUG [org.phoenixbioinformatics.api.ApiService] tair
+04/19/2016 17:17:42,407 DEBUG [org.phoenixbioinformatics.api.AbstractApiService] Making GET request: https://demoapi.arabidopsis.org/partners/?sourceUri=demotair.arabidopsis.org
+04/19/2016 17:17:42,618 ERROR [org.phoenixbioinformatics.api.ApiService] Multiple partner IDs detected for URI: demotair.arabidopsis.org
+04/19/2016 17:17:42,618 DEBUG [org.phoenixbioinformatics.api.ApiService] biocyc
+04/19/2016 17:17:42,619 DEBUG [org.phoenixbioinformatics.api.ApiService] phoenix
+04/19/2016 17:17:42,619 DEBUG [org.phoenixbioinformatics.api.ApiService] tair
+04/19/2016 17:17:55,172 DEBUG [org.phoenixbioinformatics.api.AbstractApiService] Making GET request: https://demoapi.arabidopsis.org/partners/?sourceUri=demotair.arabidopsis.org
+04/19/2016 17:17:55,666 ERROR [org.phoenixbioinformatics.api.ApiService] Multiple partner IDs detected for URI: demotair.arabidopsis.org
+04/19/2016 17:17:55,667 DEBUG [org.phoenixbioinformatics.api.ApiService] biocyc
+04/19/2016 17:17:55,667 DEBUG [org.phoenixbioinformatics.api.ApiService] phoenix
+04/19/2016 17:17:55,667 DEBUG [org.phoenixbioinformatics.api.ApiService] tair
+04/19/2016 17:19:27,517 DEBUG [org.phoenixbioinformatics.api.AbstractApiService] Making GET request: https://demoapi.arabidopsis.org/partners/?sourceUri=demotair.arabidopsis.org
+04/19/2016 17:19:28,077 ERROR [org.phoenixbioinformatics.api.ApiService] Multiple partner IDs detected for URI: demotair.arabidopsis.org
+04/19/2016 17:19:28,078 DEBUG [org.phoenixbioinformatics.api.ApiService] biocyc
+04/19/2016 17:19:28,078 DEBUG [org.phoenixbioinformatics.api.ApiService] phoenix
+04/19/2016 17:19:28,078 DEBUG [org.phoenixbioinformatics.api.ApiService] tair
+04/19/2016 17:23:29,595 DEBUG [org.phoenixbioinformatics.api.AbstractApiService] Making GET request: https://demoapi.arabidopsis.org/partners/patterns//?sourceUri=demotair.arabidopsis.org
+04/19/2016 17:23:30,055 DEBUG [org.phoenixbioinformatics.api.AbstractApiService] Making GET request: https://demoapi.arabidopsis.org/partners/patterns//?sourceUri=demotair.arabidopsis.org
+04/19/2016 17:24:22,429 DEBUG [org.phoenixbioinformatics.api.AbstractApiService] Making GET request: https://demoapi.arabidopsis.org/partners/patterns//?sourceUri=demotair.arabidopsis.org
+04/19/2016 17:24:22,920 DEBUG [org.phoenixbioinformatics.api.AbstractApiService] Making GET request: https://demoapi.arabidopsis.org/partners/patterns//?sourceUri=demotair.arabidopsis.org
+04/19/2016 17:24:45,524 DEBUG [org.phoenixbioinformatics.api.AbstractApiService] Making GET request: https://demoapi.arabidopsis.org/partners/patterns//?sourceUri=www.arabidopsis.org
+04/19/2016 17:24:46,011 DEBUG [org.phoenixbioinformatics.api.AbstractApiService] Making GET request: https://demoapi.arabidopsis.org/partners/patterns//?sourceUri=www.arabidopsis.org
+04/19/2016 17:25:15,165 DEBUG [org.phoenixbioinformatics.api.AbstractApiService] Making GET request: https://demoapi.arabidopsis.org/partners/patterns//?sourceUri=www.arabidopsis.org
+04/19/2016 17:27:45,961 DEBUG [org.phoenixbioinformatics.api.AbstractApiService] Making GET request: https://demoapi.arabidopsis.org/partners/patterns//?sourceUri=www.arabidopsis.org
+04/19/2016 17:27:46,454 DEBUG [org.phoenixbioinformatics.api.AbstractApiService] Making GET request: https://demoapi.arabidopsis.org/partners/patterns//?sourceUri=www.arabidopsis.org
+04/19/2016 17:28:10,511 DEBUG [org.phoenixbioinformatics.api.AbstractApiService] Making GET request: https://demoapi.arabidopsis.org/partners/patterns//?sourceUri=demotair.arabidopsis.org
+04/19/2016 17:28:10,977 DEBUG [org.phoenixbioinformatics.api.AbstractApiService] Making GET request: https://demoapi.arabidopsis.org/partners/patterns//?sourceUri=demotair.arabidopsis.org
+04/19/2016 17:45:15,462 DEBUG [org.phoenixbioinformatics.api.AbstractApiService] Making GET request: https://demoapi.arabidopsis.org/partners/patterns//?sourceUri=demotair.arabidopsis.org
+04/19/2016 17:45:15,910 DEBUG [org.phoenixbioinformatics.api.AbstractApiService] Making GET request: https://demoapi.arabidopsis.org/partners/patterns//?sourceUri=null
+04/19/2016 17:45:16,176 DEBUG [org.phoenixbioinformatics.api.AbstractApiService] Making GET request: https://demoapi.arabidopsis.org/partners/patterns//?sourceUri=null
+04/19/2016 17:45:16,386 DEBUG [org.phoenixbioinformatics.api.AbstractApiService] Making GET request: https://demoapi.arabidopsis.org/partners/patterns//?sourceUri=demotair.arabidopsis.org
+04/19/2016 17:49:19,247 DEBUG [org.phoenixbioinformatics.api.AbstractApiService] Making GET request: https://demoapi.arabidopsis.org/partners/patterns//?sourceUri=demotair.arabidopsis.org
+04/19/2016 17:49:19,744 DEBUG [org.phoenixbioinformatics.api.AbstractApiService] Making GET request: https://demoapi.arabidopsis.org/partners/patterns//?sourceUri=demotair.arabidopsis.org
+04/19/2016 17:49:19,960 DEBUG [org.phoenixbioinformatics.api.AbstractApiService] Making GET request: https://demoapi.arabidopsis.org/partners/patterns//?sourceUri=demotair.arabidopsis.org
+04/19/2016 17:49:20,198 DEBUG [org.phoenixbioinformatics.api.AbstractApiService] Making GET request: https://demoapi.arabidopsis.org/partners/patterns//?sourceUri=demotair.arabidopsis.org
+04/19/2016 17:50:49,649 DEBUG [org.phoenixbioinformatics.api.AbstractApiService] Making GET request: https://demoapi.arabidopsis.org/partners/patterns//?sourceUri=demotair.arabidopsis.org
+04/19/2016 17:50:50,117 DEBUG [org.phoenixbioinformatics.api.AbstractApiService] Making GET request: https://demoapi.arabidopsis.org/partners/patterns//?sourceUri=demotair.arabidopsis.org
+04/19/2016 17:50:50,360 DEBUG [org.phoenixbioinformatics.api.AbstractApiService] Making GET request: https://demoapi.arabidopsis.org/partners/patterns//?sourceUri=demotair.arabidopsis.org
+04/19/2016 17:50:50,588 DEBUG [org.phoenixbioinformatics.api.AbstractApiService] Making GET request: https://demoapi.arabidopsis.org/partners/patterns//?sourceUri=demotair.arabidopsis.org
+04/20/2016 14:38:18,133 DEBUG [org.phoenixbioinformatics.api.AbstractApiService] Making GET request: https://demoapi.arabidopsis.org/partners/patterns//?sourceUri=demotair.arabidopsis.org
+04/20/2016 14:38:19,336 DEBUG [org.phoenixbioinformatics.api.AbstractApiService] Making GET request: https://demoapi.arabidopsis.org/partners/patterns//?sourceUri=demotair.arabidopsis.org
+04/20/2016 14:38:19,541 DEBUG [org.phoenixbioinformatics.api.AbstractApiService] Making GET request: https://demoapi.arabidopsis.org/partners/patterns//?sourceUri=demotair.arabidopsis.org
+04/20/2016 14:38:19,758 DEBUG [org.phoenixbioinformatics.api.AbstractApiService] Making GET request: https://demoapi.arabidopsis.org/partners/patterns//?sourceUri=demotair.arabidopsis.org

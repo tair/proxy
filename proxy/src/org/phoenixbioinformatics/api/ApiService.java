@@ -153,16 +153,16 @@ public class ApiService extends AbstractApiService {
   }
 
   /**
-   * Retrieves partner ID based on the request URI by making a request to
+   * Retrieves partner pattern information based on a source URI by making a request to
    * partner app of the API server. Example: URI = "arabidopsis.org" request to
-   * API server: https://testapi.arabidopsis.org/partners?uri=arabidopsis.org
-   * returns: partnerId = "tair"
+   * API server: https://testapi.arabidopsis.org/partners?sourceUri=arabidopsis.org
+   * returns: partnerId = "tair", targetUri = "http://back-prod.arabidopsis.org"
    * 
    * @param uri URI of client's request
    * @return unique identifier for the partner corresponding to the request URI
    */
   public static PartnerOutput getPartnerInfo(String uri) {
-    String urn = PARTNERS_URN + "/?uri=" + uri;
+    String urn = PARTNERS_URN + PATTERNS_URI + "/?sourceUri=" + uri;
     try {
       String content = callApi(urn, RequestFactory.HttpMethod.GET);
       Gson gson = new Gson();

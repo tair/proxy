@@ -15,10 +15,7 @@ import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.util.Arrays;
 import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.Map;
 
-import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.Cookie;
@@ -30,6 +27,7 @@ import javax.servlet.http.HttpSession;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.Header;
 import org.apache.http.HttpHeaders;
+import org.apache.http.HttpHost;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.CookieStore;
@@ -43,6 +41,9 @@ import org.apache.http.util.EntityUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.phoenixbioinformatics.api.ApiService;
+import org.phoenixbioinformatics.http.ApiPartnerPattern;
+import org.phoenixbioinformatics.http.HttpHostFactory;
+import org.phoenixbioinformatics.http.HttpPropertyImpl;
 import org.phoenixbioinformatics.http.RequestFactory;
 import org.phoenixbioinformatics.http.UnsupportedHttpMethodException;
 import org.phoenixbioinformatics.properties.ProxyProperties;
@@ -60,6 +61,11 @@ import org.phoenixbioinformatics.properties.ProxyProperties;
 
 @WebServlet(urlPatterns = { "/proxy/*" })
 public class Proxy extends HttpServlet {
+  private static final String PASSWORD_UPDATE_HEADER =
+    "Phoenix-Proxy-PasswordUpdate";
+
+  private static final String COOKIE_DOMAIN = ".arabidopsis.org";
+
   /** logger for this class */
   private static final Logger logger = LogManager.getLogger(Proxy.class);
 
@@ -109,10 +115,6 @@ public class Proxy extends HttpServlet {
   private static final String METER_BLOCKING_URI =
     ProxyProperties.getProperty("ui.meter.blocking");
 
-  /** HashMap that contains partner's information, with sourceUri as the key */
-  protected Map<String, ApiService.PartnerOutput> partnerMap =
-    new HashMap<String, ApiService.PartnerOutput>();
-
   // warning messages
   private static final String OUTPUT_STREAM_IO_WARN =
     "IO Error writing entity to output stream";
@@ -122,8 +124,6 @@ public class Proxy extends HttpServlet {
   // error messages
   private static final String ENCODING_FAIURE_ERROR =
     "Encoding faiure for URI ";
-  private static final String NO_PARTNER_ERROR =
-    "No partner information for URI ";
   private static final String URI_SYNTAX_ERROR = "URI syntax error";
   private static final String RUNTIME_EXCEPTION_ERROR =
     "Runtime exception while handling proxy request";
@@ -133,14 +133,6 @@ public class Proxy extends HttpServlet {
     "Error closing data source in proxy server: ";
   private static final String REDIRECT_ERROR =
     "Redirect status code but no location header in response";
-
-  @Override
-  public void init(ServletConfig servletConfig) throws ServletException {
-    super.init(servletConfig);
-    // Initialize the partnerMap static variable.
-    // TODO: synchronize partner cache with database
-    partnerMap = ApiService.getAllPartnerInfo();
-  }
 
   @Override
   protected void service(HttpServletRequest servletRequest,
@@ -182,31 +174,28 @@ public class Proxy extends HttpServlet {
       String uri = servletRequest.getRequestURI().toString();
       logger.debug("Incoming URI: " + uri);
       try {
-        String protocol = getProtocol(servletRequest);
         String queryString = servletRequest.getQueryString();
         String requestPath = servletRequest.getPathInfo();
         if (queryString != null) {
           requestPath = requestPath + "?" + queryString;
         }
-        // Get the x-forwarded-host authority and construct the partner URI
-        // from that rather than from the incoming URI, which is coming
-        // from the Apache mod_proxy reverse proxy.
-        String authority = getAuthority(servletRequest);
-        String fullRequestUri = protocol + "://" + authority + requestPath;
+        HttpHostFactory hostFactory =
+          new HttpHostFactory(new ApiPartnerPattern(),
+                              new HttpPropertyImpl(),
+                              servletRequest.getScheme(),
+                              servletRequest.getServerName(),
+                              servletRequest.getLocalPort(),
+                              servletRequest.getHeader("x-forwarded-host"));
+        HttpHost sourceHost = hostFactory.getSourceHost();
+        String fullRequestUri =
+          sourceHost.getSchemeName() + "://" + sourceHost.getHostName()
+              + requestPath;
 
-        ApiService.PartnerOutput partnerInfo = partnerMap.get(authority);
-        if (partnerInfo == null) {
-          logger.error(NO_PARTNER_ERROR + authority);
-          logPartnerMap();
-          throw new InvalidPartnerException(NO_PARTNER_ERROR + authority);
-        }
-        String partnerId = partnerInfo.partnerId;
-        String targetUri = partnerInfo.targetUri;
         String remoteIp = getIpAddress(servletRequest);
 
-        // populate loginKey and partyId from cookie if available
-        String partyId = null;
-        String loginKey = null;
+        // populate secret key and credential id from cookie if available
+        String credentialId = null;
+        String secretKey = null;
         String sessionId = null;
         Cookie cookies[] = servletRequest.getCookies();
         if (cookies != null) {
@@ -215,9 +204,9 @@ public class Proxy extends HttpServlet {
             logger.debug("Processing cookie " + cookieName + " with value "
                          + c.getValue());
             if (cookieName.equals(SECRET_KEY_COOKIE)) {
-              loginKey = c.getValue();
+              secretKey = c.getValue();
             } else if (cookieName.equals(CREDENTIAL_ID_COOKIE)) {
-              partyId = c.getValue();
+              credentialId = c.getValue();
             } else if (cookieName.equals(TOMCAT_SESSION_COOKIE)) {
               // Tomcat/Apache session support
               sessionId = c.getValue();
@@ -229,35 +218,33 @@ public class Proxy extends HttpServlet {
         }
 
         // Log a page view for "real" URIs, exclude embedded images, js, etc.
-        // TODO: Same set of exclusions from access check, solve with same
-        // permanent solution
         if (!isEmbeddedFile(fullRequestUri)) {
           logger.debug("Creating page view for URI " + fullRequestUri);
           ApiService.createPageView(remoteIp,
                                     fullRequestUri,
-                                    partyId,
+                                    credentialId,
                                     sessionId);
         }
         StringBuilder userIdentifier = new StringBuilder();
 
         // Determine whether to proxy the request.
-        if (authorizeProxyRequest(loginKey,
-                                  partnerId,
-                                  partyId,
+        if (authorizeProxyRequest(secretKey,
+                                  hostFactory.getPartnerId(),
+                                  credentialId,
                                   fullRequestUri,
                                   remoteIp,
                                   servletResponse,
                                   userIdentifier)) {
 
           // Initialize the proxy request.
-          // TODO null for target URI object, check whether and how used in
-          // Proxy
-          // Request
           ProxyRequest proxyRequest =
-            new ProxyRequest(null, servletRequest.getMethod(), uri, remoteIp);
+            new ProxyRequest(servletRequest.getMethod(), uri, remoteIp);
 
+          String targetHost =
+            hostFactory.getTargetHost().getSchemeName() + "://"
+                + hostFactory.getTargetHost().getHostName();
           HttpUriRequest requestToProxy =
-            RequestFactory.getUriRequest(servletRequest, targetUri);
+            RequestFactory.getUriRequest(servletRequest, targetHost);
 
           logger.debug("Proxying request from " + proxyRequest.getIp() + "-->"
                        + requestToProxy.getRequestLine().getUri() + "\"");
@@ -271,7 +258,7 @@ public class Proxy extends HttpServlet {
             proxy(servletRequest.getSession(),
                   servletResponse,
                   proxyRequest,
-                  protocol + "://" + authority,
+                  sourceHost,
                   userIdentifier.toString());
           }
         } // end of if(authorizeProxyRequest()){}
@@ -303,20 +290,6 @@ public class Proxy extends HttpServlet {
   }
 
   /**
-   * Debug the partner map by building a string and logging it.
-   */
-  private void logPartnerMap() {
-    StringBuilder builder = new StringBuilder();
-    String sep = "";
-    for (String mapUri : partnerMap.keySet()) {
-      builder.append(sep);
-      builder.append(mapUri);
-      sep = ", ";
-    }
-    logger.debug(builder.toString());
-  }
-
-  /**
    * Authorize the request based on the information in the HttpServletRequest.
    * Returns true if the servletRequest is allowed to access partner's server,
    * and false otherwise.
@@ -324,9 +297,9 @@ public class Proxy extends HttpServlet {
    * Redirection path in servletResponse will be set if the client does not
    * allow to access partner's server.
    * 
-   * @param loginKey client's login key to be used for authentication service
+   * @param secretKey client's password-based key to use for authentication
    * @param partnerId partner associated with client's request
-   * @param partyId client's partyId to be used for authentication service
+   * @param credentialId client's partyId to use for authentication
    * @param fullUri client's full request path. example:
    *          https://test.arabidopsis.org/test/test.html
    * @param remoteIp client's IP address
@@ -334,20 +307,15 @@ public class Proxy extends HttpServlet {
    *          partner's server is denied.
    * @return Boolean indicates if client has access to partner' server.
    */
-  private Boolean authorizeProxyRequest(String loginKey, String partnerId,
-                                        String partyId, String fullUri,
+  private Boolean authorizeProxyRequest(String secretKey, String partnerId,
+                                        String credentialId, String fullUri,
                                         String remoteIp,
                                         HttpServletResponse servletResponse,
                                         StringBuilder userIdentifier)
       throws IOException {
 
-    // Skip authorization check and metering incrementation for following static
-    // file
-    // types.
-    // TODO: This is just a temporary solution similar to how Proxy 1.0 skipping
-    // checks
-    // for these file types. Need a permanent solution for this -SC
     if (isEmbeddedFile(fullUri)) {
+      // Not a top-level page (CSS, JS, GIF for example), skip authorization
       return true;
     }
 
@@ -357,11 +325,15 @@ public class Proxy extends HttpServlet {
     String auth = NOT_OK_CODE;
 
     logger.debug("checkAccess API parameters: " + fullUri + ", " + partnerId
-                 + ", " + loginKey + ", " + partyId + ", " + remoteIp);
+                 + ", " + secretKey + ", " + credentialId + ", " + remoteIp);
 
     try {
       ApiService.AccessOutput accessOutput =
-        ApiService.checkAccess(fullUri, loginKey, partnerId, partyId, remoteIp);
+        ApiService.checkAccess(fullUri,
+                               secretKey,
+                               partnerId,
+                               credentialId,
+                               remoteIp);
       auth = accessOutput.status;
       userIdentifier.append(accessOutput.userIdentifier);
     } catch (Exception e1) {
@@ -380,10 +352,10 @@ public class Proxy extends HttpServlet {
     if (auth.equals(OK_CODE)) {
       // grant access
       authorized = true;
-      logger.debug("Party " + partyId + " authorized for free content "
+      logger.debug("Party " + credentialId + " authorized for free content "
                    + fullUri + " at partner " + partnerId);
     } else if (auth.equals("NeedSubscription")) {
-      logger.debug("Party " + partyId
+      logger.debug("Party " + credentialId
                    + " needs to subscribe to see paid content " + fullUri
                    + " at partner " + partnerId);
       String meter = ApiService.checkMeteringLimit(remoteIp, partnerId);
@@ -405,15 +377,15 @@ public class Proxy extends HttpServlet {
               + redirectUri;
       }
     } else if (auth.equals(NEED_LOGIN_CODE)) {
-      logger.debug("Party " + partyId + " needs to login to access " + fullUri
-                   + " at partner " + partnerId);
+      logger.debug("Party " + credentialId + " needs to login to access "
+                   + fullUri + " at partner " + partnerId);
       authorized = false;
       redirectPath =
         UI_URI + LOGIN_URI + partnerId + REDIRECT_PARAM + redirectUri;
     }
 
     if (!authorized) {
-      logger.debug("Party " + partyId + " not authorized for " + fullUri
+      logger.debug("Party " + credentialId + " not authorized for " + fullUri
                    + " at partner " + partnerId + ", redirecting to "
                    + redirectPath);
       servletResponse.sendRedirect(redirectPath);
@@ -440,7 +412,8 @@ public class Proxy extends HttpServlet {
    * @throws IOException when there is a problem handling the URI or redirecting
    * @throws ClientProtocolException when there is a syntax error in the URI
    */
-  private void sendRequestToServer(HttpUriRequest request, HttpSession session,
+  private void sendRequestToServer(HttpHost host, HttpUriRequest request,
+                                   HttpSession session,
                                    ResponseHandler<String> responseHandler,
                                    String userIdentifier)
       throws ClientProtocolException, IOException {
@@ -465,8 +438,12 @@ public class Proxy extends HttpServlet {
     logger.debug(cookieStore.toString());
     // Bind custom cookie store to the local context
     localContext.setCookieStore(cookieStore);
+    // Set the target host to the input HttpHost, allowing the caller
+    // to specify the target Host header separately from the proxy URI.
+    localContext.setTargetHost(host);
     client = HttpClientBuilder.create().disableRedirectHandling().build();
     // Execute the request on the proxied server. Ignore returned string.
+    // TODO: try adding host as first param, see if it does the right thing.
     client.execute(request, responseHandler, localContext);
 
     // Put the cookie store with any returned session cookie into the session.
@@ -509,19 +486,23 @@ public class Proxy extends HttpServlet {
    * @param session the HTTP session, for setting the cookie store
    * @param servletResponse the servlet response to send to the client
    * @param proxyRequest the proxy request
+   * @param originalScheme the HTTP scheme from the original URI
+   * @param originalHost the host name from the original URI authority
+   * @param originalPort the optional port from the original URI authority
+   * @param userIdentifier the partner identifier for the user
    * @throws ServletException when there is a servlet problem, including URI
    *           syntax or handling issues
    */
   private void proxy(final HttpSession session,
                      final HttpServletResponse servletResponse,
                      final ProxyRequest proxyRequest,
-                     final String originalHost, final String userIdentifier)
+                     final HttpHost originalHost, final String userIdentifier)
       throws ServletException {
     logger.info("Proxying " + proxyRequest.getMethod()
                 + " URI from IP address " + proxyRequest.getIp() + ": "
                 + proxyRequest.getCurrentUri() + " -- "
                 + proxyRequest.getRequestToProxy().getRequestLine().getUri()
-                + " ... " + originalHost + " ... " + userIdentifier);
+                + " ... " + originalHost.toString() + " ... " + userIdentifier);
 
     // Create a custom response handler to ensure all resources get freed.
     // Note: ignore the returned response, it is always null.
@@ -551,10 +532,12 @@ public class Proxy extends HttpServlet {
 
             // Does a proxy rewrite if target host is redirecting
             // to localhost. See issue PW-110 for detail. -SC
-            if (uri.getHost() != null && !originalHost.equals(uri.getHost())
+            String originalPrefix =
+              originalHost.getSchemeName() + "://" + originalHost.getHostName();
+            if (uri.getHost() != null && !originalPrefix.equals(uri.getHost())
                 && uri.getHost().matches(".*localhost.*")) {
               // Rewrite the location header URI to go to the proxy server.
-              String rewrittenUri = rewriteUriFromString(uri, originalHost);
+              String rewrittenUri = rewriteUriFromString(uri, originalPrefix);
               logger.warn(LOCALHOST_REDIRECT_WARN + rewrittenUri);
               servletResponse.sendRedirect(rewrittenUri);
 
@@ -630,7 +613,14 @@ public class Proxy extends HttpServlet {
 
     // Proxy the request.
     try {
-      sendRequestToServer(proxyRequest.getRequestToProxy(),
+      // Send the request to the server, specifying the target host as
+      // the original scheme and authority. This permits the back-end
+      // partner server to use a virtual host based on the original
+      // URI schemes while the proxy request goes to the appropriate
+      // back-end host. This is the same as the mod_proxy ProxyPreserveHost
+      // directive in Apache. See JIRA PW-288 for details.
+      sendRequestToServer(originalHost,
+                          proxyRequest.getRequestToProxy(),
                           session,
                           responseHandler,
                           userIdentifier);
@@ -693,7 +683,7 @@ public class Proxy extends HttpServlet {
     credentialIdCookie.setPath("/");
     servletResponse.addCookie(credentialIdCookie);
     // PW-165
-    setExperimentalCookies(servletResponse, credentialIdCookie);
+    addCookie(servletResponse, credentialIdCookie);
 
     Cookie secretKeyCookie =
       new Cookie(SECRET_KEY_COOKIE,
@@ -701,7 +691,7 @@ public class Proxy extends HttpServlet {
     secretKeyCookie.setPath("/");
     servletResponse.addCookie(secretKeyCookie);
     // PW-165
-    setExperimentalCookies(servletResponse, secretKeyCookie);
+    addCookie(servletResponse, secretKeyCookie);
 
     logger.debug("Setting cookies: credentialId = "
                  + credentialIdCookie.getValue() + "; secretKey = "
@@ -774,28 +764,6 @@ public class Proxy extends HttpServlet {
   }
 
   /**
-   * Get the host from the x-forwarded-host header.
-   *
-   * @param request the HTTP request
-   * @return the host from the x-forwarded-host header
-   */
-  public static String getAuthority(HttpServletRequest request) {
-    return request.getHeader("x-forwarded-host");
-  }
-
-  /**
-   * Get the protocol; this is always https so that the proxy server remains as
-   * secure as possible.
-   *
-   * @param request the request
-   * @return "https"
-   */
-  public static String getProtocol(HttpServletRequest request) {
-    return "https";
-    // return request.getHeader("X-Forwarded-Proto");
-  }
-
-  /**
    * Get the remote IP address of the requester from the request. This method
    * gets, in order, the Remote_Addr header value, the x-forwarded-for header
    * value, or the HTTP request remote address. If the resulting string is a
@@ -815,14 +783,16 @@ public class Proxy extends HttpServlet {
         ipAddress = request.getRemoteAddr();
       }
     }
-    
+
     ipAddress = canonicalizeIpAddress(ipAddress);
 
     return ipAddress;
   }
 
   /**
-   * Produce a standard IP address with no leading or trailing blanks. If the input string is a comma-delimited list of addresses, the result will be the last address in the list.
+   * Produce a standard IP address with no leading or trailing blanks. If the
+   * input string is a comma-delimited list of addresses, the result will be the
+   * last address in the list.
    *
    * @param ipAddress an IP address or list of IP addresses
    * @return a single IP address with no leading or trailing blanks
@@ -831,7 +801,7 @@ public class Proxy extends HttpServlet {
     if (ipAddress.contains(",")) {
       String[] list = ipAddress.split(",");
       // Set the returned address to the last address in the list.
-      ipAddress = list[list.length-1];
+      ipAddress = list[list.length - 1];
     }
     return ipAddress.trim();
   }
@@ -903,21 +873,20 @@ public class Proxy extends HttpServlet {
         credentialIdCookie.setMaxAge(0);
         clientResponse.addCookie(credentialIdCookie);
         // PW-165
-        setExperimentalCookies(clientResponse, credentialIdCookie);
+        addCookie(clientResponse, credentialIdCookie);
 
         Cookie secretKeyCookie = new Cookie(SECRET_KEY_COOKIE, null);
         secretKeyCookie.setPath("/");
         secretKeyCookie.setMaxAge(0);
         clientResponse.addCookie(secretKeyCookie);
         // PW-165
-        setExperimentalCookies(clientResponse, secretKeyCookie);
+        addCookie(clientResponse, secretKeyCookie);
 
       }
 
-      // Check for the password change signal from the partner
-      // (the value of the special header carries the new secret key (a.k.a.
-      // login key)
-      if (header.getName().equals("Phoenix-Proxy-PasswordUpdate")) {
+      // Check for the password change signal from the partner (the value of the
+      // special header carries the new secret key).
+      if (header.getName().equals(PASSWORD_UPDATE_HEADER)) {
 
         logger.debug("Possible change of password: " + header.getValue());
 
@@ -926,20 +895,20 @@ public class Proxy extends HttpServlet {
         secretKeyCookie.setPath("/");
         clientResponse.addCookie(secretKeyCookie);
         // PW-165
-        setExperimentalCookies(clientResponse, secretKeyCookie);
-
+        addCookie(clientResponse, secretKeyCookie);
       }
-
     }
   }
 
-  private static void setExperimentalCookies(HttpServletResponse clientResponse,
-                                             Cookie cookie) {
-
-    // cookie.setDomain("demotair.arabidopsis.org");
-    // clientResponse.addCookie(cookie);
-    cookie.setDomain(".arabidopsis.org");
-    clientResponse.addCookie(cookie);
+  /**
+   * Add a cookie to a servlet response, setting the cookie domain.
+   *
+   * @param response the servlet response
+   * @param cookie the cookie to add
+   */
+  private static void addCookie(HttpServletResponse response, Cookie cookie) {
+    cookie.setDomain(COOKIE_DOMAIN);
+    response.addCookie(cookie);
   }
 
 }
