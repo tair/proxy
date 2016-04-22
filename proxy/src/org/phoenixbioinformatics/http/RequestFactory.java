@@ -68,9 +68,10 @@ public class RequestFactory {
    * servlet request. The method handles all supported HTTP request methods.
    * 
    * @param servletRequest the HTTP servlet request containing the URI to proxy
+   * @param partnerHostUri the scheme and authority for the target partner host
    * @return the rewritten URI to proxy
-   * @throws UnsupportedHttpMethodException
-   * @throws IOException
+   * @throws UnsupportedHttpMethodException when the method in the servlet request is not a supported method (GET, POST, PUT, DELETE, OPTIONS)
+   * @throws IOException when the URI request can't be initialized
    */
   public static HttpUriRequest getUriRequest(HttpServletRequest servletRequest, String partnerHostUri)
       throws UnsupportedHttpMethodException, IOException {
