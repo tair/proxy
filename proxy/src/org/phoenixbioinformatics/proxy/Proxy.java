@@ -44,6 +44,7 @@ import org.phoenixbioinformatics.api.ApiService;
 import org.phoenixbioinformatics.http.ApiPartnerPatternImpl;
 import org.phoenixbioinformatics.http.HttpHostFactory;
 import org.phoenixbioinformatics.http.HttpPropertyImpl;
+import org.phoenixbioinformatics.http.IPartnerPattern;
 import org.phoenixbioinformatics.http.RequestFactory;
 import org.phoenixbioinformatics.http.UnsupportedHttpMethodException;
 import org.phoenixbioinformatics.properties.ProxyProperties;
@@ -190,14 +191,16 @@ public class Proxy extends HttpServlet {
       String uri = servletRequest.getRequestURI().toString();
       logger.debug("Incoming URI: " + uri);
       try {
+        ApiPartnerPatternImpl partnerPattern = new ApiPartnerPatternImpl();
         HttpHostFactory hostFactory =
-          new HttpHostFactory(new ApiPartnerPatternImpl(),
+          new HttpHostFactory(partnerPattern,
                               new HttpPropertyImpl(),
                               servletRequest.getScheme(),
                               servletRequest.getServerName(),
                               servletRequest.getLocalPort(),
                               servletRequest.getHeader(X_FORWARDED_HOST));
         HttpHost sourceHost = hostFactory.getSourceHost();
+        partnerPattern.setSourceUri(sourceHost.toHostString());
 
         // populate secret key and credential id from cookie if available
         String credentialId = null;
