@@ -31,8 +31,8 @@ public class HttpHostFactoryIntegrationTest {
   @Test
   public void testGetTargetHost() {
     HttpHostFactory factory =
-      new HttpHostFactory(new ApiPartnerPattern(SOURCE_URI),
-                          new TruePreservedProperty(),
+      new HttpHostFactory(new ApiPartnerPatternImpl(SOURCE_URI),
+                          new TruePreservedPropertyImpl(),
                           TEST_SCHEME,
                           TEST_SERVER_NAME,
                           TEST_PORT,
@@ -54,8 +54,8 @@ public class HttpHostFactoryIntegrationTest {
   @Test
   public void testGetPartnerId() {
     HttpHostFactory factory =
-      new HttpHostFactory(new ApiPartnerPattern(SOURCE_URI),
-                          new TruePreservedProperty(),
+      new HttpHostFactory(new ApiPartnerPatternImpl(SOURCE_URI),
+                          new TruePreservedPropertyImpl(),
                           TEST_SCHEME,
                           TEST_SERVER_NAME,
                           TEST_PORT,
@@ -72,10 +72,10 @@ public class HttpHostFactoryIntegrationTest {
    */
   @Test
   public void testGetTargetHostWithSource() {
-    ApiPartnerPattern pattern = new ApiPartnerPattern(null);
+    ApiPartnerPatternImpl pattern = new ApiPartnerPatternImpl(null);
     HttpHostFactory factory =
       new HttpHostFactory(pattern,
-                          new TruePreservedProperty(),
+                          new TruePreservedPropertyImpl(),
                           TEST_SCHEME,
                           TEST_SERVER_NAME,
                           TEST_PORT,
@@ -97,10 +97,10 @@ public class HttpHostFactoryIntegrationTest {
    */
   @Test
   public void testGetPartnerIdWithSource() {
-    ApiPartnerPattern pattern = new ApiPartnerPattern(null);
+    ApiPartnerPatternImpl pattern = new ApiPartnerPatternImpl(null);
     HttpHostFactory factory =
       new HttpHostFactory(pattern,
-                          new TruePreservedProperty(),
+                          new TruePreservedPropertyImpl(),
                           TEST_SCHEME,
                           TEST_SERVER_NAME,
                           TEST_PORT,

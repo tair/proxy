@@ -34,8 +34,8 @@ public class HttpHostFactoryTest {
   @Test
   public void testHttpHostFactory() {
     HttpHostFactory factory =
-      new HttpHostFactory(new TestPartnerPattern(SOURCE_URI),
-                          new TruePreservedProperty(),
+      new HttpHostFactory(new TestPartnerPatternImpl(SOURCE_URI),
+                          new TruePreservedPropertyImpl(),
                           TEST_SCHEME,
                           TEST_SERVER_NAME,
                           TEST_PORT,
@@ -55,8 +55,8 @@ public class HttpHostFactoryTest {
   @Test
   public void testGetSourceHostPreserved() {
     HttpHostFactory factory =
-      new HttpHostFactory(new TestPartnerPattern(SOURCE_URI),
-                          new TruePreservedProperty(),
+      new HttpHostFactory(new TestPartnerPatternImpl(SOURCE_URI),
+                          new TruePreservedPropertyImpl(),
                           TEST_SCHEME,
                           TEST_SERVER_NAME,
                           TEST_PORT,
@@ -76,8 +76,8 @@ public class HttpHostFactoryTest {
   @Test
   public void testGetSourceHostNotPreserved() {
     HttpHostFactory factory =
-      new HttpHostFactory(new TestPartnerPattern(SOURCE_URI),
-                          new FalsePreservedProperty(),
+      new HttpHostFactory(new TestPartnerPatternImpl(SOURCE_URI),
+                          new FalsePreservedPropertyImpl(),
                           TEST_SCHEME,
                           TEST_SERVER_NAME,
                           TEST_PORT,
@@ -97,8 +97,8 @@ public class HttpHostFactoryTest {
   @Test
   public void testGetSourceHostDefaultHttpPort() {
     HttpHostFactory factory =
-      new HttpHostFactory(new TestPartnerPattern(SOURCE_URI),
-                          new FalsePreservedProperty(),
+      new HttpHostFactory(new TestPartnerPatternImpl(SOURCE_URI),
+                          new FalsePreservedPropertyImpl(),
                           "http",
                           TEST_SERVER_NAME,
                           -1,
@@ -115,8 +115,8 @@ public class HttpHostFactoryTest {
   @Test
   public void testGetTargetHost() {
     HttpHostFactory factory =
-      new HttpHostFactory(new TestPartnerPattern(SOURCE_URI),
-                          new TruePreservedProperty(),
+      new HttpHostFactory(new TestPartnerPatternImpl(SOURCE_URI),
+                          new TruePreservedPropertyImpl(),
                           TEST_SCHEME,
                           TEST_SERVER_NAME,
                           TEST_PORT,
@@ -137,8 +137,8 @@ public class HttpHostFactoryTest {
   @Test
   public void testGetPartnerId() {
     HttpHostFactory factory =
-      new HttpHostFactory(new TestPartnerPattern(SOURCE_URI),
-                          new TruePreservedProperty(),
+      new HttpHostFactory(new TestPartnerPatternImpl(SOURCE_URI),
+                          new TruePreservedPropertyImpl(),
                           TEST_SCHEME,
                           TEST_SERVER_NAME,
                           TEST_PORT,

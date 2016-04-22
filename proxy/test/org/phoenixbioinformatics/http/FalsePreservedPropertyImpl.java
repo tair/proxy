@@ -7,7 +7,7 @@ package org.phoenixbioinformatics.http;
  * Implementation of the IProperty interface to set host.preserved to false in unit tests
  * @author Robert J. Muller
  */
-public class FalsePreservedProperty implements IProperty {
+public class FalsePreservedPropertyImpl implements IProperty {
   @Override
   public Boolean getHostPreserved() {
     return Boolean.FALSE;

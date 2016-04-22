@@ -8,7 +8,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.http.HttpHost;
-import org.phoenixbioinformatics.properties.ProxyProperties;
 
 
 /**
@@ -90,7 +89,7 @@ public class HttpHostFactory {
   }
 
   /**
-   * Get the target host URI for the factory's source URI. If there is no
+   * Get the "target" host URI for the factory's source URI. If there is no
    * partner corresponding to the source URI, the return will be null.
    *
    * @return a target HTTP host, or null if there is no partner for the source
@@ -100,15 +99,16 @@ public class HttpHostFactory {
     HttpHost sourceHost = getSourceHost();
     HttpHost targetHost = null;
 
-    if (partnerPattern != null) {
+    if (partnerPattern != null && partnerPattern.getTargetUri() != null) {
       // Parse out the elements needed to create the host.
       Matcher matcher = URI_PATTERN.matcher(partnerPattern.getTargetUri());
       if (matcher.matches()) {
         String scheme = matcher.group(1);
         String hostname = matcher.group(2);
         String portString = matcher.group(3);
+        // set default port to "default" value -1
         int port = -1;
-        if (!portString.isEmpty()) {
+        if (portString != null && !portString.isEmpty()) {
           port = new Integer(portString);
         }
         targetHost = new HttpHost(hostname, port, scheme);

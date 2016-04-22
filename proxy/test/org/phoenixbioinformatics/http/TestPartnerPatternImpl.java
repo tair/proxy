@@ -9,12 +9,12 @@ package org.phoenixbioinformatics.http;
  * 
  * @author Robert J. Muller
  */
-public class TestPartnerPattern implements IPartnerPattern {
+public class TestPartnerPatternImpl implements IPartnerPattern {
 
   /**
    * Create a TestPartnerPattern object.
    */
-  public TestPartnerPattern(String sourceUri) {
+  public TestPartnerPatternImpl(String sourceUri) {
   }
 
   @Override
