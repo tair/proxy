@@ -4,7 +4,7 @@
 package org.phoenixbioinformatics.http;
 
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertTrue;
 
 import org.apache.http.HttpHost;
 import org.junit.Test;

@@ -44,7 +44,6 @@ import org.phoenixbioinformatics.api.ApiService;
 import org.phoenixbioinformatics.http.ApiPartnerPatternImpl;
 import org.phoenixbioinformatics.http.HttpHostFactory;
 import org.phoenixbioinformatics.http.HttpPropertyImpl;
-import org.phoenixbioinformatics.http.IPartnerPattern;
 import org.phoenixbioinformatics.http.RequestFactory;
 import org.phoenixbioinformatics.http.UnsupportedHttpMethodException;
 import org.phoenixbioinformatics.properties.ProxyProperties;
@@ -200,6 +199,13 @@ public class Proxy extends HttpServlet {
                               servletRequest.getLocalPort(),
                               servletRequest.getHeader(X_FORWARDED_HOST));
         HttpHost sourceHost = hostFactory.getSourceHost();
+        HttpHost targetHost = hostFactory.getTargetHost();
+        String partnerId = hostFactory.getPartnerId();
+        logger.debug("Server name: " + servletRequest.getServerName());
+        logger.debug("Host name: " + servletRequest.getHeader("host"));
+        logger.debug("Forwarded host: " + servletRequest.getHeader(X_FORWARDED_HOST));
+        logger.debug("Source host: " + sourceHost.toHostString());
+        logger.debug("Target host: " + sourceHost.toHostString());
         partnerPattern.setSourceUri(sourceHost.toHostString());
 
         // populate secret key and credential id from cookie if available
@@ -240,7 +246,7 @@ public class Proxy extends HttpServlet {
                           servletResponse,
                           uri,
                           hostFactory.getPartnerId(),
-                          hostFactory.getTargetHost(),
+                          targetHost,
                           sourceHost, // hard-coded to source for now
                           fullRequestUri,
                           remoteIp,
