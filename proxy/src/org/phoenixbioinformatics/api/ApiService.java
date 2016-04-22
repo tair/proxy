@@ -162,7 +162,7 @@ public class ApiService extends AbstractApiService {
    * @return unique identifier for the partner corresponding to the request URI
    */
   public static PartnerOutput getPartnerInfo(String uri) {
-    String urn = PARTNERS_URN + PATTERNS_URI + "/?sourceUri=" + uri;
+    String urn = PARTNERS_URN + PATTERNS_URI + "?sourceUri=" + uri;
     try {
       String content = callApi(urn, RequestFactory.HttpMethod.GET);
       Gson gson = new Gson();
