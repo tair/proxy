@@ -199,6 +199,8 @@ public class Proxy extends HttpServlet {
                               servletRequest.getLocalPort(),
                               servletRequest.getHeader(X_FORWARDED_HOST));
         HttpHost sourceHost = hostFactory.getSourceHost();
+        // Set source string before using host factory further.
+        partnerPattern.setSourceUri(sourceHost.toHostString());
         HttpHost targetHost = hostFactory.getTargetHost();
         String partnerId = hostFactory.getPartnerId();
         logger.debug("Server name: " + servletRequest.getServerName());
@@ -206,7 +208,6 @@ public class Proxy extends HttpServlet {
         logger.debug("Forwarded host: " + servletRequest.getHeader(X_FORWARDED_HOST));
         logger.debug("Source host: " + sourceHost.toHostString());
         logger.debug("Target host: " + sourceHost.toHostString());
-        partnerPattern.setSourceUri(sourceHost.toHostString());
 
         // populate secret key and credential id from cookie if available
         String credentialId = null;
@@ -245,7 +246,7 @@ public class Proxy extends HttpServlet {
         authorizeAndProxy(servletRequest,
                           servletResponse,
                           uri,
-                          hostFactory.getPartnerId(),
+                          partnerId,
                           targetHost,
                           sourceHost, // hard-coded to source for now
                           fullRequestUri,
