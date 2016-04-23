@@ -200,7 +200,7 @@ public class Proxy extends HttpServlet {
                               servletRequest.getHeader(X_FORWARDED_HOST));
         
         logger.debug("Server name: " + servletRequest.getServerName());
-        logger.debug("Host name: " + servletRequest.getHeader("host"));
+        logger.debug("Host name: " + servletRequest.getHeader(HttpHeaders.HOST));
         logger.debug("Forwarded host: " + servletRequest.getHeader(X_FORWARDED_HOST));
         
         HttpHost sourceHost = hostFactory.getSourceHost();
