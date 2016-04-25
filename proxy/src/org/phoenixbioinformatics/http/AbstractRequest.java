@@ -128,11 +128,12 @@ public abstract class AbstractRequest implements IRequest {
 
   /**
    * Extract the URI from a servlet request and rewrite it using the target
-   * server URI prefix and URI encoding for security. The method handles a query
-   * string and/or URI fragments (?name=value&name2=value#fragment).
+   * server URI scheme and authority, with URI encoding for security. The method
+   * handles a query string and/or URI fragments
+   * (?name=value&name2=value#fragment).
    * 
    * @param servletRequest the incoming HTTP request
-   * @param targetPrefix the first part of the target URI
+   * @param targetPrefix the scheme and authority of the target URI
    *          (https://domain.arabidopsis.org, for example)
    * @return the URI composed from the request
    */

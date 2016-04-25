@@ -1,0 +1,4 @@
+04/21/2016 17:30:59,275 DEBUG [org.phoenixbioinformatics.api.AbstractApiService] Making GET request: https://demoapi.arabidopsis.org/partners/patterns//?sourceUri=demotair.arabidopsis.org
+04/21/2016 17:31:00,033 DEBUG [org.phoenixbioinformatics.api.AbstractApiService] Making GET request: https://demoapi.arabidopsis.org/partners/patterns//?sourceUri=demotair.arabidopsis.org
+04/21/2016 17:31:00,238 DEBUG [org.phoenixbioinformatics.api.AbstractApiService] Making GET request: https://demoapi.arabidopsis.org/partners/patterns//?sourceUri=demotair.arabidopsis.org
+04/21/2016 17:31:00,445 DEBUG [org.phoenixbioinformatics.api.AbstractApiService] Making GET request: https://demoapi.arabidopsis.org/partners/patterns//?sourceUri=demotair.arabidopsis.org

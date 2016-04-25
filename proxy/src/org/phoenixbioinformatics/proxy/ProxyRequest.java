@@ -6,7 +6,6 @@ package org.phoenixbioinformatics.proxy;
 
 
 import java.io.Serializable;
-import java.net.URI;
 import java.util.Enumeration;
 
 import javax.servlet.http.HttpServletRequest;
@@ -14,9 +13,7 @@ import javax.servlet.http.HttpSession;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpHeaders;
-import org.apache.http.HttpHost;
 import org.apache.http.client.methods.HttpUriRequest;
-import org.apache.http.client.utils.URIUtils;
 import org.apache.http.message.BasicHeader;
 import org.apache.http.message.HeaderGroup;
 
@@ -34,8 +31,6 @@ import org.apache.http.message.HeaderGroup;
 public class ProxyRequest implements Serializable {
   /** serial version UI for serializable class */
   private static final long serialVersionUID = 1L;
-  /** the proxied host as a URI object */
-  private URI targetObject;
   /** HTTP method, GET or POST */
   private String method = null;
   /** rewritten original request */
@@ -75,17 +70,12 @@ public class ProxyRequest implements Serializable {
    * Create a ProxyRequest object. This keeps the actual request to proxy null,
    * the client must set that later.
    * 
-   * @param targetUriObj the target URI
    * @param method the HTTP method as a string
    * @param currentUri the URI of the request, the part of this request's URL
    *          from the protocol name up to the query string
    * @param ip the IP address making the request
    */
-  public ProxyRequest(URI targetUriObj,
-                      String method,
-                      String currentUri,
-                      String ip) {
-    this.targetObject = targetUriObj;
+  public ProxyRequest(String method, String currentUri, String ip) {
     this.method = method;
     this.currentUri = currentUri;
     this.ip = ip;
@@ -103,9 +93,7 @@ public class ProxyRequest implements Serializable {
   }
 
   /**
-   * Copy request headers from the servlet client to the proxy request. The
-   * method rewrites the HOST header with the proxy host, if there is a HOST
-   * header.
+   * Copy request headers from the servlet client to the proxy request.
    * 
    * @param request the incoming HTTP request
    */
@@ -123,18 +111,6 @@ public class ProxyRequest implements Serializable {
       Enumeration<String> headers = request.getHeaders(headerName);
       while (headers.hasMoreElements()) {
         String headerValue = headers.nextElement();
-        // In case the proxy host is running multiple virtual servers,
-        // rewrite the Host header to ensure that we get content from
-        // the correct virtual server.
-        if (headerName.equalsIgnoreCase(HttpHeaders.HOST)) {
-          HttpHost host = URIUtils.extractHost(targetObject);
-          if (host != null) {
-            headerValue = host.getHostName();
-            if (host.getPort() != -1) {
-              headerValue += ":" + host.getPort();
-            }
-          }
-        }
         requestToProxy.addHeader(headerName, headerValue);
       }
     }
@@ -159,7 +135,7 @@ public class ProxyRequest implements Serializable {
   }
 
   public void setUserIdentifier(String userIdentifier) {
-    requestToProxy.addHeader("Cookie", "userIdentifier="+userIdentifier);
+    requestToProxy.addHeader("Cookie", "userIdentifier=" + userIdentifier);
   }
 
   /**

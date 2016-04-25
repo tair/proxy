@@ -9,8 +9,8 @@ import org.apache.http.client.methods.HttpUriRequest;
 
 
 /**
- * An API interface for proxy request implementation objects that represent
- * a factory for HttpUriRequest objects to proxy to a target server
+ * An API interface for proxy request implementation objects that represent a
+ * factory for HttpUriRequest objects to proxy to a target server
  * 
  * @author Robert J. Muller
  */
@@ -21,10 +21,11 @@ public interface IRequest {
    * 
    * @param servletRequest the HTTP servlet request containing the request
    *          details
+   * @param partnerHostUri the scheme and authority for the target partner host
    * @return an HTTP URI request suitable for proxying
    * @throws IOException when there is a problem streaming an entity or the
    *           entity character set is not a supported character set
    */
-  HttpUriRequest getUriRequest(HttpServletRequest servletRequest, String partnerHostUri)
-      throws IOException;
+  HttpUriRequest getUriRequest(HttpServletRequest servletRequest,
+                               String partnerHostUri) throws IOException;
 }
