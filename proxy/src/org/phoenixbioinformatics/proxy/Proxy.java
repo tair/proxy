@@ -198,17 +198,18 @@ public class Proxy extends HttpServlet {
                               servletRequest.getServerName(),
                               servletRequest.getLocalPort(),
                               servletRequest.getHeader(X_FORWARDED_HOST));
-        
+
         logger.debug("Server name: " + servletRequest.getServerName());
         logger.debug("Host name: " + servletRequest.getHeader(HttpHeaders.HOST));
-        logger.debug("Forwarded host: " + servletRequest.getHeader(X_FORWARDED_HOST));
-        
+        logger.debug("Forwarded host: "
+                     + servletRequest.getHeader(X_FORWARDED_HOST));
+
         HttpHost sourceHost = hostFactory.getSourceHost();
         logger.debug("Source host: " + sourceHost.toHostString());
-        
+
         // Set source string before using host factory further.
         partnerPattern.setSourceUri(sourceHost.toHostString());
-        
+
         HttpHost targetHost = hostFactory.getTargetHost();
         String partnerId = hostFactory.getPartnerId();
         logger.debug("Target host: " + sourceHost.toHostString());
@@ -239,9 +240,10 @@ public class Proxy extends HttpServlet {
         }
 
         String fullRequestUri =
-          buildFullUri(servletRequest.getPathInfo(),
-                       servletRequest.getQueryString(),
-                       sourceHost);
+          buildFullUri(servletRequest.getScheme(),
+                       sourceHost.getHostName(),
+                       servletRequest.getPathInfo(),
+                       servletRequest.getQueryString());
         String remoteIp = getIpAddress(servletRequest);
 
         logRequest(fullRequestUri, remoteIp, credentialId, sessionId);
@@ -350,15 +352,17 @@ public class Proxy extends HttpServlet {
   /**
    * Build the full URI for proxying based on the transformed source host.
    *
+   * @param scheme the scheme (http or https) for the URI
+   * @param hostName the host name for the URI
    * @param path the URI path information
    * @param query the URI query parameters
-   * @param sourceHost the HTTP host for the source being proxied
    * @return the transformed URI
    */
-  private String buildFullUri(String path, String query, HttpHost sourceHost) {
-    StringBuilder builder =
-      new StringBuilder(sourceHost.getSchemeName() + "://"
-                        + sourceHost.getHostName());
+  private String buildFullUri(String scheme, String hostName, String path,
+                              String query) {
+    StringBuilder builder = new StringBuilder(scheme);
+    builder.append("://");
+    builder.append(hostName);
     builder.append(path);
     if (query != null) {
       builder.append("?");
