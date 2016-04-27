@@ -77,6 +77,8 @@ public class Proxy extends HttpServlet {
   /** x-forwarded-for header name constant */
   private static final String X_FORWARDED_FOR = "x-forwarded-for";
   /** x-forwarded-host header name constant */
+  private static final String X_FORWARDED_SCHEME = "x-forwarded-proto";
+  /** x-forwarded-host header name constant */
   private static final String X_FORWARDED_HOST = "x-forwarded-host";
   /** name of custom header indicating password update */
   private static final String PASSWORD_UPDATE_HEADER =
@@ -194,7 +196,7 @@ public class Proxy extends HttpServlet {
         HttpHostFactory hostFactory =
           new HttpHostFactory(partnerPattern,
                               new HttpPropertyImpl(),
-                              servletRequest.getScheme(),
+                              servletRequest.getHeader(X_FORWARDED_SCHEME),
                               servletRequest.getServerName(),
                               servletRequest.getLocalPort(),
                               servletRequest.getHeader(X_FORWARDED_HOST));
@@ -202,6 +204,8 @@ public class Proxy extends HttpServlet {
         logger.debug("Server name: " + servletRequest.getServerName());
         logger.debug("Server scheme: " + servletRequest.getScheme());
         logger.debug("Host name: " + servletRequest.getHeader(HttpHeaders.HOST));
+        logger.debug("Forwarded scheme: "
+                     + servletRequest.getHeader(X_FORWARDED_SCHEME));
         logger.debug("Forwarded host: "
                      + servletRequest.getHeader(X_FORWARDED_HOST));
 
@@ -241,7 +245,7 @@ public class Proxy extends HttpServlet {
         }
 
         String fullRequestUri =
-          buildFullUri(servletRequest.getScheme(),
+          buildFullUri(sourceHost.getSchemeName(),
                        sourceHost.getHostName(),
                        servletRequest.getPathInfo(),
                        servletRequest.getQueryString());
