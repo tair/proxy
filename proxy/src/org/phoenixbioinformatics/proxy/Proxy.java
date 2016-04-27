@@ -200,19 +200,20 @@ public class Proxy extends HttpServlet {
                               servletRequest.getHeader(X_FORWARDED_HOST));
 
         logger.debug("Server name: " + servletRequest.getServerName());
+        logger.debug("Server scheme:" + servletRequest.getScheme());
         logger.debug("Host name: " + servletRequest.getHeader(HttpHeaders.HOST));
         logger.debug("Forwarded host: "
                      + servletRequest.getHeader(X_FORWARDED_HOST));
 
         HttpHost sourceHost = hostFactory.getSourceHost();
-        logger.debug("Source host: " + sourceHost.toHostString());
+        logger.debug("Source host: " + sourceHost.toString());
 
         // Set source string before using host factory further.
-        partnerPattern.setSourceUri(sourceHost.toHostString());
+        partnerPattern.setSourceUri(sourceHost.toString());
 
         HttpHost targetHost = hostFactory.getTargetHost();
         String partnerId = hostFactory.getPartnerId();
-        logger.debug("Target host: " + sourceHost.toHostString());
+        logger.debug("Target host: " + targetHost.toString());
         logger.debug("Partner ID:" + partnerId);
 
         // populate secret key and credential id from cookie if available
