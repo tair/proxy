@@ -200,16 +200,16 @@ public class Proxy extends HttpServlet {
                               servletRequest.getHeader(X_FORWARDED_HOST));
 
         logger.debug("Server name: " + servletRequest.getServerName());
-        logger.debug("Server scheme:" + servletRequest.getScheme());
+        logger.debug("Server scheme: " + servletRequest.getScheme());
         logger.debug("Host name: " + servletRequest.getHeader(HttpHeaders.HOST));
         logger.debug("Forwarded host: "
                      + servletRequest.getHeader(X_FORWARDED_HOST));
 
         HttpHost sourceHost = hostFactory.getSourceHost();
-        logger.debug("Source host: " + sourceHost.toString());
+        logger.debug("Source host: " + sourceHost.toHostString());
 
         // Set source string before using host factory further.
-        partnerPattern.setSourceUri(sourceHost.toString());
+        partnerPattern.setSourceUri(sourceHost.toHostString());
 
         HttpHost targetHost = hostFactory.getTargetHost();
         String partnerId = hostFactory.getPartnerId();
