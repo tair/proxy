@@ -460,8 +460,15 @@ public class Proxy extends HttpServlet {
       logger.debug("PW-249 UI_URI: "+ UI_URI);
       logger.debug("PW-249 fullUri: "+ fullUri);
       
+//      from log //TODO clean it up later
+//      PW-249 redirectUri before replacement: http%3A%2F%2Fdemotair.arabidopsis.org%2Fservlets%2FOrder%3Fstate%3Dsearch%26mode%3Dstock%26stock_numbers%3DSALK_024277C
+//      PW-249 UI_URI: https://demoui.arabidopsis.org
+//      PW-249 fullUri: http://demotair.arabidopsis.org/servlets/Order?state=search&mode=stock&stock_numbers=SALK_024277C
+//      PW-249 redirectUri after replacement: http%3A%2F%2Fdemotair.arabidopsis.org%2Fservlets%2FOrder%3Fstate%3Dsearch%26mode%3Dstock%26stock_numbers%3DSALK_024277C
+
       if (UI_URI.toLowerCase().contains("https://") && fullUri.toLowerCase().contains("http://")) {
-          redirectUri.replaceFirst("http://", "https://");
+          redirectUri.replace("http", "https");//I assume there's only one occurence of http in redirectUri.
+          logger.debug("PW-249 REPLACED http with https in redirectUri");
         }
       logger.debug("PW-249 redirectUri after replacement: "+ redirectUri);
       
