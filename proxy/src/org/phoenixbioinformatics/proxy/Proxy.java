@@ -455,6 +455,9 @@ public class Proxy extends HttpServlet {
     // Build the URI to use for a redirect if authorization fails
     try {
       redirectUri = URLEncoder.encode(fullUri, UTF_8);
+      if (UI_URI.toLowerCase().contains("https://") && fullUri.toLowerCase().contains("http://")) {
+          redirectUri.replaceFirst("http://", "https://");
+        }
     } catch (UnsupportedEncodingException e) {
       // Log and ignore, use un-encoded redirect URI
       logger.warn(ENCODING_FAIURE_ERROR + redirectUri, e);
@@ -467,7 +470,9 @@ public class Proxy extends HttpServlet {
       authorized = true;
       logger.debug("Party " + credentialId + " authorized for free content "
                    + fullUri + " at partner " + partnerId);
-    } else if (auth.equals("NeedSubscription")) {
+    } 
+    
+    else if (auth.equals("NeedSubscription")) {
       // check metering status and redirect or proxy as appropriate
       logger.debug("Party " + credentialId
                    + " needs to subscribe to see paid content " + fullUri
@@ -490,7 +495,9 @@ public class Proxy extends HttpServlet {
           UI_URI + METER_BLOCKING_URI + partnerId + REDIRECT_PARAM
               + redirectUri;
       }
-    } else if (auth.equals(NEED_LOGIN_CODE)) {
+    } 
+    
+    else if (auth.equals(NEED_LOGIN_CODE)) {
       // force user to log in
       logger.debug("Party " + credentialId + " needs to login to access "
                    + fullUri + " at partner " + partnerId);
