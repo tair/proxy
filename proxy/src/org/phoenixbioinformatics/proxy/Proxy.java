@@ -455,9 +455,16 @@ public class Proxy extends HttpServlet {
     // Build the URI to use for a redirect if authorization fails
     try {
       redirectUri = URLEncoder.encode(fullUri, UTF_8);
+      
+      logger.debug("PW-249 redirectUri before replacement: "+ redirectUri);
+      logger.debug("PW-249 UI_URI: "+ UI_URI);
+      logger.debug("PW-249 fullUri: "+ fullUri);
+      
       if (UI_URI.toLowerCase().contains("https://") && fullUri.toLowerCase().contains("http://")) {
           redirectUri.replaceFirst("http://", "https://");
         }
+      logger.debug("PW-249 redirectUri after replacement: "+ redirectUri);
+      
     } catch (UnsupportedEncodingException e) {
       // Log and ignore, use un-encoded redirect URI
       logger.warn(ENCODING_FAIURE_ERROR + redirectUri, e);
@@ -494,6 +501,9 @@ public class Proxy extends HttpServlet {
         redirectPath =
           UI_URI + METER_BLOCKING_URI + partnerId + REDIRECT_PARAM
               + redirectUri;
+        
+        logger.debug("redirectPath: "+ redirectPath);
+        
       }
     } 
     
@@ -504,6 +514,8 @@ public class Proxy extends HttpServlet {
       authorized = false;
       redirectPath =
         UI_URI + LOGIN_URI + partnerId + REDIRECT_PARAM + redirectUri;
+      
+      logger.debug("PW-249 redirectPath in login: "+ redirectPath);
     }
 
     if (!authorized) {
