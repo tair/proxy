@@ -455,6 +455,23 @@ public class Proxy extends HttpServlet {
     // Build the URI to use for a redirect if authorization fails
     try {
       redirectUri = URLEncoder.encode(fullUri, UTF_8);
+      
+      logger.debug("PW-249 redirectUri before replacement: "+ redirectUri);
+      logger.debug("PW-249 UI_URI: "+ UI_URI);
+      logger.debug("PW-249 fullUri: "+ fullUri);
+      
+//      from log //TODO clean it up later
+//      PW-249 redirectUri before replacement: http%3A%2F%2Fdemotair.arabidopsis.org%2Fservlets%2FOrder%3Fstate%3Dsearch%26mode%3Dstock%26stock_numbers%3DSALK_024277C
+//      PW-249 UI_URI: https://demoui.arabidopsis.org
+//      PW-249 fullUri: http://demotair.arabidopsis.org/servlets/Order?state=search&mode=stock&stock_numbers=SALK_024277C
+//      PW-249 redirectUri after replacement: http%3A%2F%2Fdemotair.arabidopsis.org%2Fservlets%2FOrder%3Fstate%3Dsearch%26mode%3Dstock%26stock_numbers%3DSALK_024277C
+
+      if (UI_URI.toLowerCase().contains("https://") && fullUri.toLowerCase().contains("http://")) {
+    	  redirectUri = redirectUri.replaceFirst("http", "https");
+          logger.debug("PW-249 REPLACED http with https in redirectUri");
+        }
+      logger.debug("PW-249 redirectUri after replacement: "+ redirectUri);
+      
     } catch (UnsupportedEncodingException e) {
       // Log and ignore, use un-encoded redirect URI
       logger.warn(ENCODING_FAIURE_ERROR + redirectUri, e);
@@ -467,7 +484,9 @@ public class Proxy extends HttpServlet {
       authorized = true;
       logger.debug("Party " + credentialId + " authorized for free content "
                    + fullUri + " at partner " + partnerId);
-    } else if (auth.equals("NeedSubscription")) {
+    } 
+    
+    else if (auth.equals("NeedSubscription")) {
       // check metering status and redirect or proxy as appropriate
       logger.debug("Party " + credentialId
                    + " needs to subscribe to see paid content " + fullUri
@@ -489,14 +508,21 @@ public class Proxy extends HttpServlet {
         redirectPath =
           UI_URI + METER_BLOCKING_URI + partnerId + REDIRECT_PARAM
               + redirectUri;
+        
+        logger.debug("redirectPath: "+ redirectPath);
+        
       }
-    } else if (auth.equals(NEED_LOGIN_CODE)) {
+    } 
+    
+    else if (auth.equals(NEED_LOGIN_CODE)) {
       // force user to log in
       logger.debug("Party " + credentialId + " needs to login to access "
                    + fullUri + " at partner " + partnerId);
       authorized = false;
       redirectPath =
         UI_URI + LOGIN_URI + partnerId + REDIRECT_PARAM + redirectUri;
+      
+      logger.debug("PW-249 redirectPath in login: "+ redirectPath);
     }
 
     if (!authorized) {
