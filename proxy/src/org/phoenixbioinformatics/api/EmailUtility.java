@@ -37,7 +37,6 @@ public class EmailUtility {
 
 	public static void send(String to, String from, String subject, String body) {
 		
-		// setup Mail Server Properties //TODO
 		mailServerProperties = System.getProperties();
 		mailServerProperties.setProperty("mail.smtp.host", ProxyProperties.getProperty("mail.smtp.host"));
 		mailServerProperties.put("mail.smtp.port", ProxyProperties.getProperty("mail.smtp.port"));
@@ -45,27 +44,17 @@ public class EmailUtility {
 		mailServerProperties.put("mail.smtp.starttls.enable", "true");
 
 		try {
-			// create mail session
-			//mailSession = Session.getDefaultInstance(mailServerProperties, null);
-			
 			mailSession = createSession();
+			
 			message = new MimeMessage(mailSession);
 			message.setFrom(new InternetAddress(from));
-
 			message.addRecipient(Message.RecipientType.TO, new InternetAddress(to));
-			message.addRecipient(Message.RecipientType.CC, new InternetAddress("andrvet@gmail.com"));
+			message.addRecipient(Message.RecipientType.CC, new InternetAddress("emily@arabidopsis.org"));
+			message.addRecipient(Message.RecipientType.CC, new InternetAddress("muller@arabidopsis.org"));
 			message.setSubject(subject);
 			message.setContent(body, "text/html");
 
-//			Transport transport = mailSession.getTransport("smtp");
-
-			// Enter your correct gmail UserID and Password
-			// if you have 2FA enabled then provide App Specific Password
-//			transport.connect("smtp.gmail.com", ProxyProperties.getProperty("mail.username"), ProxyProperties.getProperty("mail.password"));
-//			transport.sendMessage(message, message.getAllRecipients());
-//			transport.close();
-
-			 Transport.send(message);
+			Transport.send(message);
 		}
 		catch (MessagingException e) {
 			logger.error(SEND_EMAIL_ERROR + to, e);

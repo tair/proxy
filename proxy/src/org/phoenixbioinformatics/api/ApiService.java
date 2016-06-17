@@ -294,11 +294,11 @@ public static void sendMeteringEmail(String remoteIp, String partnerId) {
 //		} else if (ip == null) {
 //			identity.append("No IP address or community id");
 //		}
-		String content = "content";// identity.toString() + ": " + ProxyProperties.getProperty("metering.content") + count + "!";
-		String subject = "subject: partnerId:"+partnerId+"is about to reach the limit for remoteIp:"+remoteIp;
+		String content = "partnerId:"+partnerId+" is about to exceed the limit for remoteIp:"+remoteIp;// identity.toString() + ": " + ProxyProperties.getProperty("metering.content") + count + "!";
+		String subject = "partnerId:"+partnerId+" is about to exceed the limit for remoteIp:"+remoteIp;
 		
-		logger.debug("Sending email to " + to + " from " + from + ": " + subject );
-		logger.debug("Contents: " + content);
+		logger.debug("Sending email to " + to + " from " + from + ". Subject: " + subject );
+		logger.debug("Content: " + content);
 		
 		EmailUtility.send(to, from, subject, content);	
 }
