@@ -501,7 +501,7 @@ public class Proxy extends HttpServlet {
         
         ApiService.incrementMeteringCount(remoteIp, partnerId);
         
-        ApiService.sendMeteringEmail(remoteIp, partnerId);//PW-87
+        ApiService.sendMeteringEmail(remoteIp, partnerId, credentialId);
 
       } else {
         logger.debug("Blocked from paid content by meter block");

@@ -280,21 +280,10 @@ public class ApiService extends AbstractApiService {
     }
   }
 
-public static void sendMeteringEmail(String remoteIp, String partnerId) {
+public static void sendMeteringEmail(String remoteIp, String partnerId, String credentialId) {
 		String to = "andrey@arabidopsis.org";//ProxyProperties.getProperty("mail.to");
 		String from = ProxyProperties.getProperty("mail.from");
-//		StringBuilder identity = new StringBuilder(ip);
-//		if (ip != null && communityId != null) {
-//			identity.append("(community id = ");
-//			identity.append(communityId.toString());
-//			identity.append(")");
-//		} else if (communityId != null) {
-//			identity.append("communityId = ");
-//			identity.append(communityId.toString());
-//		} else if (ip == null) {
-//			identity.append("No IP address or community id");
-//		}
-		String content = "partnerId:"+partnerId+" is about to exceed the limit for remoteIp:"+remoteIp;// identity.toString() + ": " + ProxyProperties.getProperty("metering.content") + count + "!";
+		String content = "partnerId:"+partnerId+" is about to exceed the limit for remoteIp:"+remoteIp+" credentialId:"+credentialId;
 		String subject = "partnerId:"+partnerId+" is about to exceed the limit for remoteIp:"+remoteIp;
 		
 		logger.debug("Sending email to " + to + " from " + from + ". Subject: " + subject );
