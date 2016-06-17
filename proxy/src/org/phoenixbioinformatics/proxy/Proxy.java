@@ -460,12 +460,6 @@ public class Proxy extends HttpServlet {
       logger.debug("PW-249 UI_URI: "+ UI_URI);
       logger.debug("PW-249 fullUri: "+ fullUri);
       
-//      from log //TODO clean it up later
-//      PW-249 redirectUri before replacement: http%3A%2F%2Fdemotair.arabidopsis.org%2Fservlets%2FOrder%3Fstate%3Dsearch%26mode%3Dstock%26stock_numbers%3DSALK_024277C
-//      PW-249 UI_URI: https://demoui.arabidopsis.org
-//      PW-249 fullUri: http://demotair.arabidopsis.org/servlets/Order?state=search&mode=stock&stock_numbers=SALK_024277C
-//      PW-249 redirectUri after replacement: http%3A%2F%2Fdemotair.arabidopsis.org%2Fservlets%2FOrder%3Fstate%3Dsearch%26mode%3Dstock%26stock_numbers%3DSALK_024277C
-
       if (UI_URI.toLowerCase().contains("https://") && fullUri.toLowerCase().contains("http://")) {
     	  redirectUri = redirectUri.replaceFirst("http", "https");
           logger.debug("PW-249 REPLACED http with https in redirectUri");
@@ -491,17 +485,24 @@ public class Proxy extends HttpServlet {
       logger.debug("Party " + credentialId
                    + " needs to subscribe to see paid content " + fullUri
                    + " at partner " + partnerId);
+      
       String meter = ApiService.checkMeteringLimit(remoteIp, partnerId);
+      
       if (meter.equals(OK_CODE)) {
         logger.debug("Allowed free access to content by metering");
         authorized = true;
         ApiService.incrementMeteringCount(remoteIp, partnerId);
+      
       } else if (meter.equals(METER_WARNING_CODE)) {
         logger.debug("Warned to subscribe by meter limit");
         authorized = false;
         redirectPath =
           UI_URI + METER_WARNING_URI + partnerId + REDIRECT_PARAM + redirectUri;
+        
         ApiService.incrementMeteringCount(remoteIp, partnerId);
+        
+        ApiService.sendMeteringEmail(remoteIp, partnerId);//PW-87
+
       } else {
         logger.debug("Blocked from paid content by meter block");
         authorized = false;

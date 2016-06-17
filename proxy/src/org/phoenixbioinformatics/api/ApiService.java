@@ -19,6 +19,7 @@ import org.apache.http.message.BasicNameValuePair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.phoenixbioinformatics.http.RequestFactory;
+import org.phoenixbioinformatics.properties.ProxyProperties;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -278,4 +279,27 @@ public class ApiService extends AbstractApiService {
       return e.getMessage();
     }
   }
+
+public static void sendMeteringEmail(String remoteIp, String partnerId) {
+		String to = ProxyProperties.getProperty("metering.email.to");
+		String from = ProxyProperties.getProperty("metering.email.from");//TODO
+//		StringBuilder identity = new StringBuilder(ip);
+//		if (ip != null && communityId != null) {
+//			identity.append("(community id = ");
+//			identity.append(communityId.toString());
+//			identity.append(")");
+//		} else if (communityId != null) {
+//			identity.append("communityId = ");
+//			identity.append(communityId.toString());
+//		} else if (ip == null) {
+//			identity.append("No IP address or community id");
+//		}
+		String content = "content";//TODO identity.toString() + ": " + ProxyProperties.getProperty("metering.content") + count + "!";
+		String subject = "subject: partnerId:"+partnerId+"is about to reach the limit for remoteIp:"+remoteIp;
+		logger.debug("Sending email to " + to + " from " + from + ": " + subject );
+		logger.debug("Contents: " + content);
+		EmailUtility.send(to, from, subject, content);	
+}
+
+
 }
