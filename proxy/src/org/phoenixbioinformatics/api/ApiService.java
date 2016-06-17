@@ -281,8 +281,8 @@ public class ApiService extends AbstractApiService {
   }
 
 public static void sendMeteringEmail(String remoteIp, String partnerId) {
-		String to = ProxyProperties.getProperty("metering.email.to");
-		String from = ProxyProperties.getProperty("metering.email.from");
+		String to = ProxyProperties.getProperty("mail.to");
+		String from = ProxyProperties.getProperty("mail.from");
 //		StringBuilder identity = new StringBuilder(ip);
 //		if (ip != null && communityId != null) {
 //			identity.append("(community id = ");
