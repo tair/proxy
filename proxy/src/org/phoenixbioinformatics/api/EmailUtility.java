@@ -19,7 +19,7 @@ public class EmailUtility {
 	private static Session mailSession;
 	private static MimeMessage message;
 
-	private static final String SEND_EMAIL_ERROR = "Error sending email to ";
+	private static final String SEND_EMAIL_ERROR = "Error sending metering email to ";
 	private static final Logger logger = LogManager.getLogger(EmailUtility.class);
 
 //	private static Session createSession() {
@@ -34,11 +34,11 @@ public class EmailUtility {
 //	}
 
 	public static void send(String to, String from, String subject, String body) {
+		
 		// setup Mail Server Properties //TODO
 		mailServerProperties = System.getProperties();
-		String host = "localhost";
-		mailServerProperties.setProperty("mail.smtp.host", host);
-		mailServerProperties.put("mail.smtp.port", "587");
+		mailServerProperties.setProperty("mail.smtp.host", ProxyProperties.getProperty("metering.email.host")); //localhost
+		mailServerProperties.put("mail.smtp.port", ProxyProperties.getProperty("metering.email.port")); // for gmail 587
 		mailServerProperties.put("mail.smtp.auth", "true");
 		mailServerProperties.put("mail.smtp.starttls.enable", "true");
 
@@ -51,7 +51,7 @@ public class EmailUtility {
 			message.setFrom(new InternetAddress(from));
 
 			message.addRecipient(Message.RecipientType.TO, new InternetAddress(to));
-			message.addRecipient(Message.RecipientType.CC, new InternetAddress("andrey@arabidopsis.org"));
+			message.addRecipient(Message.RecipientType.CC, new InternetAddress(ProxyProperties.getProperty("metering.email.cc")));
 			message.setSubject(subject);
 			message.setContent(body, "text/html");
 
@@ -59,14 +59,11 @@ public class EmailUtility {
 
 			// Enter your correct gmail UserID and Password
 			// if you have 2FA enabled then provide App Specific Password
-			transport.connect("smtp.gmail.com", "andrvet", "gmail_pwd");// TODO
-			//or
 			transport.connect("smtp.gmail.com", ProxyProperties.getProperty("metering.email.username"), ProxyProperties.getProperty("metering.email.password"));// TODO
-
 			transport.sendMessage(message, message.getAllRecipients());
 			transport.close();
 
-			// or
+			// or just
 			// Transport.send(message);
 		}
 		catch (MessagingException e) {

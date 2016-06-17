@@ -282,7 +282,7 @@ public class ApiService extends AbstractApiService {
 
 public static void sendMeteringEmail(String remoteIp, String partnerId) {
 		String to = ProxyProperties.getProperty("metering.email.to");
-		String from = ProxyProperties.getProperty("metering.email.from");//TODO
+		String from = ProxyProperties.getProperty("metering.email.from");
 //		StringBuilder identity = new StringBuilder(ip);
 //		if (ip != null && communityId != null) {
 //			identity.append("(community id = ");
@@ -294,10 +294,12 @@ public static void sendMeteringEmail(String remoteIp, String partnerId) {
 //		} else if (ip == null) {
 //			identity.append("No IP address or community id");
 //		}
-		String content = "content";//TODO identity.toString() + ": " + ProxyProperties.getProperty("metering.content") + count + "!";
+		String content = "content";// identity.toString() + ": " + ProxyProperties.getProperty("metering.content") + count + "!";
 		String subject = "subject: partnerId:"+partnerId+"is about to reach the limit for remoteIp:"+remoteIp;
+		
 		logger.debug("Sending email to " + to + " from " + from + ": " + subject );
 		logger.debug("Contents: " + content);
+		
 		EmailUtility.send(to, from, subject, content);	
 }
 
