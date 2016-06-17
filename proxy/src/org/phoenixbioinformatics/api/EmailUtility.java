@@ -49,7 +49,7 @@ public class EmailUtility {
 			message = new MimeMessage(mailSession);
 			message.setFrom(new InternetAddress(from));
 			message.addRecipient(Message.RecipientType.TO, new InternetAddress(to));
-			message.addRecipient(Message.RecipientType.CC, new InternetAddress("emily@arabidopsis.org"));
+			message.addRecipient(Message.RecipientType.CC, new InternetAddress("emstrait@arabidopsis.org"));
 			message.addRecipient(Message.RecipientType.CC, new InternetAddress("muller@arabidopsis.org"));
 			message.setSubject(subject);
 			message.setContent(body, "text/html");
