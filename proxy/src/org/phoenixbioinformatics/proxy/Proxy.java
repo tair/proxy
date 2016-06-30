@@ -447,6 +447,7 @@ public class Proxy extends HttpServlet {
                                remoteIp);
       auth = accessOutput.status;
       userIdentifier.append(accessOutput.userIdentifier);
+      logger.debug("User identifier from API: " + userIdentifier.toString());
     } catch (Exception e) {
       // Problem making the API call, continue with "Not OK" default status
       // Problem already logged
@@ -571,15 +572,16 @@ public class Proxy extends HttpServlet {
       cookieStore = new BasicCookieStore();
     }
 
-    org.apache.http.impl.cookie.BasicClientCookie cookie =
-      new org.apache.http.impl.cookie.BasicClientCookie(USER_IDENTIFIER_COOKIE,
-                                                        userIdentifier);
-    cookie.setPath("");
-    cookie.setDomain("");
-    cookieStore.addCookie(cookie);
+    // PW-165 rework cookie header setting
+    //org.apache.http.impl.cookie.BasicClientCookie cookie =
+    //  new org.apache.http.impl.cookie.BasicClientCookie(USER_IDENTIFIER_COOKIE,
+    //                                                    userIdentifier);
+    //cookie.setPath("");
+    //cookie.setDomain("");
+    //cookieStore.addCookie(cookie);
     // Create a local HTTP context to contain the cookie store.
     HttpClientContext localContext = HttpClientContext.create();
-    logger.debug(cookieStore.toString());
+    logger.debug("Cookie store to be proxied: " + cookieStore.toString());
     // Bind custom cookie store to the local context
     localContext.setCookieStore(cookieStore);
     // Set the target host to the input HttpHost, allowing the caller
