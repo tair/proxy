@@ -92,8 +92,6 @@ public class Proxy extends HttpServlet {
   private static final String COOKIE_DOMAIN = ".arabidopsis.org";
   /** session attribute for cookies */
   private static final String COOKIES_ATTRIBUTE = "cookies";
-  /** name of the partner user id cookie */
-  private static final String USER_IDENTIFIER_COOKIE = "userIdentifier";
   /** name of the ptools web server session cookie */
   private static final String PTOOLS_SESSION_COOKIE = "PTools-session";
   /** name of the tomcat session cookie */
@@ -221,6 +219,7 @@ public class Proxy extends HttpServlet {
         logger.debug("Partner ID:" + partnerId);
 
         // populate secret key and credential id from cookie if available
+        // populate session id from supported session cookies if available to support session logging
         String credentialId = null;
         String secretKey = null;
         String sessionId = null;
@@ -346,8 +345,7 @@ public class Proxy extends HttpServlet {
                             uriRequest,
                             userIdentifier.toString());
       // Proxy, using the sourceHost as the "original" host.
-      proxy(servletRequest.getSession(),
-            servletResponse,
+      proxy(servletResponse,
             proxyRequest,
             sourceHost,
             userIdentifier.toString());
@@ -542,7 +540,6 @@ public class Proxy extends HttpServlet {
    * </p>
    * 
    * @param request the URI request to send to the server
-   * @param session the HTTP session containing a possible cookie store
    * @param responseHandler the response handler for the request
    * @param userIdentifier the id string the partner uses to identify the user
    * 
@@ -550,19 +547,18 @@ public class Proxy extends HttpServlet {
    * @throws ClientProtocolException when there is a syntax error in the URI
    */
   private void sendRequestToServer(HttpHost host, HttpUriRequest request,
-                                   HttpSession session,
                                    ResponseHandler<String> responseHandler,
                                    String userIdentifier)
       throws ClientProtocolException, IOException {
     CloseableHttpClient client = null;
     // Get cookie store from session if it's there.
-    CookieStore cookieStore =
-      (CookieStore)session.getAttribute(COOKIES_ATTRIBUTE);
+//    CookieStore cookieStore =
+//      (CookieStore)session.getAttribute(COOKIES_ATTRIBUTE);
 
     // Otherwise, create a basic store.
-    if (cookieStore == null) {
-      cookieStore = new BasicCookieStore();
-    }
+//    if (cookieStore == null) {
+//      cookieStore = new BasicCookieStore();
+//    }
 
     // PW-165 rework cookie header setting
     //org.apache.http.impl.cookie.BasicClientCookie cookie =
@@ -573,9 +569,9 @@ public class Proxy extends HttpServlet {
     //cookieStore.addCookie(cookie);
     // Create a local HTTP context to contain the cookie store.
     HttpClientContext localContext = HttpClientContext.create();
-    logger.debug("Cookie store to be proxied: " + cookieStore.toString());
+//    logger.debug("Cookie store to be proxied: " + cookieStore.toString());
     // Bind custom cookie store to the local context
-    localContext.setCookieStore(cookieStore);
+//    localContext.setCookieStore(cookieStore);
     // Set the target host to the input HttpHost, allowing the caller
     // to specify the target Host header separately from the proxy URI.
     localContext.setTargetHost(host);
@@ -585,8 +581,8 @@ public class Proxy extends HttpServlet {
     client.execute(request, responseHandler, localContext);
 
     // Put the cookie store with any returned session cookie into the session.
-    cookieStore = localContext.getCookieStore();
-    session.setAttribute(COOKIES_ATTRIBUTE, localContext.getCookieStore());
+//    cookieStore = localContext.getCookieStore();
+//    session.setAttribute(COOKIES_ATTRIBUTE, localContext.getCookieStore());
   }
 
   /**
@@ -621,7 +617,6 @@ public class Proxy extends HttpServlet {
   /**
    * Proxy the request.
    * 
-   * @param session the HTTP session, for setting the cookie store
    * @param servletResponse the servlet response to send to the client
    * @param proxyRequest the proxy request
    * @param host the host to which to set the HOST header, the target host
@@ -629,8 +624,7 @@ public class Proxy extends HttpServlet {
    * @throws ServletException when there is a servlet problem, including URI
    *           syntax or handling issues
    */
-  private void proxy(final HttpSession session,
-                     final HttpServletResponse servletResponse,
+  private void proxy(final HttpServletResponse servletResponse,
                      final ProxyRequest proxyRequest, final HttpHost host,
                      final String userIdentifier) throws ServletException {
     logger.info("Proxying " + proxyRequest.getMethod()
@@ -758,7 +752,6 @@ public class Proxy extends HttpServlet {
 
       sendRequestToServer(host,
                           proxyRequest.getRequestToProxy(),
-                          session,
                           responseHandler,
                           userIdentifier);
     } catch (IOException e) {
