@@ -447,6 +447,7 @@ public class Proxy extends HttpServlet {
                                remoteIp);
       auth = accessOutput.status;
       userIdentifier.append(accessOutput.userIdentifier);
+      logger.debug("User identifier from API: " + userIdentifier.toString());
     } catch (Exception e) {
       // Problem making the API call, continue with "Not OK" default status
       // Problem already logged
@@ -460,12 +461,6 @@ public class Proxy extends HttpServlet {
       logger.debug("PW-249 UI_URI: "+ UI_URI);
       logger.debug("PW-249 fullUri: "+ fullUri);
       
-//      from log //TODO clean it up later
-//      PW-249 redirectUri before replacement: http%3A%2F%2Fdemotair.arabidopsis.org%2Fservlets%2FOrder%3Fstate%3Dsearch%26mode%3Dstock%26stock_numbers%3DSALK_024277C
-//      PW-249 UI_URI: https://demoui.arabidopsis.org
-//      PW-249 fullUri: http://demotair.arabidopsis.org/servlets/Order?state=search&mode=stock&stock_numbers=SALK_024277C
-//      PW-249 redirectUri after replacement: http%3A%2F%2Fdemotair.arabidopsis.org%2Fservlets%2FOrder%3Fstate%3Dsearch%26mode%3Dstock%26stock_numbers%3DSALK_024277C
-
       if (UI_URI.toLowerCase().contains("https://") && fullUri.toLowerCase().contains("http://")) {
     	  redirectUri = redirectUri.replaceFirst("http", "https");
           logger.debug("PW-249 REPLACED http with https in redirectUri");
@@ -569,15 +564,16 @@ public class Proxy extends HttpServlet {
       cookieStore = new BasicCookieStore();
     }
 
-    org.apache.http.impl.cookie.BasicClientCookie cookie =
-      new org.apache.http.impl.cookie.BasicClientCookie(USER_IDENTIFIER_COOKIE,
-                                                        userIdentifier);
-    cookie.setPath("");
-    cookie.setDomain("");
-    cookieStore.addCookie(cookie);
+    // PW-165 rework cookie header setting
+    //org.apache.http.impl.cookie.BasicClientCookie cookie =
+    //  new org.apache.http.impl.cookie.BasicClientCookie(USER_IDENTIFIER_COOKIE,
+    //                                                    userIdentifier);
+    //cookie.setPath("");
+    //cookie.setDomain("");
+    //cookieStore.addCookie(cookie);
     // Create a local HTTP context to contain the cookie store.
     HttpClientContext localContext = HttpClientContext.create();
-    logger.debug(cookieStore.toString());
+    logger.debug("Cookie store to be proxied: " + cookieStore.toString());
     // Bind custom cookie store to the local context
     localContext.setCookieStore(cookieStore);
     // Set the target host to the input HttpHost, allowing the caller
