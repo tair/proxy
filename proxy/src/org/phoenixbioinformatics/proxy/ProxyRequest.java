@@ -16,6 +16,8 @@ import org.apache.http.HttpHeaders;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.message.BasicHeader;
 import org.apache.http.message.HeaderGroup;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 
 /**
@@ -29,6 +31,8 @@ import org.apache.http.message.HeaderGroup;
  * @author Robert J. Muller
  */
 public class ProxyRequest implements Serializable {
+  /** logger for this class */
+  private static final Logger logger = LogManager.getLogger(ProxyRequest.class);
   /** serial version UI for serializable class */
   private static final long serialVersionUID = 1L;
   /** HTTP method, GET or POST */
@@ -99,19 +103,23 @@ public class ProxyRequest implements Serializable {
    */
   public void copyRequestHeaders(HttpServletRequest request) {
     // Get an Enumeration of all of the header names sent by the client
-    Enumeration<String> enumerationOfHeaderNames = request.getHeaderNames();
-    while (enumerationOfHeaderNames.hasMoreElements()) {
-      String headerName = enumerationOfHeaderNames.nextElement();
+    Enumeration<String> names = request.getHeaderNames();
+    while (names.hasMoreElements()) {
+      String headerName = names.nextElement();
       // Ignore content length (set by InputStreamEntity) and hop-by-hop hdrs.
       if (headerName.equalsIgnoreCase(HttpHeaders.CONTENT_LENGTH))
         continue;
       if (hopByHopHeaders.containsHeader(headerName))
         continue;
+      if (headerName.equalsIgnoreCase("Cookie")) {
+        logger.debug("Incoming Cookie header " + headerName);
+      }
 
       Enumeration<String> headers = request.getHeaders(headerName);
       while (headers.hasMoreElements()) {
         String headerValue = headers.nextElement();
         requestToProxy.addHeader(headerName, headerValue);
+        logger.debug("Added header " + headerName + " to proxy request: " + headerValue);
       }
     }
   }
