@@ -102,8 +102,11 @@ public class Proxy extends HttpServlet {
   private static final String CREDENTIAL_ID_COOKIE = "credentialId";
   /** name of the Phoenix secret key cookie */
   private static final String SECRET_KEY_COOKIE = "secretKey";
-  /** name of the Phoenix user identifier cookie */
-  private static final String USER_IDENTIFIER_COOKIE = "userIdentifier";
+  /**
+   * name of the Phoenix user identifier cookie; package access for sharing to
+   * request
+   */
+  static final String USER_IDENTIFIER_COOKIE = "userIdentifier";
 
   // miscellaneous constants
 
@@ -575,10 +578,9 @@ public class Proxy extends HttpServlet {
     CookieStore cookieStore =
       (CookieStore)session.getAttribute(COOKIES_ATTRIBUTE);
     HttpClientContext localContext =
-      createLocalContextWithIdentifierCookie(host,
+      createLocalContextWithCookiesAndTarget(host,
                                              cookieStore,
-                                             request.getURI().getHost(),
-                                             userIdentifier);
+                                             request.getURI().getHost());
     client = HttpClientBuilder.create().disableRedirectHandling().build();
     // Execute the request on the proxied server. Ignore returned string.
     // TODO: try adding host as first param, see if it does the right thing.
@@ -589,25 +591,24 @@ public class Proxy extends HttpServlet {
     // Put the cookie store with any returned session cookie into the session.
     cookieStore = localContext.getCookieStore();
     logger.debug("Cookie store after proxying: " + cookieStore.toString());
-    logAllCookiesInStore(cookieStore);
     session.setAttribute(COOKIES_ATTRIBUTE, localContext.getCookieStore());
   }
 
   /**
-   * Create an Apache HTTP Client local context object that contains a new
-   * cookie userIdentifier with the value of the user identifier and a target
-   * host header set to a specified host.
+   * Create an Apache HTTP Client local context object that contains the cookie
+   * store from the previous request and a target host header set to a specified
+   * host.
    *
    * @param host the host name to set as the target host
    * @param cookieStore the optional cookie store from a previous request
    * @param cookieDomain the domain to set for the cookie
-   * @param userIdentifier the user identifier to set as the cookie value
+   * @param userIdentifier the optional user identifier to set as the cookie
+   *          value
    * @return a local HttpClient context
    */
-  private HttpClientContext createLocalContextWithIdentifierCookie(HttpHost host,
+  private HttpClientContext createLocalContextWithCookiesAndTarget(HttpHost host,
                                                                    CookieStore cookieStore,
-                                                                   String cookieDomain,
-                                                                   String userIdentifier) {
+                                                                   String cookieDomain) {
     // If no cookie store, create a basic store.
     if (cookieStore == null) {
       cookieStore = new BasicCookieStore();
@@ -616,15 +617,6 @@ public class Proxy extends HttpServlet {
     // Create a local HTTP context to contain the cookie store.
     HttpClientContext localContext = HttpClientContext.create();
 
-    // Create the cookie and set its path and domain.
-    org.apache.http.impl.cookie.BasicClientCookie cookie =
-      new org.apache.http.impl.cookie.BasicClientCookie(USER_IDENTIFIER_COOKIE,
-                                                        userIdentifier);
-    cookie.setPath("/");
-    cookie.setDomain(cookieDomain);
-    cookieStore.addCookie(cookie);
-
-    logger.debug("Cookie store to be proxied: " + cookieStore.toString());
     logAllCookiesInStore(cookieStore);
 
     // Bind custom cookie store to the local context
@@ -659,7 +651,7 @@ public class Proxy extends HttpServlet {
     proxyRequest.setRedirectContext(servletRequest.getContextPath());
 
     // Set up the request headers based on the current request.
-    proxyRequest.copyRequestHeaders(servletRequest);
+    proxyRequest.copyRequestHeaders(servletRequest, userIdentifier);
     proxyRequest.setXForwardedForHeader(servletRequest);
   }
 
@@ -1008,29 +1000,30 @@ public class Proxy extends HttpServlet {
    */
   private static void logAllServletRequestHeaders(HttpServletRequest request) {
     Enumeration<String> headerNames = request.getHeaderNames();
-    logger.log(Level.TRACE, "------------------ Servlet Request Headers ------------------");
+    logger.log(Level.TRACE,
+               "------------------ Servlet Request Headers ------------------");
     while (headerNames.hasMoreElements()) {
       String headerName = headerNames.nextElement();
-      logger.log(Level.TRACE, headerName);
       Enumeration<String> headers = request.getHeaders(headerName);
-      logger.log(Level.TRACE, "----");
       while (headers.hasMoreElements()) {
         String headerValue = headers.nextElement();
-        logger.log(Level.TRACE, headerValue);
+        logger.log(Level.TRACE, "\t" + headerName + ": " + headerValue);
       }
-      logger.log(Level.TRACE, "------------------");
     }
-    logger.log(Level.TRACE, "-------------------------------------------------------------");
+    logger.log(Level.TRACE,
+               "-------------------------------------------------------------");
   }
 
   private void logAllUriRequestHeaders(HttpUriRequest request) {
-    logger.log(Level.TRACE, "------------------ URI Request Headers ------------------");
+    logger.log(Level.TRACE,
+               "------------------ URI Request Headers ------------------");
 
     for (Header header : request.getAllHeaders()) {
-      logger.log(Level.TRACE, header.getName() + ": " + header.getValue());
-      logger.log(Level.TRACE, "----");
+      logger.log(Level.TRACE,
+                 "\t" + header.getName() + ": " + header.getValue());
     }
-    logger.log(Level.TRACE, "---------------------------------------------------------");
+    logger.log(Level.TRACE,
+               "---------------------------------------------------------");
   }
 
   /**
@@ -1040,14 +1033,15 @@ public class Proxy extends HttpServlet {
    */
   private static void logAllServletResponseHeaders(HttpServletResponse response) {
     Collection<String> names = response.getHeaderNames();
-    logger.log(Level.TRACE, "------------------ Servlet Response Headers ------------------");
+    logger.log(Level.TRACE,
+               "------------------ Servlet Response Headers ------------------");
     for (String headerName : names) {
       for (String header : response.getHeaders(headerName)) {
-        logger.log(Level.TRACE, headerName + ": " + header);
+        logger.log(Level.TRACE, "\t" + headerName + ": " + header);
       }
-      logger.log(Level.TRACE, "----");
     }
-    logger.log(Level.TRACE, "--------------------------------------------------------------");
+    logger.log(Level.TRACE,
+               "--------------------------------------------------------------");
   }
 
   /**
