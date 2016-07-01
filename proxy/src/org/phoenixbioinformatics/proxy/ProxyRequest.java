@@ -16,6 +16,7 @@ import org.apache.http.HttpHeaders;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.message.BasicHeader;
 import org.apache.http.message.HeaderGroup;
+import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -100,8 +101,10 @@ public class ProxyRequest implements Serializable {
    * Copy request headers from the servlet client to the proxy request.
    * 
    * @param request the incoming HTTP request
+   * @param userIdentifier the partner user identifier for the user
    */
-  public void copyRequestHeaders(HttpServletRequest request) {
+  public void copyRequestHeaders(HttpServletRequest request,
+                                 String userIdentifier) {
     // Get an Enumeration of all of the header names sent by the client
     Enumeration<String> names = request.getHeaderNames();
     while (names.hasMoreElements()) {
@@ -111,17 +114,56 @@ public class ProxyRequest implements Serializable {
         continue;
       if (hopByHopHeaders.containsHeader(headerName))
         continue;
-      if (headerName.equalsIgnoreCase("Cookie")) {
-        logger.debug("Incoming Cookie header " + headerName);
+      if (headerName.equalsIgnoreCase("cookie")) {
+        logger.log(Level.TRACE, "\tIncoming cookie header " + headerName);
+        // Handle cookie separately, adding user identifier
+        if (addExtendedCookieHeader(request, headerName, userIdentifier)) {
+          // Added cookie header, go to the next header
+          continue;
+        }
       }
 
       Enumeration<String> headers = request.getHeaders(headerName);
       while (headers.hasMoreElements()) {
         String headerValue = headers.nextElement();
         requestToProxy.addHeader(headerName, headerValue);
-        logger.debug("Added header " + headerName + " to proxy request: " + headerValue);
+        logger.log(Level.TRACE, "\tAdded header " + headerName
+                                + " to proxy request: " + headerValue);
       }
     }
+  }
+
+  /**
+   * Given a request with a cookie header, and given a non-null user identifier,
+   * extract the value, add the user identifier cookie to it, and add the
+   * extended header to the request to proxy. If the method does add the
+   * cookie, it returns true; otherwise, false
+   *
+   * @param request the servlet request
+   * @param headerName the actual name of the cookie header
+   * @param userIdentifier the optional user identifier
+   * @return true if cookie added, false if not
+   */
+  private boolean addExtendedCookieHeader(HttpServletRequest request,
+                                       String headerName, String userIdentifier) {
+    boolean added = false;
+    if (userIdentifier != null) {
+      // id exists, add the userIdentifier cookie to the end of the header value
+      Enumeration<String> headers = request.getHeaders(headerName);
+      while (headers.hasMoreElements()) {
+        String headerValue = headers.nextElement();
+        if (headerValue != null) {
+          headerValue =
+            headerValue + "; " + Proxy.USER_IDENTIFIER_COOKIE + "="
+                + userIdentifier;
+        }
+        requestToProxy.addHeader(headerName, headerValue);
+        added = true;
+        logger.log(Level.TRACE, "\tAdded header " + headerName
+                                + " to proxy request: " + headerValue);
+      }
+    }
+    return added;
   }
 
   /**
