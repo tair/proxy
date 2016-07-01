@@ -100,6 +100,8 @@ public class Proxy extends HttpServlet {
   private static final String CREDENTIAL_ID_COOKIE = "credentialId";
   /** name of the Phoenix secret key cookie */
   private static final String SECRET_KEY_COOKIE = "secretKey";
+  /** name of the Phoenix user identifier cookie */
+  private static final String USER_IDENTIFIER_COOKIE = "userIdentifier";
 
   // miscellaneous constants
 
@@ -574,16 +576,16 @@ public class Proxy extends HttpServlet {
       cookieStore = new BasicCookieStore();
     }
 
-    // PW-165 rework cookie header setting
-    // org.apache.http.impl.cookie.BasicClientCookie cookie =
-    // new org.apache.http.impl.cookie.BasicClientCookie(USER_IDENTIFIER_COOKIE,
-    // userIdentifier);
-    // cookie.setPath("");
-    // cookie.setDomain("");
-    // cookieStore.addCookie(cookie);
     // Create a local HTTP context to contain the cookie store.
     HttpClientContext localContext = HttpClientContext.create();
+    org.apache.http.impl.cookie.BasicClientCookie cookie =
+      new org.apache.http.impl.cookie.BasicClientCookie(USER_IDENTIFIER_COOKIE,
+                                                        userIdentifier);
+    cookie.setPath("/");
+    cookie.setDomain(request.getURI().getHost());
+    cookieStore.addCookie(cookie);
     logger.debug("Cookie store to be proxied: " + cookieStore.toString());
+    debugCookies(cookieStore);
     // Bind custom cookie store to the local context
     localContext.setCookieStore(cookieStore);
     // Set the target host to the input HttpHost, allowing the caller
@@ -592,11 +594,24 @@ public class Proxy extends HttpServlet {
     client = HttpClientBuilder.create().disableRedirectHandling().build();
     // Execute the request on the proxied server. Ignore returned string.
     // TODO: try adding host as first param, see if it does the right thing.
+    // client.execute(host, request, responseHandler, localContext);
     client.execute(request, responseHandler, localContext);
 
     // Put the cookie store with any returned session cookie into the session.
     cookieStore = localContext.getCookieStore();
     session.setAttribute(COOKIES_ATTRIBUTE, localContext.getCookieStore());
+  }
+
+  /**
+   * Print debugging output for a cookie store.
+   *
+   * @param cookieStore the cookie store containing the cookies to display
+   */
+  private void debugCookies(CookieStore cookieStore) {
+    for (org.apache.http.cookie.Cookie cookie : cookieStore.getCookies()) {
+      logger.debug("Cookie " + cookie.getName() + ": " + cookie.getValue()
+                   + "[" + cookie.getDomain() + "][" + cookie.getPath() + "]");
+    }
   }
 
   /**
@@ -623,9 +638,6 @@ public class Proxy extends HttpServlet {
     // Set up the request headers based on the current request.
     proxyRequest.copyRequestHeaders(servletRequest);
     proxyRequest.setXForwardedForHeader(servletRequest);
-
-    // Set up the partner user identifier cookie.
-    proxyRequest.setUserIdentifier(userIdentifier);
   }
 
   /**
