@@ -8,8 +8,10 @@ mail.password=${aws.mail.password}
 mail.from=${proxy.mail.from}
 metering.email.to=${proxy.mail.to}
 ui.uri=https\://${proxy.ui.uri}
-ui.meter.warning=/#/contentaccess/metering?partnerId=
-ui.meter.blocking=/#/contentaccess/metering?exceed=true&partnerId=
+#ui.meter.warning=/#/contentaccess/metering?partnerId=  PW-287 commented
+ui.meter.warning=/#/contentaccess/metering?exceed=abouttoexceed&partnerId=
+ui.meter.blocking=/#/contentaccess/metering?exceed=exceeded&partnerId=
+ui.meter.blacklistblocking=/#/contentaccess/metering?exceed=blacklisted&partnerId=
 ui.login=/#/contentaccess/login?partnerId=
 api.uri=https\://${proxy.api.uri}
 api.key=${proxy.api.key}

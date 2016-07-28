@@ -120,6 +120,7 @@ public class Proxy extends HttpServlet {
   // API codes
   private static final String NEED_LOGIN_CODE = "NeedLogin";
   private static final String METER_WARNING_CODE = "Warning";
+  private static final String METER_BLACK_LIST_BLOCK = "BlackListBlock"; //PW-287
   private static final String OK_CODE = "OK";
   private static final String NOT_OK_CODE = "NOT OK";
 
@@ -136,7 +137,10 @@ public class Proxy extends HttpServlet {
   /** UI URI for meter blocking page */
   private static final String METER_BLOCKING_URI =
     ProxyProperties.getProperty("ui.meter.blocking");
-
+  /** PW-287 UI URI for meter blacklisting blocking page */
+  private static final String METER_BLACK_LIST_BLOCKING_URI =
+	ProxyProperties.getProperty("ui.meter.blacklistblocking");
+  
   // warning messages
 
   private static final String OUTPUT_STREAM_IO_WARN =
@@ -157,6 +161,8 @@ public class Proxy extends HttpServlet {
     "Error closing data source in proxy server: ";
   private static final String REDIRECT_ERROR =
     "Redirect status code but no location header in response";
+
+
 
   @Override
   protected void service(HttpServletRequest servletRequest,
@@ -512,10 +518,18 @@ public class Proxy extends HttpServlet {
 
         ApiService.incrementMeteringCount(remoteIp, partnerId);
 
-        // PW-87 commented until Eva comfirms if we need the feature
-        // ApiService.sendMeteringEmail(remoteIp, partnerId, credentialId);
-
-      } else {
+      } else if (meter.equals(METER_BLACK_LIST_BLOCK)) {
+    	  //PW-287
+          logger.debug("Blocked by BlackListBlock");
+          authorized = false;
+          redirectPath = UI_URI + METER_BLACK_LIST_BLOCKING_URI + partnerId + REDIRECT_PARAM + redirectUri;
+          logger.debug("redirectPath: " + redirectPath);
+      }
+      
+      // PW-87 commented until Eva comfirms if we need the feature
+      // ApiService.sendMeteringEmail(remoteIp, partnerId, credentialId);
+      
+      else {
         logger.debug("Blocked from paid content by meter block");
         authorized = false;
         redirectPath =
