@@ -237,8 +237,8 @@ public class ApiService extends AbstractApiService {
    * @param ip client's IP address.
    * @return String indicating client's metering status. (OK, Warn, Blocked)
    */
-  public static String checkMeteringLimit(String ip, String partnerId) {
-    String urn = METERS_URN + "/ip/" + ip + "/limit/?partnerId=" + partnerId;
+  public static String checkMeteringLimit(String ip, String partnerId, String fullUri) {
+    String urn = METERS_URN + "/ip/" + ip + "/limit/?partnerId=" + partnerId +"&uri="+fullUri;
 
     try {
       String content = callApi(urn, RequestFactory.HttpMethod.GET);
