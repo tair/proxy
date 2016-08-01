@@ -503,7 +503,7 @@ public class Proxy extends HttpServlet {
                    + " needs to subscribe to see paid content " + fullUri
                    + " at partner " + partnerId);
 
-      String meter = ApiService.checkMeteringLimit(remoteIp, partnerId);
+      String meter = ApiService.checkMeteringLimit(remoteIp, partnerId, fullUri);
 
       if (meter.equals(OK_CODE)) {
         logger.debug("Allowed free access to content by metering");
@@ -514,7 +514,7 @@ public class Proxy extends HttpServlet {
         logger.debug("Warned to subscribe by meter limit");
         authorized = false;
         redirectPath =
-          UI_URI + METER_WARNING_URI + partnerId +  "&uri=" + fullUri + REDIRECT_PARAM + redirectUri;
+          UI_URI + METER_WARNING_URI + partnerId + REDIRECT_PARAM + redirectUri;
 
         ApiService.incrementMeteringCount(remoteIp, partnerId);
 
@@ -522,7 +522,7 @@ public class Proxy extends HttpServlet {
     	  //PW-287
           logger.debug("Blocked by BlackListBlock");
           authorized = false;
-          redirectPath = UI_URI + METER_BLACK_LIST_BLOCKING_URI + partnerId + "&uri=" + fullUri + REDIRECT_PARAM + redirectUri;
+          redirectPath = UI_URI + METER_BLACK_LIST_BLOCKING_URI + partnerId + REDIRECT_PARAM + redirectUri;
           logger.debug("redirectPath: " + redirectPath);
       }
       
@@ -533,7 +533,7 @@ public class Proxy extends HttpServlet {
         logger.debug("Blocked from paid content by meter block");
         authorized = false;
         redirectPath =
-          UI_URI + METER_BLOCKING_URI + partnerId + "&uri=" + fullUri + REDIRECT_PARAM
+          UI_URI + METER_BLOCKING_URI + partnerId + REDIRECT_PARAM
               + redirectUri;
 
         logger.debug("redirectPath: " + redirectPath);
