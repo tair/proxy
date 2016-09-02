@@ -16,6 +16,7 @@ import java.net.URLEncoder;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Enumeration;
+import java.util.List;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -140,6 +141,8 @@ public class Proxy extends HttpServlet {
   /** PW-287 UI URI for meter blacklisting blocking page */
   private static final String METER_BLACK_LIST_BLOCKING_URI =
 	ProxyProperties.getProperty("ui.meter.blacklistblocking");
+  private static final List<String> origins =
+	Arrays.asList(ProxyProperties.getPorperty("access-control-allow-origin.list").trim().split(";"));		  
   
   // warning messages
 
@@ -884,8 +887,15 @@ public class Proxy extends HttpServlet {
     logger.debug("Setting cookies: credentialId = "
                  + credentialIdCookie.getValue() + "; secretKey = "
                  + secretKeyCookie.getValue());
-
-    servletResponse.setHeader("Access-Control-Allow-Origin", UI_URI);
+    String origin = servletRequest.getHeader(REQUEST_ORIGIN_NAME);
+    if (origins.contains(origin)) {
+    	servletResponse.setHeader("Access-Control-Allow-Origin", origin);
+    } else {
+        logger.debug("Attempted access from non-allowed origin: {}", origin);
+        // Include an origin to provide a clear browser error
+        servletResponse.setHeader(ORIGIN_NAME, origins.iterator().next());
+    }
+//    servletResponse.setHeader("Access-Control-Allow-Origin", UI_URI);
     servletResponse.setHeader("Access-Control-Allow-Credentials", "true");
 
   }
