@@ -142,7 +142,7 @@ public class Proxy extends HttpServlet {
   private static final String METER_BLACK_LIST_BLOCKING_URI =
 	ProxyProperties.getProperty("ui.meter.blacklistblocking");
   private static final List<String> origins =
-	Arrays.asList(ProxyProperties.getPorperty("access-control-allow-origin.list").trim().split(";"));		  
+	Arrays.asList(ProxyProperties.getProperty("access-control-allow-origin.list").trim().split(";"));		  
   
   // warning messages
 
@@ -199,7 +199,7 @@ public class Proxy extends HttpServlet {
     String action = servletRequest.getParameter("action");
     if (servletRequest.getMethod().equals("OPTIONS")) {
       logger.debug("Getting options...");
-      handleOptionsRequest(servletResponse);
+      handleOptionsRequest(servletRequest, servletResponse);
     } else if (action != null && action.equals("setCookies")) {
       logger.debug("Setting cookies...");
       handleSetCookieRequest(servletRequest, servletResponse);
@@ -887,13 +887,14 @@ public class Proxy extends HttpServlet {
     logger.debug("Setting cookies: credentialId = "
                  + credentialIdCookie.getValue() + "; secretKey = "
                  + secretKeyCookie.getValue());
-    String origin = servletRequest.getHeader(REQUEST_ORIGIN_NAME);
+    //TAIR-2734
+    String origin = servletRequest.getHeader("Origin");
     if (origins.contains(origin)) {
     	servletResponse.setHeader("Access-Control-Allow-Origin", origin);
     } else {
         logger.debug("Attempted access from non-allowed origin: {}", origin);
         // Include an origin to provide a clear browser error
-        servletResponse.setHeader(ORIGIN_NAME, origins.iterator().next());
+        servletResponse.setHeader("Access-Control-Allow-Origin", origins.iterator().next());
     }
 //    servletResponse.setHeader("Access-Control-Allow-Origin", UI_URI);
     servletResponse.setHeader("Access-Control-Allow-Credentials", "true");
@@ -905,8 +906,17 @@ public class Proxy extends HttpServlet {
    *
    * @param servletResponse the HTTP response
    */
-  private void handleOptionsRequest(HttpServletResponse servletResponse) {
-    servletResponse.setHeader("Access-Control-Allow-Origin", UI_URI);
+  private void handleOptionsRequest(HttpServletRequest servletRequest, HttpServletResponse servletResponse) {
+	  //TAIR-2734
+	  String origin = servletRequest.getHeader("Origin");
+	    if (origins.contains(origin)) {
+	    	servletResponse.setHeader("Access-Control-Allow-Origin", origin);
+	    } else {
+	        logger.debug("Attempted access from non-allowed origin: {}", origin);
+	        // Include an origin to provide a clear browser error
+	        servletResponse.setHeader("Access-Control-Allow-Origin", origins.iterator().next());
+	    }
+//    servletResponse.setHeader("Access-Control-Allow-Origin", UI_URI);
     servletResponse.setHeader("Access-Control-Allow-Credentials", "true");
     servletResponse.setHeader("Access-Control-Allow-Headers",
                               "x-requested-with, content-type, accept, origin, authorization, x-csrftoken");
