@@ -13,6 +13,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Enumeration;
@@ -121,7 +122,7 @@ public class Proxy extends HttpServlet {
   // API codes
   private static final String NEED_LOGIN_CODE = "NeedLogin";
   private static final String METER_WARNING_CODE = "Warning";
-  private static final String METER_BLACK_LIST_BLOCK = "BlackListBlock"; //PW-287
+  private static final String METER_BLACK_LIST_BLOCK_CODE = "BlackListBlock"; // PW-287
   private static final String OK_CODE = "OK";
   private static final String NOT_OK_CODE = "NOT OK";
 
@@ -140,10 +141,11 @@ public class Proxy extends HttpServlet {
     ProxyProperties.getProperty("ui.meter.blocking");
   /** PW-287 UI URI for meter blacklisting blocking page */
   private static final String METER_BLACK_LIST_BLOCKING_URI =
-	ProxyProperties.getProperty("ui.meter.blacklistblocking");
-  private static final List<String> origins =
-	Arrays.asList(ProxyProperties.getProperty("access-control-allow-origin.list").trim().split(";"));		  
-  
+    ProxyProperties.getProperty("ui.meter.blacklistblocking");
+  // TAIR-2734
+  private static final String ACCESS_CONTROL_ALLOW_ORIGIN_LIST =
+    ProxyProperties.getProperty("proxy.access.control.allow.origin.list");
+
   // warning messages
 
   private static final String OUTPUT_STREAM_IO_WARN =
@@ -164,8 +166,6 @@ public class Proxy extends HttpServlet {
     "Error closing data source in proxy server: ";
   private static final String REDIRECT_ERROR =
     "Redirect status code but no location header in response";
-
-
 
   @Override
   protected void service(HttpServletRequest servletRequest,
@@ -197,16 +197,22 @@ public class Proxy extends HttpServlet {
 
     // skips proxy if the request is a simple OPTIONS or set cookie request
     String action = servletRequest.getParameter("action");
+    // TAIR-2734 refactoring to avoid null pointer exception if no origins property,
+    // and to centralize construction of list
+    List<String> origins =
+      ACCESS_CONTROL_ALLOW_ORIGIN_LIST != null ? Arrays.asList(ACCESS_CONTROL_ALLOW_ORIGIN_LIST.trim().split(";"))
+          : new ArrayList<String>(1);
     if (servletRequest.getMethod().equals("OPTIONS")) {
       logger.debug("Getting options...");
-      handleOptionsRequest(servletRequest, servletResponse);
+      handleOptionsRequest(servletRequest, servletResponse, origins);
     } else if (action != null && action.equals("setCookies")) {
       logger.debug("Setting cookies...");
-      handleSetCookieRequest(servletRequest, servletResponse);
+      handleSetCookieRequest(servletRequest, servletResponse, origins);
     } else {
       // Get the complete URI including original domain and query string.
       String uri = servletRequest.getRequestURI().toString();
-      logger.debug("Incoming URI: " + uri);
+      String queryString = servletRequest.getQueryString();
+      logger.debug("\n==========\nIncoming URI: " + uri + " with query string " + queryString + "\n==========");
       try {
         ApiPartnerPatternImpl partnerPattern = new ApiPartnerPatternImpl();
         HttpHostFactory hostFactory =
@@ -217,24 +223,13 @@ public class Proxy extends HttpServlet {
                               servletRequest.getLocalPort(),
                               servletRequest.getHeader(X_FORWARDED_HOST));
 
-        logger.debug("Server name: " + servletRequest.getServerName());
-        logger.debug("Server scheme: " + servletRequest.getScheme());
-        logger.debug("Host name: " + servletRequest.getHeader(HttpHeaders.HOST));
-        logger.debug("Forwarded scheme: "
-                     + servletRequest.getHeader(X_FORWARDED_SCHEME));
-        logger.debug("Forwarded host: "
-                     + servletRequest.getHeader(X_FORWARDED_HOST));
-
         HttpHost sourceHost = hostFactory.getSourceHost();
-        logger.debug("Source host: " + sourceHost.toHostString());
 
         // Set source string before using host factory further.
         partnerPattern.setSourceUri(sourceHost.toHostString());
 
         HttpHost targetHost = hostFactory.getTargetHost();
-        String partnerId = hostFactory.getPartnerId();
-        logger.debug("Target host: " + targetHost.toString());
-        logger.debug("Partner ID:" + partnerId);
+        logHostAttributes(servletRequest, sourceHost, targetHost, hostFactory.getPartnerId());
 
         // populate secret key and credential id from cookie if available
         // populate session id from supported session cookies if available to
@@ -246,7 +241,7 @@ public class Proxy extends HttpServlet {
         if (cookies != null) {
           for (Cookie c : Arrays.asList(cookies)) {
             String cookieName = c.getName();
-            logger.debug("Processing cookie " + cookieName + " with value "
+            logger.trace("Processing cookie " + cookieName + " with value "
                          + c.getValue());
             if (cookieName.equals(SECRET_KEY_COOKIE)) {
               secretKey = c.getValue();
@@ -276,7 +271,7 @@ public class Proxy extends HttpServlet {
         authorizeAndProxy(servletRequest,
                           servletResponse,
                           uri,
-                          partnerId,
+                          hostFactory.getPartnerId(),
                           targetHost,
                           sourceHost, // hard-coded to source for now
                           fullRequestUri,
@@ -288,6 +283,36 @@ public class Proxy extends HttpServlet {
         logger.error(REQUEST_HANDLING_ERROR, e);
       }
     }
+  }
+
+  /**
+   * Build a log string containing server and host data from the request and hosts.
+   *
+   * @param servletRequest the servlet request
+   * @param sourceHost the derived source host
+   * @param targetHost the derived target host
+   * @param partnerId the unique identifier for the partner
+   */
+  private void logHostAttributes(HttpServletRequest servletRequest,
+                                 HttpHost sourceHost, HttpHost targetHost,
+                                 String partnerId) {
+    StringBuilder builder = new StringBuilder("server name=");
+    builder.append(servletRequest.getServerName());
+    builder.append(", server scheme=");
+    builder.append(servletRequest.getScheme());
+    builder.append(", host name=");
+    builder.append(servletRequest.getHeader(HttpHeaders.HOST));
+    builder.append("forwarded scheme=");
+    builder.append(servletRequest.getHeader(X_FORWARDED_SCHEME));
+    builder.append(", forwarded host=");
+    builder.append(servletRequest.getHeader(X_FORWARDED_HOST));
+    builder.append(", source host=");
+    builder.append(sourceHost.toHostString());
+    builder.append(", target host=");
+    builder.append(targetHost.toString());
+    builder.append(", partner id=");
+    builder.append(partnerId);
+    logger.debug(builder.toString());
   }
 
   /**
@@ -453,8 +478,8 @@ public class Proxy extends HttpServlet {
     String redirectUri = "";
     String auth = NOT_OK_CODE;
 
-    logger.debug("checkAccess API parameters: " + fullUri + ", " + partnerId
-                 + ", " + secretKey + ", " + credentialId + ", " + remoteIp);
+    logger.info("checkAccess API parameters: " + fullUri + ", " + partnerId
+                + ", " + secretKey + ", " + credentialId + ", " + remoteIp);
 
     try {
       ApiService.AccessOutput accessOutput =
@@ -465,105 +490,109 @@ public class Proxy extends HttpServlet {
                                remoteIp);
       auth = accessOutput.status;
       userIdentifier.append(accessOutput.userIdentifier);
-      logger.debug("User identifier from API: " + userIdentifier.toString());
     } catch (Exception e) {
       // Problem making the API call, continue with "Not OK" default status
       // Problem already logged
     }
 
-    // Build the URI to use for a redirect if authorization fails
-    try {
-      redirectUri = URLEncoder.encode(fullUri, UTF_8);
-
-      logger.debug("PW-249 redirectUri before replacement: " + redirectUri);
-      logger.debug("PW-249 UI_URI: " + UI_URI);
-      logger.debug("PW-249 fullUri: " + fullUri);
-
-      if (UI_URI.toLowerCase().contains("https://")
-          && fullUri.toLowerCase().contains("http://")) {
-        redirectUri = redirectUri.replaceFirst("http", "https");
-        logger.debug("PW-249 REPLACED http with https in redirectUri");
-      }
-      logger.debug("PW-249 redirectUri after replacement: " + redirectUri);
-
-    } catch (UnsupportedEncodingException e) {
-      // Log and ignore, use un-encoded redirect URI
-      logger.warn(ENCODING_FAIURE_ERROR + redirectUri, e);
-    }
+    // Get the redirect string and build the query-string part of the redirect URI
+    redirectUri = getRedirectUri(fullUri);
+    StringBuilder redirectQueryString = new StringBuilder(partnerId);
+    redirectQueryString.append(REDIRECT_PARAM);
+    redirectQueryString.append(redirectUri);
 
     // Handle the various status codes.
 
     if (auth.equals(OK_CODE)) {
       // grant access
       authorized = true;
-      logger.debug("Party " + credentialId + " authorized for free content "
-                   + fullUri + " at partner " + partnerId);
-    }
-
-    else if (auth.equals("NeedSubscription")) {
+      logger.info("Party " + credentialId + " authorized for free content "
+                  + fullUri + " at partner " + partnerId);
+    } else if (auth.equals("NeedSubscription")) {
       // check metering status and redirect or proxy as appropriate
-      logger.debug("Party " + credentialId
-                   + " needs to subscribe to see paid content " + fullUri
-                   + " at partner " + partnerId);
+      logger.info("Party " + credentialId
+                  + " needs to subscribe to see paid content " + fullUri
+                  + " at partner " + partnerId);
 
-      String meter = ApiService.checkMeteringLimit(remoteIp, partnerId, fullUri);
+      String meter =
+        ApiService.checkMeteringLimit(remoteIp, partnerId, fullUri);
 
       if (meter.equals(OK_CODE)) {
-        logger.debug("Allowed free access to content by metering");
+        logger.info("Allowed free access to content by metering");
         authorized = true;
         ApiService.incrementMeteringCount(remoteIp, partnerId);
 
       } else if (meter.equals(METER_WARNING_CODE)) {
-        logger.debug("Warned to subscribe by meter limit");
+        logger.info("Warned to subscribe by meter limit");
         authorized = false;
         redirectPath =
-          UI_URI + METER_WARNING_URI + partnerId + REDIRECT_PARAM + redirectUri;
+          UI_URI + METER_WARNING_URI + redirectQueryString.toString();
 
         ApiService.incrementMeteringCount(remoteIp, partnerId);
-
-      } else if (meter.equals(METER_BLACK_LIST_BLOCK)) {
-    	  //PW-287
-          logger.debug("Blocked by BlackListBlock");
-          authorized = false;
-          redirectPath = UI_URI + METER_BLACK_LIST_BLOCKING_URI + partnerId + REDIRECT_PARAM + redirectUri;
-          logger.debug("redirectPath: " + redirectPath);
-      }
-      
-      // PW-87 commented until Eva comfirms if we need the feature
-      // ApiService.sendMeteringEmail(remoteIp, partnerId, credentialId);
-      
-      else {
-        logger.debug("Blocked from paid content by meter block");
+      } else if (meter.equals(METER_BLACK_LIST_BLOCK_CODE)) {
+        // PW-287
+        logger.info("Blocked from no-metered-access content");
         authorized = false;
         redirectPath =
-          UI_URI + METER_BLOCKING_URI + partnerId + REDIRECT_PARAM
-              + redirectUri;
-
-        logger.debug("redirectPath: " + redirectPath);
-
+          UI_URI + METER_BLACK_LIST_BLOCKING_URI + redirectQueryString.toString();
+        logger.info("redirectPath: " + redirectPath);
+      } else {
+        logger.info("Blocked from paid content by meter limit");
+        authorized = false;
+        redirectPath =
+          UI_URI + METER_BLOCKING_URI + redirectQueryString.toString();
       }
-    }
-
-    else if (auth.equals(NEED_LOGIN_CODE)) {
+    } else if (auth.equals(NEED_LOGIN_CODE)) {
       // force user to log in
-      logger.debug("Party " + credentialId + " needs to login to access "
-                   + fullUri + " at partner " + partnerId);
       authorized = false;
-      redirectPath =
-        UI_URI + LOGIN_URI + partnerId + REDIRECT_PARAM + redirectUri;
-
-      logger.debug("PW-249 redirectPath in login: " + redirectPath);
+      redirectPath = UI_URI + LOGIN_URI + redirectQueryString.toString();
+      logger.info("Party " + credentialId + " needs to login to access "
+          + fullUri + " at partner " + partnerId);
     }
 
     if (!authorized) {
       // One or another status requires a redirect.
-      logger.debug("Party " + credentialId + " not authorized for " + fullUri
-                   + " at partner " + partnerId + ", redirecting to "
-                   + redirectPath);
+      logger.info("Party " + credentialId + " not authorized for " + fullUri
+                  + " at partner " + partnerId + ", redirecting to "
+                  + redirectPath);
       servletResponse.sendRedirect(redirectPath);
     }
 
     return authorized;
+  }
+
+  /**
+   * Get the URI to use for a redirect if authorization fails. The method
+   * performs any transformations required by the redirect, such as converting
+   * an http scheme to https when the main URI contains https.
+   *
+   * @param fullUri the full URI to which to redirect
+   * @return the transformed URI to which to redirect
+   */
+  public String getRedirectUri(String fullUri) {
+    String redirectUri = null;
+
+    logger.debug("Full URI to use for redirect: " + fullUri);
+
+    try {
+      redirectUri = URLEncoder.encode(fullUri, UTF_8);
+
+      logger.debug("Encoded URI for redirect: " + redirectUri);
+
+      if (UI_URI.toLowerCase().contains("https://")
+          && fullUri.toLowerCase().contains("http://")) {
+        redirectUri = redirectUri.replaceFirst("http", "https");
+      }
+
+    } catch (UnsupportedEncodingException e) {
+      // Log and ignore, use un-encoded redirect URI
+      logger.warn(ENCODING_FAIURE_ERROR + redirectUri, e);
+    }
+
+    logger.debug("Encoded and transformed URI to which to redirect:"
+                 + redirectUri);
+
+    return redirectUri;
   }
 
   /**
@@ -864,9 +893,11 @@ public class Proxy extends HttpServlet {
    *
    * @param servletRequest the HTTP request
    * @param servletResponse the HTTP response
+   * @param origins: a list of allowed origins for access control
    */
   private void handleSetCookieRequest(HttpServletRequest servletRequest,
-                                      HttpServletResponse servletResponse) {
+                                      HttpServletResponse servletResponse,
+                                      List<String> origins) {
 
     Cookie credentialIdCookie =
       new Cookie(CREDENTIAL_ID_COOKIE,
@@ -887,16 +918,17 @@ public class Proxy extends HttpServlet {
     logger.debug("Setting cookies: credentialId = "
                  + credentialIdCookie.getValue() + "; secretKey = "
                  + secretKeyCookie.getValue());
-    //TAIR-2734
+    // TAIR-2734
     String origin = servletRequest.getHeader("Origin");
     if (origins.contains(origin)) {
-    	servletResponse.setHeader("Access-Control-Allow-Origin", origin);
+      servletResponse.setHeader("Access-Control-Allow-Origin", origin);
     } else {
-        logger.debug("Attempted access from non-allowed origin: {}", origin);
-        // Include an origin to provide a clear browser error
-        servletResponse.setHeader("Access-Control-Allow-Origin", origins.iterator().next());
+      logger.debug("Attempted access from non-allowed origin: {}", origin);
+      // Include an origin to provide a clear browser error
+      servletResponse.setHeader("Access-Control-Allow-Origin",
+                                origins.iterator().next());
     }
-//    servletResponse.setHeader("Access-Control-Allow-Origin", UI_URI);
+    // servletResponse.setHeader("Access-Control-Allow-Origin", UI_URI);
     servletResponse.setHeader("Access-Control-Allow-Credentials", "true");
 
   }
@@ -904,19 +936,24 @@ public class Proxy extends HttpServlet {
   /**
    * Set the headers appropriate to responding to an OPTIONS request.
    *
+   * @param servletRequest the HTTP request
    * @param servletResponse the HTTP response
+   * @param origins: a list of allowed origins for access control
    */
-  private void handleOptionsRequest(HttpServletRequest servletRequest, HttpServletResponse servletResponse) {
-	  //TAIR-2734
-	  String origin = servletRequest.getHeader("Origin");
-	    if (origins.contains(origin)) {
-	    	servletResponse.setHeader("Access-Control-Allow-Origin", origin);
-	    } else {
-	        logger.debug("Attempted access from non-allowed origin: {}", origin);
-	        // Include an origin to provide a clear browser error
-	        servletResponse.setHeader("Access-Control-Allow-Origin", origins.iterator().next());
-	    }
-//    servletResponse.setHeader("Access-Control-Allow-Origin", UI_URI);
+  private void handleOptionsRequest(HttpServletRequest servletRequest,
+                                    HttpServletResponse servletResponse,
+                                    List<String> origins) {
+    // TAIR-2734
+    String origin = servletRequest.getHeader("Origin");
+    if (origins.contains(origin)) {
+      servletResponse.setHeader("Access-Control-Allow-Origin", origin);
+    } else {
+      logger.debug("Attempted access from non-allowed origin: {}", origin);
+      // Include an origin to provide a clear browser error
+      servletResponse.setHeader("Access-Control-Allow-Origin",
+                                origins.iterator().next());
+    }
+    // servletResponse.setHeader("Access-Control-Allow-Origin", UI_URI);
     servletResponse.setHeader("Access-Control-Allow-Credentials", "true");
     servletResponse.setHeader("Access-Control-Allow-Headers",
                               "x-requested-with, content-type, accept, origin, authorization, x-csrftoken");
