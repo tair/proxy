@@ -13,6 +13,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Enumeration;
@@ -121,7 +122,7 @@ public class Proxy extends HttpServlet {
   // API codes
   private static final String NEED_LOGIN_CODE = "NeedLogin";
   private static final String METER_WARNING_CODE = "Warning";
-  private static final String METER_BLACK_LIST_BLOCK = "BlackListBlock"; //PW-287
+  private static final String METER_BLACK_LIST_BLOCK = "BlackListBlock"; // PW-287
   private static final String OK_CODE = "OK";
   private static final String NOT_OK_CODE = "NOT OK";
 
@@ -140,10 +141,11 @@ public class Proxy extends HttpServlet {
     ProxyProperties.getProperty("ui.meter.blocking");
   /** PW-287 UI URI for meter blacklisting blocking page */
   private static final String METER_BLACK_LIST_BLOCKING_URI =
-	ProxyProperties.getProperty("ui.meter.blacklistblocking");
-  private static final List<String> origins =
-	Arrays.asList(ProxyProperties.getProperty("access-control-allow-origin.list").trim().split(";"));		  
-  
+    ProxyProperties.getProperty("ui.meter.blacklistblocking");
+  // TAIR-2734
+  private static final String ACCESS_CONTROL_ALLOW_ORIGIN_LIST =
+    ProxyProperties.getProperty("proxy.access.control.allow.origin.list");
+
   // warning messages
 
   private static final String OUTPUT_STREAM_IO_WARN =
@@ -164,8 +166,6 @@ public class Proxy extends HttpServlet {
     "Error closing data source in proxy server: ";
   private static final String REDIRECT_ERROR =
     "Redirect status code but no location header in response";
-
-
 
   @Override
   protected void service(HttpServletRequest servletRequest,
@@ -197,12 +197,17 @@ public class Proxy extends HttpServlet {
 
     // skips proxy if the request is a simple OPTIONS or set cookie request
     String action = servletRequest.getParameter("action");
+    // TAIR-2734 refactoring to avoid null pointer exception if no origins property,
+    // and to centralize construction of list
+    List<String> origins =
+      ACCESS_CONTROL_ALLOW_ORIGIN_LIST != null ? Arrays.asList(ACCESS_CONTROL_ALLOW_ORIGIN_LIST.trim().split(";"))
+          : new ArrayList<String>(1);
     if (servletRequest.getMethod().equals("OPTIONS")) {
       logger.debug("Getting options...");
-      handleOptionsRequest(servletRequest, servletResponse);
+      handleOptionsRequest(servletRequest, servletResponse, origins);
     } else if (action != null && action.equals("setCookies")) {
       logger.debug("Setting cookies...");
-      handleSetCookieRequest(servletRequest, servletResponse);
+      handleSetCookieRequest(servletRequest, servletResponse, origins);
     } else {
       // Get the complete URI including original domain and query string.
       String uri = servletRequest.getRequestURI().toString();
@@ -454,7 +459,7 @@ public class Proxy extends HttpServlet {
     String auth = NOT_OK_CODE;
 
     logger.info("checkAccess API parameters: " + fullUri + ", " + partnerId
-                 + ", " + secretKey + ", " + credentialId + ", " + remoteIp);
+                + ", " + secretKey + ", " + credentialId + ", " + remoteIp);
 
     try {
       ApiService.AccessOutput accessOutput =
@@ -478,14 +483,15 @@ public class Proxy extends HttpServlet {
       // grant access
       authorized = true;
       logger.info("Party " + credentialId + " authorized for free content "
-                   + fullUri + " at partner " + partnerId);
+                  + fullUri + " at partner " + partnerId);
     } else if (auth.equals("NeedSubscription")) {
       // check metering status and redirect or proxy as appropriate
       logger.info("Party " + credentialId
-                   + " needs to subscribe to see paid content " + fullUri
-                   + " at partner " + partnerId);
+                  + " needs to subscribe to see paid content " + fullUri
+                  + " at partner " + partnerId);
 
-      String meter = ApiService.checkMeteringLimit(remoteIp, partnerId, fullUri);
+      String meter =
+        ApiService.checkMeteringLimit(remoteIp, partnerId, fullUri);
 
       if (meter.equals(OK_CODE)) {
         logger.info("Allowed free access to content by metering");
@@ -500,11 +506,13 @@ public class Proxy extends HttpServlet {
 
         ApiService.incrementMeteringCount(remoteIp, partnerId);
       } else if (meter.equals(METER_BLACK_LIST_BLOCK)) {
-    	  //PW-287
-          logger.info("Blocked by BlackListBlock");
-          authorized = false;
-          redirectPath = UI_URI + METER_BLACK_LIST_BLOCKING_URI + partnerId + REDIRECT_PARAM + redirectUri;
-          logger.info("redirectPath: " + redirectPath);
+        // PW-287
+        logger.info("Blocked by BlackListBlock");
+        authorized = false;
+        redirectPath =
+          UI_URI + METER_BLACK_LIST_BLOCKING_URI + partnerId + REDIRECT_PARAM
+              + redirectUri;
+        logger.info("redirectPath: " + redirectPath);
       } else {
         logger.info("Blocked from paid content by meter block");
         authorized = false;
@@ -516,7 +524,7 @@ public class Proxy extends HttpServlet {
     } else if (auth.equals(NEED_LOGIN_CODE)) {
       // force user to log in
       logger.info("Party " + credentialId + " needs to login to access "
-                   + fullUri + " at partner " + partnerId);
+                  + fullUri + " at partner " + partnerId);
       authorized = false;
       redirectPath =
         UI_URI + LOGIN_URI + partnerId + REDIRECT_PARAM + redirectUri;
@@ -525,8 +533,8 @@ public class Proxy extends HttpServlet {
     if (!authorized) {
       // One or another status requires a redirect.
       logger.info("Party " + credentialId + " not authorized for " + fullUri
-                   + " at partner " + partnerId + ", redirecting to "
-                   + redirectPath);
+                  + " at partner " + partnerId + ", redirecting to "
+                  + redirectPath);
       servletResponse.sendRedirect(redirectPath);
     }
 
@@ -543,12 +551,12 @@ public class Proxy extends HttpServlet {
    */
   public String getRedirectUri(String fullUri) {
     String redirectUri = null;
-    
+
     logger.debug("Full URI to use for redirect: " + fullUri);
-    
+
     try {
       redirectUri = URLEncoder.encode(fullUri, UTF_8);
-      
+
       logger.debug("Encoded URI for redirect: " + redirectUri);
 
       if (UI_URI.toLowerCase().contains("https://")
@@ -560,9 +568,10 @@ public class Proxy extends HttpServlet {
       // Log and ignore, use un-encoded redirect URI
       logger.warn(ENCODING_FAIURE_ERROR + redirectUri, e);
     }
-    
-    logger.debug("Encoded and transformed URI to which to redirect:" + redirectUri);
-    
+
+    logger.debug("Encoded and transformed URI to which to redirect:"
+                 + redirectUri);
+
     return redirectUri;
   }
 
@@ -864,9 +873,11 @@ public class Proxy extends HttpServlet {
    *
    * @param servletRequest the HTTP request
    * @param servletResponse the HTTP response
+   * @param origins: a list of allowed origins for access control
    */
   private void handleSetCookieRequest(HttpServletRequest servletRequest,
-                                      HttpServletResponse servletResponse) {
+                                      HttpServletResponse servletResponse,
+                                      List<String> origins) {
 
     Cookie credentialIdCookie =
       new Cookie(CREDENTIAL_ID_COOKIE,
@@ -887,16 +898,17 @@ public class Proxy extends HttpServlet {
     logger.debug("Setting cookies: credentialId = "
                  + credentialIdCookie.getValue() + "; secretKey = "
                  + secretKeyCookie.getValue());
-    //TAIR-2734
+    // TAIR-2734
     String origin = servletRequest.getHeader("Origin");
     if (origins.contains(origin)) {
-    	servletResponse.setHeader("Access-Control-Allow-Origin", origin);
+      servletResponse.setHeader("Access-Control-Allow-Origin", origin);
     } else {
-        logger.debug("Attempted access from non-allowed origin: {}", origin);
-        // Include an origin to provide a clear browser error
-        servletResponse.setHeader("Access-Control-Allow-Origin", origins.iterator().next());
+      logger.debug("Attempted access from non-allowed origin: {}", origin);
+      // Include an origin to provide a clear browser error
+      servletResponse.setHeader("Access-Control-Allow-Origin",
+                                origins.iterator().next());
     }
-//    servletResponse.setHeader("Access-Control-Allow-Origin", UI_URI);
+    // servletResponse.setHeader("Access-Control-Allow-Origin", UI_URI);
     servletResponse.setHeader("Access-Control-Allow-Credentials", "true");
 
   }
@@ -904,19 +916,24 @@ public class Proxy extends HttpServlet {
   /**
    * Set the headers appropriate to responding to an OPTIONS request.
    *
+   * @param servletRequest the HTTP request
    * @param servletResponse the HTTP response
+   * @param origins: a list of allowed origins for access control
    */
-  private void handleOptionsRequest(HttpServletRequest servletRequest, HttpServletResponse servletResponse) {
-	  //TAIR-2734
-	  String origin = servletRequest.getHeader("Origin");
-	    if (origins.contains(origin)) {
-	    	servletResponse.setHeader("Access-Control-Allow-Origin", origin);
-	    } else {
-	        logger.debug("Attempted access from non-allowed origin: {}", origin);
-	        // Include an origin to provide a clear browser error
-	        servletResponse.setHeader("Access-Control-Allow-Origin", origins.iterator().next());
-	    }
-//    servletResponse.setHeader("Access-Control-Allow-Origin", UI_URI);
+  private void handleOptionsRequest(HttpServletRequest servletRequest,
+                                    HttpServletResponse servletResponse,
+                                    List<String> origins) {
+    // TAIR-2734
+    String origin = servletRequest.getHeader("Origin");
+    if (origins.contains(origin)) {
+      servletResponse.setHeader("Access-Control-Allow-Origin", origin);
+    } else {
+      logger.debug("Attempted access from non-allowed origin: {}", origin);
+      // Include an origin to provide a clear browser error
+      servletResponse.setHeader("Access-Control-Allow-Origin",
+                                origins.iterator().next());
+    }
+    // servletResponse.setHeader("Access-Control-Allow-Origin", UI_URI);
     servletResponse.setHeader("Access-Control-Allow-Credentials", "true");
     servletResponse.setHeader("Access-Control-Allow-Headers",
                               "x-requested-with, content-type, accept, origin, authorization, x-csrftoken");
