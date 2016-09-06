@@ -122,7 +122,7 @@ public class Proxy extends HttpServlet {
   // API codes
   private static final String NEED_LOGIN_CODE = "NeedLogin";
   private static final String METER_WARNING_CODE = "Warning";
-  private static final String METER_BLACK_LIST_BLOCK = "BlackListBlock"; // PW-287
+  private static final String METER_BLACK_LIST_BLOCK_CODE = "BlackListBlock"; // PW-287
   private static final String OK_CODE = "OK";
   private static final String NOT_OK_CODE = "NOT OK";
 
@@ -223,24 +223,13 @@ public class Proxy extends HttpServlet {
                               servletRequest.getLocalPort(),
                               servletRequest.getHeader(X_FORWARDED_HOST));
 
-        logger.debug("Server name: " + servletRequest.getServerName());
-        logger.debug("Server scheme: " + servletRequest.getScheme());
-        logger.debug("Host name: " + servletRequest.getHeader(HttpHeaders.HOST));
-        logger.debug("Forwarded scheme: "
-                     + servletRequest.getHeader(X_FORWARDED_SCHEME));
-        logger.debug("Forwarded host: "
-                     + servletRequest.getHeader(X_FORWARDED_HOST));
-
         HttpHost sourceHost = hostFactory.getSourceHost();
-        logger.debug("Source host: " + sourceHost.toHostString());
 
         // Set source string before using host factory further.
         partnerPattern.setSourceUri(sourceHost.toHostString());
 
         HttpHost targetHost = hostFactory.getTargetHost();
-        String partnerId = hostFactory.getPartnerId();
-        logger.debug("Target host: " + targetHost.toString());
-        logger.debug("Partner ID:" + partnerId);
+        logHostAttributes(servletRequest, sourceHost, targetHost, hostFactory.getPartnerId());
 
         // populate secret key and credential id from cookie if available
         // populate session id from supported session cookies if available to
@@ -252,7 +241,7 @@ public class Proxy extends HttpServlet {
         if (cookies != null) {
           for (Cookie c : Arrays.asList(cookies)) {
             String cookieName = c.getName();
-            logger.debug("Processing cookie " + cookieName + " with value "
+            logger.trace("Processing cookie " + cookieName + " with value "
                          + c.getValue());
             if (cookieName.equals(SECRET_KEY_COOKIE)) {
               secretKey = c.getValue();
@@ -282,7 +271,7 @@ public class Proxy extends HttpServlet {
         authorizeAndProxy(servletRequest,
                           servletResponse,
                           uri,
-                          partnerId,
+                          hostFactory.getPartnerId(),
                           targetHost,
                           sourceHost, // hard-coded to source for now
                           fullRequestUri,
@@ -294,6 +283,36 @@ public class Proxy extends HttpServlet {
         logger.error(REQUEST_HANDLING_ERROR, e);
       }
     }
+  }
+
+  /**
+   * Build a log string containing server and host data from the request and hosts.
+   *
+   * @param servletRequest the servlet request
+   * @param sourceHost the derived source host
+   * @param targetHost the derived target host
+   * @param partnerId the unique identifier for the partner
+   */
+  private void logHostAttributes(HttpServletRequest servletRequest,
+                                 HttpHost sourceHost, HttpHost targetHost,
+                                 String partnerId) {
+    StringBuilder builder = new StringBuilder("server name=");
+    builder.append(servletRequest.getServerName());
+    builder.append(", server scheme=");
+    builder.append(servletRequest.getScheme());
+    builder.append(", host name=");
+    builder.append(servletRequest.getHeader(HttpHeaders.HOST));
+    builder.append("forwarded scheme=");
+    builder.append(servletRequest.getHeader(X_FORWARDED_SCHEME));
+    builder.append(", forwarded host=");
+    builder.append(servletRequest.getHeader(X_FORWARDED_HOST));
+    builder.append(", source host=");
+    builder.append(sourceHost.toHostString());
+    builder.append(", target host=");
+    builder.append(targetHost.toString());
+    builder.append(", partner id=");
+    builder.append(partnerId);
+    logger.debug(builder.toString());
   }
 
   /**
@@ -476,7 +495,11 @@ public class Proxy extends HttpServlet {
       // Problem already logged
     }
 
+    // Get the redirect string and build the query-string part of the redirect URI
     redirectUri = getRedirectUri(fullUri);
+    StringBuilder redirectQueryString = new StringBuilder(partnerId);
+    redirectQueryString.append(REDIRECT_PARAM);
+    redirectQueryString.append(redirectUri);
 
     // Handle the various status codes.
 
@@ -503,32 +526,28 @@ public class Proxy extends HttpServlet {
         logger.info("Warned to subscribe by meter limit");
         authorized = false;
         redirectPath =
-          UI_URI + METER_WARNING_URI + partnerId + REDIRECT_PARAM + redirectUri;
+          UI_URI + METER_WARNING_URI + redirectQueryString.toString();
 
         ApiService.incrementMeteringCount(remoteIp, partnerId);
-      } else if (meter.equals(METER_BLACK_LIST_BLOCK)) {
+      } else if (meter.equals(METER_BLACK_LIST_BLOCK_CODE)) {
         // PW-287
-        logger.info("Blocked by BlackListBlock");
+        logger.info("Blocked from no-metered-access content");
         authorized = false;
         redirectPath =
-          UI_URI + METER_BLACK_LIST_BLOCKING_URI + partnerId + REDIRECT_PARAM
-              + redirectUri;
+          UI_URI + METER_BLACK_LIST_BLOCKING_URI + redirectQueryString.toString();
         logger.info("redirectPath: " + redirectPath);
       } else {
-        logger.info("Blocked from paid content by meter block");
+        logger.info("Blocked from paid content by meter limit");
         authorized = false;
         redirectPath =
-          UI_URI + METER_BLOCKING_URI + partnerId + REDIRECT_PARAM
-              + redirectUri;
-        logger.debug("redirectPath: " + redirectPath);
+          UI_URI + METER_BLOCKING_URI + redirectQueryString.toString();
       }
     } else if (auth.equals(NEED_LOGIN_CODE)) {
       // force user to log in
-      logger.info("Party " + credentialId + " needs to login to access "
-                  + fullUri + " at partner " + partnerId);
       authorized = false;
-      redirectPath =
-        UI_URI + LOGIN_URI + partnerId + REDIRECT_PARAM + redirectUri;
+      redirectPath = UI_URI + LOGIN_URI + redirectQueryString.toString();
+      logger.info("Party " + credentialId + " needs to login to access "
+          + fullUri + " at partner " + partnerId);
     }
 
     if (!authorized) {
