@@ -211,7 +211,8 @@ public class Proxy extends HttpServlet {
     } else {
       // Get the complete URI including original domain and query string.
       String uri = servletRequest.getRequestURI().toString();
-      logger.debug("Incoming URI: " + uri);
+      String queryString = servletRequest.getQueryString();
+      logger.debug("**********\nIncoming URI: " + uri + " with query string " + queryString + "\n**********");
       try {
         ApiPartnerPatternImpl partnerPattern = new ApiPartnerPatternImpl();
         HttpHostFactory hostFactory =
