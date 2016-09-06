@@ -453,7 +453,7 @@ public class Proxy extends HttpServlet {
     String redirectUri = "";
     String auth = NOT_OK_CODE;
 
-    logger.debug("checkAccess API parameters: " + fullUri + ", " + partnerId
+    logger.info("checkAccess API parameters: " + fullUri + ", " + partnerId
                  + ", " + secretKey + ", " + credentialId + ", " + remoteIp);
 
     try {
@@ -465,105 +465,105 @@ public class Proxy extends HttpServlet {
                                remoteIp);
       auth = accessOutput.status;
       userIdentifier.append(accessOutput.userIdentifier);
-      logger.debug("User identifier from API: " + userIdentifier.toString());
     } catch (Exception e) {
       // Problem making the API call, continue with "Not OK" default status
       // Problem already logged
     }
 
-    // Build the URI to use for a redirect if authorization fails
-    try {
-      redirectUri = URLEncoder.encode(fullUri, UTF_8);
-
-      logger.debug("PW-249 redirectUri before replacement: " + redirectUri);
-      logger.debug("PW-249 UI_URI: " + UI_URI);
-      logger.debug("PW-249 fullUri: " + fullUri);
-
-      if (UI_URI.toLowerCase().contains("https://")
-          && fullUri.toLowerCase().contains("http://")) {
-        redirectUri = redirectUri.replaceFirst("http", "https");
-        logger.debug("PW-249 REPLACED http with https in redirectUri");
-      }
-      logger.debug("PW-249 redirectUri after replacement: " + redirectUri);
-
-    } catch (UnsupportedEncodingException e) {
-      // Log and ignore, use un-encoded redirect URI
-      logger.warn(ENCODING_FAIURE_ERROR + redirectUri, e);
-    }
+    redirectUri = getRedirectUri(fullUri);
 
     // Handle the various status codes.
 
     if (auth.equals(OK_CODE)) {
       // grant access
       authorized = true;
-      logger.debug("Party " + credentialId + " authorized for free content "
+      logger.info("Party " + credentialId + " authorized for free content "
                    + fullUri + " at partner " + partnerId);
-    }
-
-    else if (auth.equals("NeedSubscription")) {
+    } else if (auth.equals("NeedSubscription")) {
       // check metering status and redirect or proxy as appropriate
-      logger.debug("Party " + credentialId
+      logger.info("Party " + credentialId
                    + " needs to subscribe to see paid content " + fullUri
                    + " at partner " + partnerId);
 
       String meter = ApiService.checkMeteringLimit(remoteIp, partnerId, fullUri);
 
       if (meter.equals(OK_CODE)) {
-        logger.debug("Allowed free access to content by metering");
+        logger.info("Allowed free access to content by metering");
         authorized = true;
         ApiService.incrementMeteringCount(remoteIp, partnerId);
 
       } else if (meter.equals(METER_WARNING_CODE)) {
-        logger.debug("Warned to subscribe by meter limit");
+        logger.info("Warned to subscribe by meter limit");
         authorized = false;
         redirectPath =
           UI_URI + METER_WARNING_URI + partnerId + REDIRECT_PARAM + redirectUri;
 
         ApiService.incrementMeteringCount(remoteIp, partnerId);
-
       } else if (meter.equals(METER_BLACK_LIST_BLOCK)) {
     	  //PW-287
-          logger.debug("Blocked by BlackListBlock");
+          logger.info("Blocked by BlackListBlock");
           authorized = false;
           redirectPath = UI_URI + METER_BLACK_LIST_BLOCKING_URI + partnerId + REDIRECT_PARAM + redirectUri;
-          logger.debug("redirectPath: " + redirectPath);
-      }
-      
-      // PW-87 commented until Eva comfirms if we need the feature
-      // ApiService.sendMeteringEmail(remoteIp, partnerId, credentialId);
-      
-      else {
-        logger.debug("Blocked from paid content by meter block");
+          logger.info("redirectPath: " + redirectPath);
+      } else {
+        logger.info("Blocked from paid content by meter block");
         authorized = false;
         redirectPath =
           UI_URI + METER_BLOCKING_URI + partnerId + REDIRECT_PARAM
               + redirectUri;
-
         logger.debug("redirectPath: " + redirectPath);
-
       }
-    }
-
-    else if (auth.equals(NEED_LOGIN_CODE)) {
+    } else if (auth.equals(NEED_LOGIN_CODE)) {
       // force user to log in
-      logger.debug("Party " + credentialId + " needs to login to access "
+      logger.info("Party " + credentialId + " needs to login to access "
                    + fullUri + " at partner " + partnerId);
       authorized = false;
       redirectPath =
         UI_URI + LOGIN_URI + partnerId + REDIRECT_PARAM + redirectUri;
-
-      logger.debug("PW-249 redirectPath in login: " + redirectPath);
     }
 
     if (!authorized) {
       // One or another status requires a redirect.
-      logger.debug("Party " + credentialId + " not authorized for " + fullUri
+      logger.info("Party " + credentialId + " not authorized for " + fullUri
                    + " at partner " + partnerId + ", redirecting to "
                    + redirectPath);
       servletResponse.sendRedirect(redirectPath);
     }
 
     return authorized;
+  }
+
+  /**
+   * Get the URI to use for a redirect if authorization fails. The method
+   * performs any transformations required by the redirect, such as converting
+   * an http scheme to https when the main URI contains https.
+   *
+   * @param fullUri the full URI to which to redirect
+   * @return the transformed URI to which to redirect
+   */
+  public String getRedirectUri(String fullUri) {
+    String redirectUri = null;
+    
+    logger.debug("Full URI to use for redirect: " + fullUri);
+    
+    try {
+      redirectUri = URLEncoder.encode(fullUri, UTF_8);
+      
+      logger.debug("Encoded URI for redirect: " + redirectUri);
+
+      if (UI_URI.toLowerCase().contains("https://")
+          && fullUri.toLowerCase().contains("http://")) {
+        redirectUri = redirectUri.replaceFirst("http", "https");
+      }
+
+    } catch (UnsupportedEncodingException e) {
+      // Log and ignore, use un-encoded redirect URI
+      logger.warn(ENCODING_FAIURE_ERROR + redirectUri, e);
+    }
+    
+    logger.debug("Encoded and transformed URI to which to redirect:" + redirectUri);
+    
+    return redirectUri;
   }
 
   /**
