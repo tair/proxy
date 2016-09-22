@@ -10,12 +10,6 @@ package org.phoenixbioinformatics.http;
  * @author Robert J. Muller
  */
 public interface IPartner {
-  /**
-   * Get the partner identifier for the partner
-   *
-   * @return the partner identifier, a string
-   */
-  String getPartnerId();
 
   /**
    * Get the partner's login URI
