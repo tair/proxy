@@ -194,12 +194,12 @@ public class ApiService extends AbstractApiService {
     try {
       String content = callApi(urn, RequestFactory.HttpMethod.GET);
       Gson gson = new Gson();
-      Type type = new TypeToken<List<PartnerOutput>>() {
+      Type type = new TypeToken<List<PartnerDetailOutput>>() {
       }.getType();
 
       ArrayList<PartnerDetailOutput> out = gson.fromJson(content, type);
       if (out.size() > 1) {
-        logger.error(MULTIPLE_PARTNER_ERROR + uri);
+        logger.error(MULTIPLE_PARTNER_ERROR + partnerId);
         for (PartnerDetailOutput entry : out) {
           logger.debug(entry.partnerId);
         }
