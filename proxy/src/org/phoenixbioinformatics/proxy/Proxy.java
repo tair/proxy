@@ -135,15 +135,15 @@ public class Proxy extends HttpServlet {
   // API partner information
 
   /** URI for UI server */
-  private static final String UI_URI;
+  private static String UI_URI;
   /** UI URI for login page */
-  private static final String LOGIN_URI;
+  private static String LOGIN_URI;
   /** UI URI for meter warning page */
-  private static final String METER_WARNING_URI;
+  private static String METER_WARNING_URI;
   /** UI URI for meter blocking page */
-  private static final String METER_BLOCKING_URI;
+  private static String METER_BLOCKING_URI;
   /** PW-287 UI URI for meter blacklisting blocking page */
-  private static final String METER_BLACK_LIST_BLOCKING_URI;
+  private static String METER_BLACK_LIST_BLOCKING_URI;
 
   // warning messages
 
