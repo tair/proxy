@@ -87,7 +87,33 @@ public class ApiService extends AbstractApiService {
     public String sourceUri;
     public String targetUri;
   }
-
+  
+  /**
+   * Data transfer object for partner detail API output data
+   */
+  public static class PartnerDetailOutput {
+    public String partnerId;
+    public String name;
+    public String logoUri;
+    public String termOfServiceUri;
+    public String homeUri;
+    public String description;
+    public String loginUri;
+    public String registerUri;
+    public String subscriptionListDesc;
+    public String registerText;
+    public String forgotUserNameEmailSubject;
+    public String forgotUserNameEmailTo;
+    public String forgotUserNameEmailBody;
+    public String activationEmailInstructionText;
+    public String forgotUserNameText;
+    public String loginPasswordFieldPrompt;
+    public String loginUserNameFieldPrompt;
+    public String resetPasswordEmailBody;
+    public String loginRedirectErrorText;
+    public String defaultLoginRedirect;
+  }
+  
   /**
    * Retrieves all partner information from the API
    *
