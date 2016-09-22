@@ -42,6 +42,8 @@ public class ApiService extends AbstractApiService {
     "API call failed with unexpected error";
   private static final String PARTNER_ID_ERROR =
     "API call to get partner id failed";
+  private static final String PARTNER_INFO_ERROR =
+    "API call to get partner information failed";
   private static final String MULTIPLE_PARTNER_ERROR =
     "Multiple partner IDs detected for URI: ";
   // string constants
@@ -178,6 +180,42 @@ public class ApiService extends AbstractApiService {
     }
   }
 
+  /**
+   * Retrieves partner information based on a partnerId by making a request to
+   * partner app of the API server. Example: partnerId = "biocyc" request to
+   * API server: https://demoapi.arabidopsis.org/partners/?partnerId=biocyc
+   * returns: partnerId = "biocyc", loginUri="https://demoui.arabidopsis.org/#/contentaccess/login/" and so on
+   * 
+   * @param partnerId partnerId of partner
+   * @return PartnerDetailObject
+   */
+  public static PartnerDetailOutput getPartnerDetailInfo(String partnerId) {
+    String urn = PARTNERS_URN + "?partnerId=" + partnerId;
+    try {
+      String content = callApi(urn, RequestFactory.HttpMethod.GET);
+      Gson gson = new Gson();
+      Type type = new TypeToken<List<PartnerOutput>>() {
+      }.getType();
+
+      ArrayList<PartnerDetailOutput> out = gson.fromJson(content, type);
+      if (out.size() > 1) {
+        logger.error(MULTIPLE_PARTNER_ERROR + uri);
+        for (PartnerDetailOutput entry : out) {
+          logger.debug(entry.partnerId);
+        }
+      } else {
+        for (PartnerDetailOutput entry : out) {
+          return entry;
+        }
+      }
+
+      return null;
+    } catch (IOException e) {
+      logger.error(PARTNER_INFO_ERROR, e);
+      return null;
+    }
+  }
+  
   /**
    * Retrieves partner pattern information based on a source URI by making a request to
    * partner app of the API server. Example: URI = "arabidopsis.org" request to

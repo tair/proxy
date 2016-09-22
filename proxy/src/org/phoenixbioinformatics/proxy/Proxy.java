@@ -45,6 +45,7 @@ import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.phoenixbioinformatics.api.ApiService;
+import org.phoenixbioinformatics.http.ApiPartnerImpl;
 import org.phoenixbioinformatics.http.ApiPartnerPatternImpl;
 import org.phoenixbioinformatics.http.HttpHostFactory;
 import org.phoenixbioinformatics.http.HttpPropertyImpl;
@@ -131,8 +132,8 @@ public class Proxy extends HttpServlet {
   /** URI for UI server */
   private static final String UI_URI = ProxyProperties.getProperty("ui.uri");
   /** UI URI for login page */
-  private static final String LOGIN_URI =
-    ProxyProperties.getProperty("ui.login");
+  //private static final String LOGIN_URI =
+    //ProxyProperties.getProperty("ui.login");
   /** UI URI for meter warning page */
   private static final String METER_WARNING_URI =
     ProxyProperties.getProperty("ui.meter.warning");
@@ -545,6 +546,11 @@ public class Proxy extends HttpServlet {
     } else if (auth.equals(NEED_LOGIN_CODE)) {
       // force user to log in
       authorized = false;
+      ApiPartnerImpl partner = new ApiPartnerImpl();
+
+      // Set source string before using host factory further.
+      partner.setPartnerId(partnerId);
+      String LOGIN_URI = partner.getLoginUri();      
       redirectPath = UI_URI + LOGIN_URI + redirectQueryString.toString();
       logger.info("Party " + credentialId + " needs to login to access "
           + fullUri + " at partner " + partnerId);
