@@ -114,6 +114,8 @@ public class ApiService extends AbstractApiService {
     public String resetPasswordEmailBody;
     public String loginRedirectErrorText;
     public String defaultLoginRedirect;
+    public String uiUri;
+    public String uiMeterUri;
   }
   
   /**

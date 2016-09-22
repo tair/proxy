@@ -86,4 +86,16 @@ public class ApiPartnerImpl implements IPartner {
     getPartner();
     return partner.defaultLoginRedirect;
   }
+  
+  @Override
+  public String getUiUri() {
+    getPartner();
+    return partner.uiUri;
+  }
+  
+  @Override
+  public String getUiMeterUri() {
+    getPartner();
+    return partner.uiMeterUri;
+  }
 }

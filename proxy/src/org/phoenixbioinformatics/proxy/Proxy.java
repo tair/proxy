@@ -128,24 +128,22 @@ public class Proxy extends HttpServlet {
   private static final String NOT_OK_CODE = "NOT OK";
 
   // property-based constants
-
-  /** URI for UI server */
-  private static final String UI_URI = ProxyProperties.getProperty("ui.uri");
-  /** UI URI for login page */
-  //private static final String LOGIN_URI =
-    //ProxyProperties.getProperty("ui.login");
-  /** UI URI for meter warning page */
-  private static final String METER_WARNING_URI =
-    ProxyProperties.getProperty("ui.meter.warning");
-  /** UI URI for meter blocking page */
-  private static final String METER_BLOCKING_URI =
-    ProxyProperties.getProperty("ui.meter.blocking");
-  /** PW-287 UI URI for meter blacklisting blocking page */
-  private static final String METER_BLACK_LIST_BLOCKING_URI =
-    ProxyProperties.getProperty("ui.meter.blacklistblocking");
   // TAIR-2734
   private static final String ACCESS_CONTROL_ALLOW_ORIGIN_LIST =
     ProxyProperties.getProperty("proxy.access.control.allow.origin.list");
+  
+  // API partner information
+
+  /** URI for UI server */
+  private static final String UI_URI;
+  /** UI URI for login page */
+  private static final String LOGIN_URI;
+  /** UI URI for meter warning page */
+  private static final String METER_WARNING_URI;
+  /** UI URI for meter blocking page */
+  private static final String METER_BLOCKING_URI;
+  /** PW-287 UI URI for meter blacklisting blocking page */
+  private static final String METER_BLACK_LIST_BLOCKING_URI;
 
   // warning messages
 
@@ -231,7 +229,21 @@ public class Proxy extends HttpServlet {
 
         HttpHost targetHost = hostFactory.getTargetHost();
         logHostAttributes(servletRequest, sourceHost, targetHost, hostFactory.getPartnerId());
-
+        
+        //PW-373 PW-376
+        // Get partnerId
+        String partnerId = hostFactory.getPartnerId();
+        // Get partner information
+        ApiPartnerImpl partner = new ApiPartnerImpl();
+        // Set partnerId before using partner further
+        partner.setPartnerId(partnerId);
+        // Get attributes from partner
+        UI_URI = partner.getUiUri();
+        LOGIN_URI = partner.getLoginUri();
+        METER_WARNING_URI = partner.getUiMeterUri() + "/?exceed=abouttoexceed&partnerId=";
+        METER_BLOCKING_URI = partner.getUiMeterUri() + "/?exceed=exceeded&partnerId=";
+        METER_BLACK_LIST_BLOCKING_URI = partner.getUiMeterUri() + "/?exceed=blacklisted&partnerId=";
+        
         // populate secret key and credential id from cookie if available
         // populate session id from supported session cookies if available to
         // support session logging
@@ -545,12 +557,7 @@ public class Proxy extends HttpServlet {
       }
     } else if (auth.equals(NEED_LOGIN_CODE)) {
       // force user to log in
-      authorized = false;
-      ApiPartnerImpl partner = new ApiPartnerImpl();
-
-      // Set source string before using host factory further.
-      partner.setPartnerId(partnerId);
-      String LOGIN_URI = partner.getLoginUri();      
+      authorized = false;    
       redirectPath = UI_URI + LOGIN_URI + redirectQueryString.toString();
       logger.info("Party " + credentialId + " needs to login to access "
           + fullUri + " at partner " + partnerId);
