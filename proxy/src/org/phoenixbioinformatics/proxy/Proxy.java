@@ -131,19 +131,6 @@ public class Proxy extends HttpServlet {
   // TAIR-2734
   private static final String ACCESS_CONTROL_ALLOW_ORIGIN_LIST =
     ProxyProperties.getProperty("proxy.access.control.allow.origin.list");
-  
-  // API partner information
-
-  /** URI for UI server */
-  private static String UI_URI;
-  /** UI URI for login page */
-  private static String LOGIN_URI;
-  /** UI URI for meter warning page */
-  private static String METER_WARNING_URI;
-  /** UI URI for meter blocking page */
-  private static String METER_BLOCKING_URI;
-  /** PW-287 UI URI for meter blacklisting blocking page */
-  private static String METER_BLACK_LIST_BLOCKING_URI;
 
   // warning messages
 
@@ -229,26 +216,6 @@ public class Proxy extends HttpServlet {
 
         HttpHost targetHost = hostFactory.getTargetHost();
         logHostAttributes(servletRequest, sourceHost, targetHost, hostFactory.getPartnerId());
-        
-        //PW-373 PW-376
-        // Get partnerId
-        String partnerId = hostFactory.getPartnerId();
-        // Get partner information
-        ApiPartnerImpl partner = new ApiPartnerImpl();
-        // Set partnerId before using partner further
-        partner.setPartnerId(partnerId);
-        // Get attributes from partner
-        UI_URI = partner.getUiUri();
-        LOGIN_URI = partner.getLoginUri();
-        METER_WARNING_URI = partner.getUiMeterUri() + "/?exceed=abouttoexceed&partnerId=";
-        METER_BLOCKING_URI = partner.getUiMeterUri() + "/?exceed=exceeded&partnerId=";
-        METER_BLACK_LIST_BLOCKING_URI = partner.getUiMeterUri() + "/?exceed=blacklisted&partnerId=";
-        
-        logger.debug("UI_URI set to: " + UI_URI);
-        logger.debug("LOGIN_URI set to: " + LOGIN_URI);
-        logger.debug("METER_WARNING_URI set to: " + METER_WARNING_URI);
-        logger.debug("METER_BLOCKING_URI set to: " + METER_BLOCKING_URI);
-        logger.debug("METER_BLACK_LIST_BLOCKING_URI set to: " + METER_BLACK_LIST_BLOCKING_URI);
         
         // populate secret key and credential id from cookie if available
         // populate session id from supported session cookies if available to
@@ -490,7 +457,25 @@ public class Proxy extends HttpServlet {
     if (isEmbeddedFile(fullUri)) {
       // Not a top-level page (CSS, JS, GIF for example), skip authorization
       return true;
-    }
+    }   
+    
+    //PW-373 PW-376
+    // Get partner information
+    ApiPartnerImpl partner = new ApiPartnerImpl();
+    // Set partnerId before using partner further
+    partner.setPartnerId(partnerId);
+    // Get attributes from partner
+    String UI_URI = partner.getUiUri();
+    String LOGIN_URI = partner.getLoginUri();
+    String METER_WARNING_URI = partner.getUiMeterUri() + "/?exceed=abouttoexceed&partnerId=";
+    String METER_BLOCKING_URI = partner.getUiMeterUri() + "/?exceed=exceeded&partnerId=";
+    String METER_BLACK_LIST_BLOCKING_URI = partner.getUiMeterUri() + "/?exceed=blacklisted&partnerId=";
+    
+    logger.debug("UI_URI set to: " + UI_URI);
+    logger.debug("LOGIN_URI set to: " + LOGIN_URI);
+    logger.debug("METER_WARNING_URI set to: " + METER_WARNING_URI);
+    logger.debug("METER_BLOCKING_URI set to: " + METER_BLOCKING_URI);
+    logger.debug("METER_BLACK_LIST_BLOCKING_URI set to: " + METER_BLACK_LIST_BLOCKING_URI);
 
     Boolean authorized = false;
     String redirectPath = "";
