@@ -500,7 +500,7 @@ public class Proxy extends HttpServlet {
     }
 
     // Get the redirect string and build the query-string part of the redirect URI
-    redirectUri = getRedirectUri(fullUri);
+    redirectUri = getRedirectUri(fullUri, UI_URI);
     StringBuilder redirectQueryString = new StringBuilder(partnerId);
     redirectQueryString.append(REDIRECT_PARAM);
     redirectQueryString.append(redirectUri);
@@ -573,7 +573,7 @@ public class Proxy extends HttpServlet {
    * @param fullUri the full URI to which to redirect
    * @return the transformed URI to which to redirect
    */
-  public String getRedirectUri(String fullUri) {
+  public String getRedirectUri(String fullUri, String UI_URI) {
     String redirectUri = null;
 
     logger.debug("Full URI to use for redirect: " + fullUri);
