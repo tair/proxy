@@ -43,6 +43,8 @@ public class ApiService extends AbstractApiService {
     "API call failed with unexpected error";
   private static final String PARTNER_ID_ERROR =
     "API call to get partner id failed";
+  private static final String PARTNER_INFO_ERROR =
+    "API call to get partner information failed";
   private static final String MULTIPLE_PARTNER_ERROR =
     "Multiple partner IDs detected for URI: ";
   // string constants
@@ -88,7 +90,35 @@ public class ApiService extends AbstractApiService {
     public String sourceUri;
     public String targetUri;
   }
-
+  
+  /**
+   * Data transfer object for partner detail API output data
+   */
+  public static class PartnerDetailOutput {
+    public String partnerId;
+    public String name;
+    public String logoUri;
+    public String termOfServiceUri;
+    public String homeUri;
+    public String description;
+    public String loginUri;
+    public String registerUri;
+    public String subscriptionListDesc;
+    public String registerText;
+    public String forgotUserNameEmailSubject;
+    public String forgotUserNameEmailTo;
+    public String forgotUserNameEmailBody;
+    public String activationEmailInstructionText;
+    public String forgotUserNameText;
+    public String loginPasswordFieldPrompt;
+    public String loginUserNameFieldPrompt;
+    public String resetPasswordEmailBody;
+    public String loginRedirectErrorText;
+    public String defaultLoginRedirect;
+    public String uiUri;
+    public String uiMeterUri;
+  }
+  
   /**
    * Retrieves all partner information from the API
    *
@@ -153,6 +183,43 @@ public class ApiService extends AbstractApiService {
     }
   }
 
+  /**
+   * Retrieves partner information based on a partnerId by making a request to
+   * partner app of the API server. Example: partnerId = "biocyc" request to
+   * API server: https://demoapi.arabidopsis.org/partners/?partnerId=biocyc
+   * returns: partnerId = "biocyc", loginUri="https://demoui.arabidopsis.org/#/contentaccess/login/" and so on
+   * 
+   * @param partnerId partnerId of partner
+   * @return PartnerDetailObject
+   */
+  public static PartnerDetailOutput getPartnerDetailInfo(String partnerId) {
+    String urn = PARTNERS_URN + "/?partnerId=" + partnerId;
+    try {
+      String content = callApi(urn, RequestFactory.HttpMethod.GET);
+      logger.debug("getPartnerDetialInfo content: "+ content);
+      Gson gson = new Gson();
+      Type type = new TypeToken<List<PartnerDetailOutput>>() {
+      }.getType();
+
+      ArrayList<PartnerDetailOutput> out = gson.fromJson(content, type);
+      if (out.size() > 1) {
+        logger.error(MULTIPLE_PARTNER_ERROR + partnerId);
+        for (PartnerDetailOutput entry : out) {
+          logger.debug(entry.partnerId);
+        }
+      } else {
+        for (PartnerDetailOutput entry : out) {
+          return entry;
+        }
+      }
+
+      return null;
+    } catch (IOException e) {
+      logger.error(PARTNER_INFO_ERROR, e);
+      return null;
+    }
+  }
+  
   /**
    * Retrieves partner pattern information based on a source URI by making a request to
    * partner app of the API server. Example: URI = "arabidopsis.org" request to
