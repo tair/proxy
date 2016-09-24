@@ -192,9 +192,10 @@ public class ApiService extends AbstractApiService {
    * @return PartnerDetailObject
    */
   public static PartnerDetailOutput getPartnerDetailInfo(String partnerId) {
-    String urn = PARTNERS_URN + "?partnerId=" + partnerId;
+    String urn = PARTNERS_URN + "/?partnerId=" + partnerId;
     try {
       String content = callApi(urn, RequestFactory.HttpMethod.GET);
+      logger.debug("getPartnerDetialInfo content: "+ content);
       Gson gson = new Gson();
       Type type = new TypeToken<List<PartnerDetailOutput>>() {
       }.getType();

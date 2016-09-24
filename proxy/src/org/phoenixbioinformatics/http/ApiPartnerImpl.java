@@ -5,6 +5,8 @@ package org.phoenixbioinformatics.http;
 
 
 import org.phoenixbioinformatics.api.ApiService;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 
 /**
@@ -15,6 +17,8 @@ import org.phoenixbioinformatics.api.ApiService;
  * @author Qian Li
  */
 public class ApiPartnerImpl implements IPartner {
+	
+	private static final Logger logger = LogManager.getLogger(ApiPartnerImpl.class);
   /** the partner information from the API database */
   private ApiService.PartnerDetailOutput partner;
   /** the source URI for the partner lookup */
@@ -78,24 +82,28 @@ public class ApiPartnerImpl implements IPartner {
   @Override
   public String getLoginUri() {
     getPartner();
+    logger.debug("get loginUri from partner: "+partner.loginUri);
     return partner.loginUri;
   }
 
   @Override
   public String getDefaultLoginRedirect() {
     getPartner();
+    logger.debug("get defaultLoginRedirect from partner: "+partner.defaultLoginRedirect);
     return partner.defaultLoginRedirect;
   }
   
   @Override
   public String getUiUri() {
     getPartner();
+    logger.debug("get uiUri from partner: "+partner.uiUri);
     return partner.uiUri;
   }
   
   @Override
   public String getUiMeterUri() {
     getPartner();
+    logger.debug("get uiMeterUri from partner: "+partner.uiMeterUri);
     return partner.uiMeterUri;
   }
 }
