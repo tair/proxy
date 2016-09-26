@@ -24,4 +24,18 @@ public interface IPartner {
    * @return the default login redirect URI 
    */
   String getDefaultLoginRedirect();
+
+  /**
+   * Get the partner's ui URI
+   *
+   * @return the ui URI
+   */
+  String getUiUri();
+
+  /**
+   * Get the partner's ui meter URI
+   *
+   * @return the ui meter URI
+   */
+  String getUiMeterUri();
 }

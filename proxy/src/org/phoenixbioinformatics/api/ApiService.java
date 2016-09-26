@@ -115,6 +115,8 @@ public class ApiService extends AbstractApiService {
     public String resetPasswordEmailBody;
     public String loginRedirectErrorText;
     public String defaultLoginRedirect;
+    public String uiUri;
+    public String uiMeterUri;
   }
   
   /**
@@ -191,9 +193,10 @@ public class ApiService extends AbstractApiService {
    * @return PartnerDetailObject
    */
   public static PartnerDetailOutput getPartnerDetailInfo(String partnerId) {
-    String urn = PARTNERS_URN + "?partnerId=" + partnerId;
+    String urn = PARTNERS_URN + "/?partnerId=" + partnerId;
     try {
       String content = callApi(urn, RequestFactory.HttpMethod.GET);
+      logger.debug("getPartnerDetialInfo content: "+ content);
       Gson gson = new Gson();
       Type type = new TypeToken<List<PartnerDetailOutput>>() {
       }.getType();
