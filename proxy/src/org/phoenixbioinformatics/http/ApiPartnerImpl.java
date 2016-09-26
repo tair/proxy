@@ -82,28 +82,28 @@ public class ApiPartnerImpl implements IPartner {
   @Override
   public String getLoginUri() {
     getPartner();
-    logger.debug("get loginUri from partner: "+partner.loginUri);
+    //logger.debug("get loginUri from partner: "+partner.loginUri);
     return partner.loginUri;
   }
 
   @Override
   public String getDefaultLoginRedirect() {
     getPartner();
-    logger.debug("get defaultLoginRedirect from partner: "+partner.defaultLoginRedirect);
+    //logger.debug("get defaultLoginRedirect from partner: "+partner.defaultLoginRedirect);
     return partner.defaultLoginRedirect;
   }
   
   @Override
   public String getUiUri() {
     getPartner();
-    logger.debug("get uiUri from partner: "+partner.uiUri);
+    //logger.debug("get uiUri from partner: "+partner.uiUri);
     return partner.uiUri;
   }
   
   @Override
   public String getUiMeterUri() {
     getPartner();
-    logger.debug("get uiMeterUri from partner: "+partner.uiMeterUri);
+    //logger.debug("get uiMeterUri from partner: "+partner.uiMeterUri);
     return partner.uiMeterUri;
   }
 }

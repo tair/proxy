@@ -72,7 +72,6 @@ public abstract class AbstractApiService {
     if (method == RequestFactory.HttpMethod.GET) {
       request = new HttpGet(API_URL + urn);
       methodString = "GET";
-      logger.debug("API_URL is: " + API_URL);
     } else if (method == RequestFactory.HttpMethod.POST) {
       request = new HttpPost(API_URL + urn);
       methodString = "POST";
