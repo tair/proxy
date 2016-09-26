@@ -471,11 +471,11 @@ public class Proxy extends HttpServlet {
     String METER_BLOCKING_URI = partner.getUiMeterUri() + "/?exceed=exceeded&partnerId=";
     String METER_BLACK_LIST_BLOCKING_URI = partner.getUiMeterUri() + "/?exceed=blacklisted&partnerId=";
     
-    logger.debug("UI_URI set to: " + UI_URI);
-    logger.debug("LOGIN_URI set to: " + LOGIN_URI);
-    logger.debug("METER_WARNING_URI set to: " + METER_WARNING_URI);
-    logger.debug("METER_BLOCKING_URI set to: " + METER_BLOCKING_URI);
-    logger.debug("METER_BLACK_LIST_BLOCKING_URI set to: " + METER_BLACK_LIST_BLOCKING_URI);
+//    logger.debug("UI_URI set to: " + UI_URI);
+//    logger.debug("LOGIN_URI set to: " + LOGIN_URI);
+//    logger.debug("METER_WARNING_URI set to: " + METER_WARNING_URI);
+//    logger.debug("METER_BLOCKING_URI set to: " + METER_BLOCKING_URI);
+//    logger.debug("METER_BLACK_LIST_BLOCKING_URI set to: " + METER_BLACK_LIST_BLOCKING_URI);
 
     Boolean authorized = false;
     String redirectPath = "";
