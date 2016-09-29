@@ -549,7 +549,7 @@ public class Proxy extends HttpServlet {
     } else if (auth.equals(NEED_LOGIN_CODE)) {
       // force user to log in
       authorized = false;    
-      redirectPath = UI_URI + LOGIN_URI + redirectQueryString.toString();
+      redirectPath = LOGIN_URI + redirectQueryString.toString();
       logger.info("Party " + credentialId + " needs to login to access "
           + fullUri + " at partner " + partnerId);
     }
