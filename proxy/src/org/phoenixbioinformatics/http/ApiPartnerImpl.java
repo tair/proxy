@@ -82,7 +82,7 @@ public class ApiPartnerImpl implements IPartner {
   @Override
   public String getLoginUri() {
     getPartner();
-    //logger.debug("get loginUri from partner: "+partner.loginUri);
+    logger.debug("get loginUri from partner: "+partner.loginUri);
     return partner.loginUri;
   }
 
