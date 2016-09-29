@@ -501,8 +501,7 @@ public class Proxy extends HttpServlet {
 
     // Get the redirect string and build the query-string part of the redirect URI
     redirectUri = getRedirectUri(fullUri, uiUri);
-    StringBuilder redirectQueryString = new StringBuilder(partnerId);
-    redirectQueryString.append(REDIRECT_PARAM);
+    StringBuilder redirectQueryString = new StringBuilder(REDIRECT_PARAM);
     redirectQueryString.append(redirectUri);
 
     // Handle the various status codes.
@@ -571,9 +570,10 @@ public class Proxy extends HttpServlet {
    * an http scheme to https when the main URI contains https.
    *
    * @param fullUri the full URI to which to redirect
+   * @param uiUri the URI containing the UI scheme and host
    * @return the transformed URI to which to redirect
    */
-  public String getRedirectUri(String fullUri, String UI_URI) {
+  public String getRedirectUri(String fullUri, String uiUri) {
     String redirectUri = null;
 
     logger.debug("Full URI to use for redirect: " + fullUri);
@@ -583,7 +583,7 @@ public class Proxy extends HttpServlet {
 
       logger.debug("Encoded URI for redirect: " + redirectUri);
 
-      if (UI_URI.toLowerCase().contains("https://")
+      if (uiUri.toLowerCase().contains("https://")
           && fullUri.toLowerCase().contains("http://")) {
         redirectUri = redirectUri.replaceFirst("http", "https");
       }
