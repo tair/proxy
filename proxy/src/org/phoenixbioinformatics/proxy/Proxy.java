@@ -467,9 +467,9 @@ public class Proxy extends HttpServlet {
     // Get attributes from partner
     String uiUri = partner.getUiUri();
     String loginUri = partner.getLoginUri();
-    String meterWarningUri = partner.getUiMeterUri() + "?exceed=abouttoexceed&partnerId=";
-    String meterBlockingUri = partner.getUiMeterUri() + "?exceed=exceeded&partnerId=";
-    String meterBlacklistUri = partner.getUiMeterUri() + "?exceed=blacklisted&partnerId=";
+    String meterWarningUri = partner.getUiMeterUri() + "?exceed=abouttoexceed&partnerId=" + partnerId;
+    String meterBlockingUri = partner.getUiMeterUri() + "?exceed=exceeded&partnerId=" + partnerId;
+    String meterBlacklistUri = partner.getUiMeterUri() + "?exceed=blacklisted&partnerId=" + partnerId;
     
 //    logger.debug("UI URI set to: " + uiUri);
     logger.debug("login URI set to: " + loginUri);
