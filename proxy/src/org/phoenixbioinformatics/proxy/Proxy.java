@@ -465,17 +465,17 @@ public class Proxy extends HttpServlet {
     // Set partnerId before using partner further
     partner.setPartnerId(partnerId);
     // Get attributes from partner
-    String UI_URI = partner.getUiUri();
-    String LOGIN_URI = partner.getLoginUri();
-    String METER_WARNING_URI = partner.getUiMeterUri() + "?exceed=abouttoexceed&partnerId=";
-    String METER_BLOCKING_URI = partner.getUiMeterUri() + "?exceed=exceeded&partnerId=";
-    String METER_BLACK_LIST_BLOCKING_URI = partner.getUiMeterUri() + "?exceed=blacklisted&partnerId=";
+    String uiUri = partner.getUiUri();
+    String loginUri = partner.getLoginUri();
+    String meterWarningUri = partner.getUiMeterUri() + "?exceed=abouttoexceed&partnerId=";
+    String meterBlockingUri = partner.getUiMeterUri() + "?exceed=exceeded&partnerId=";
+    String meterBlacklistUri = partner.getUiMeterUri() + "?exceed=blacklisted&partnerId=";
     
-//    logger.debug("UI_URI set to: " + UI_URI);
-//    logger.debug("LOGIN_URI set to: " + LOGIN_URI);
-//    logger.debug("METER_WARNING_URI set to: " + METER_WARNING_URI);
-//    logger.debug("METER_BLOCKING_URI set to: " + METER_BLOCKING_URI);
-//    logger.debug("METER_BLACK_LIST_BLOCKING_URI set to: " + METER_BLACK_LIST_BLOCKING_URI);
+//    logger.debug("UI URI set to: " + uiUri);
+    logger.debug("login URI set to: " + loginUri);
+//    logger.debug("meter warning URI set to: " + meterWarningUri);
+//    logger.debug("meter blocking URI set to: " + meterBlockingUri);
+//    logger.debug("meter blacklist blocking URI set to: " + meterBlacklistUri);
 
     Boolean authorized = false;
     String redirectPath = "";
@@ -500,7 +500,7 @@ public class Proxy extends HttpServlet {
     }
 
     // Get the redirect string and build the query-string part of the redirect URI
-    redirectUri = getRedirectUri(fullUri, UI_URI);
+    redirectUri = getRedirectUri(fullUri, uiUri);
     StringBuilder redirectQueryString = new StringBuilder(partnerId);
     redirectQueryString.append(REDIRECT_PARAM);
     redirectQueryString.append(redirectUri);
@@ -530,7 +530,7 @@ public class Proxy extends HttpServlet {
         logger.info("Warned to subscribe by meter limit");
         authorized = false;
         redirectPath =
-          UI_URI + METER_WARNING_URI + redirectQueryString.toString();
+          uiUri + meterWarningUri + redirectQueryString.toString();
 
         ApiService.incrementMeteringCount(remoteIp, partnerId);
       } else if (meter.equals(METER_BLACK_LIST_BLOCK_CODE)) {
@@ -538,18 +538,18 @@ public class Proxy extends HttpServlet {
         logger.info("Blocked from no-metered-access content");
         authorized = false;
         redirectPath =
-          UI_URI + METER_BLACK_LIST_BLOCKING_URI + redirectQueryString.toString();
+          uiUri + meterBlacklistUri + redirectQueryString.toString();
         logger.info("redirectPath: " + redirectPath);
       } else {
         logger.info("Blocked from paid content by meter limit");
         authorized = false;
         redirectPath =
-          UI_URI + METER_BLOCKING_URI + redirectQueryString.toString();
+          uiUri + meterBlockingUri + redirectQueryString.toString();
       }
     } else if (auth.equals(NEED_LOGIN_CODE)) {
       // force user to log in
       authorized = false;    
-      redirectPath = LOGIN_URI + redirectQueryString.toString();
+      redirectPath = uiUri + loginUri + redirectQueryString.toString();
       logger.info("Party " + credentialId + " needs to login to access "
           + fullUri + " at partner " + partnerId);
     }
