@@ -369,17 +369,20 @@ public class Proxy extends HttpServlet {
 
       logger.debug("Proxying request from " + proxyRequest.getIp() + "-->\""
                    + uriRequest.getRequestLine().getUri() + "\"");
-
+      
+      logger.debug("userIdentifier before configureProxyRequest(): " + userIdentifier.toString());
       configureProxyRequest(servletRequest,
                             proxyRequest,
                             uriRequest,
                             userIdentifier.toString());
+      logger.debug("userIdentifier after configureProxyRequest(): " + userIdentifier.toString());
       // Proxy, using the sourceHost as the "original" host.
       proxy(servletRequest.getSession(),
             servletResponse,
             proxyRequest,
             sourceHost,
             userIdentifier.toString());
+      logger.debug("userIdentifier after proxy(): " + userIdentifier.toString());
     }
   }
 
@@ -494,6 +497,7 @@ public class Proxy extends HttpServlet {
                                remoteIp);
       auth = accessOutput.status;
       userIdentifier.append(accessOutput.userIdentifier);
+      logger.debug("userIdentifier: " + userIdentifier.toString());
     } catch (Exception e) {
       // Problem making the API call, continue with "Not OK" default status
       // Problem already logged
