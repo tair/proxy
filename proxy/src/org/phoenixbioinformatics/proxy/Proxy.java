@@ -1187,5 +1187,6 @@ public class Proxy extends HttpServlet {
   private static void addCookie(HttpServletResponse response, Cookie cookie) {
     cookie.setDomain(COOKIE_DOMAIN);
     response.addCookie(cookie);
+    logAllServletResponseHeaders(response);
   }
 }
