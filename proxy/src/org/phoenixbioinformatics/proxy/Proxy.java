@@ -940,7 +940,7 @@ public class Proxy extends HttpServlet {
     }
     // servletResponse.setHeader("Access-Control-Allow-Origin", UI_URI);
     servletResponse.setHeader("Access-Control-Allow-Credentials", "true");
-
+    logAllServletResponseHeaders(servletResponse);
   }
 
   /**
