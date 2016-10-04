@@ -41,7 +41,6 @@ import org.apache.http.impl.client.BasicCookieStore;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.util.EntityUtils;
-import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.phoenixbioinformatics.api.ApiService;
@@ -183,7 +182,8 @@ public class Proxy extends HttpServlet {
 
     // skips proxy if the request is a simple OPTIONS or set cookie request
     String action = servletRequest.getParameter("action");
-    // TAIR-2734 refactoring to avoid null pointer exception if no origins property,
+    // TAIR-2734 refactoring to avoid null pointer exception if no origins
+    // property,
     // and to centralize construction of list
     List<String> origins =
       ACCESS_CONTROL_ALLOW_ORIGIN_LIST != null ? Arrays.asList(ACCESS_CONTROL_ALLOW_ORIGIN_LIST.trim().split(";"))
@@ -198,7 +198,8 @@ public class Proxy extends HttpServlet {
       // Get the complete URI including original domain and query string.
       String uri = servletRequest.getRequestURI().toString();
       String queryString = servletRequest.getQueryString();
-      logger.debug("\n==========\nIncoming URI: " + uri + " with query string " + queryString + "\n==========");
+      logger.debug("\n==========\nIncoming URI: " + uri + " with query string "
+                   + queryString + "\n==========");
       try {
         ApiPartnerPatternImpl partnerPattern = new ApiPartnerPatternImpl();
         HttpHostFactory hostFactory =
@@ -215,8 +216,11 @@ public class Proxy extends HttpServlet {
         partnerPattern.setSourceUri(sourceHost.toHostString());
 
         HttpHost targetHost = hostFactory.getTargetHost();
-        logHostAttributes(servletRequest, sourceHost, targetHost, hostFactory.getPartnerId());
-        
+        logHostAttributes(servletRequest,
+                          sourceHost,
+                          targetHost,
+                          hostFactory.getPartnerId());
+
         // populate secret key and credential id from cookie if available
         // populate session id from supported session cookies if available to
         // support session logging
@@ -227,7 +231,11 @@ public class Proxy extends HttpServlet {
         if (cookies != null) {
           for (Cookie c : Arrays.asList(cookies)) {
             String cookieName = c.getName();
+<<<<<<< Updated upstream
             logger.trace("Processing cookie " + cookieName + " with value "
+=======
+            logger.debug("Processing cookie " + cookieName + " with value "
+>>>>>>> Stashed changes
                          + c.getValue());
             if (cookieName.equals(SECRET_KEY_COOKIE)) {
               secretKey = c.getValue();
@@ -272,7 +280,8 @@ public class Proxy extends HttpServlet {
   }
 
   /**
-   * Build a log string containing server and host data from the request and hosts.
+   * Build a log string containing server and host data from the request and
+   * hosts.
    *
    * @param servletRequest the servlet request
    * @param sourceHost the derived source host
@@ -370,10 +379,20 @@ public class Proxy extends HttpServlet {
       logger.debug("Proxying request from " + proxyRequest.getIp() + "-->\""
                    + uriRequest.getRequestLine().getUri() + "\"");
 
+<<<<<<< Updated upstream
+=======
+      logger.debug("userIdentifier before configureProxyRequest(): "
+                   + userIdentifier.toString());
+>>>>>>> Stashed changes
       configureProxyRequest(servletRequest,
                             proxyRequest,
                             uriRequest,
                             userIdentifier.toString());
+<<<<<<< Updated upstream
+=======
+      logger.debug("userIdentifier after configureProxyRequest(): "
+                   + userIdentifier.toString());
+>>>>>>> Stashed changes
       // Proxy, using the sourceHost as the "original" host.
       proxy(servletRequest.getSession(),
             servletResponse,
@@ -457,9 +476,9 @@ public class Proxy extends HttpServlet {
     if (isEmbeddedFile(fullUri)) {
       // Not a top-level page (CSS, JS, GIF for example), skip authorization
       return true;
-    }   
-    
-    //PW-373 PW-376
+    }
+
+    // PW-373 PW-376
     // Get partner information
     ApiPartnerImpl partner = new ApiPartnerImpl();
     // Set partnerId before using partner further
@@ -467,15 +486,19 @@ public class Proxy extends HttpServlet {
     // Get attributes from partner
     String uiUri = partner.getUiUri();
     String loginUri = partner.getLoginUri();
-    String meterWarningUri = partner.getUiMeterUri() + "?exceed=abouttoexceed&partnerId=" + partnerId;
-    String meterBlockingUri = partner.getUiMeterUri() + "?exceed=exceeded&partnerId=" + partnerId;
-    String meterBlacklistUri = partner.getUiMeterUri() + "?exceed=blacklisted&partnerId=" + partnerId;
-    
-//    logger.debug("UI URI set to: " + uiUri);
+    String meterWarningUri =
+      partner.getUiMeterUri() + "?exceed=abouttoexceed&partnerId=" + partnerId;
+    String meterBlockingUri =
+      partner.getUiMeterUri() + "?exceed=exceeded&partnerId=" + partnerId;
+    String meterBlacklistUri =
+      partner.getUiMeterUri() + "?exceed=blacklisted&partnerId=" + partnerId;
+
+    // logger.debug("UI URI set to: " + uiUri);
     logger.debug("login URI set to: " + loginUri);
-//    logger.debug("meter warning URI set to: " + meterWarningUri);
-//    logger.debug("meter blocking URI set to: " + meterBlockingUri);
-//    logger.debug("meter blacklist blocking URI set to: " + meterBlacklistUri);
+    // logger.debug("meter warning URI set to: " + meterWarningUri);
+    // logger.debug("meter blocking URI set to: " + meterBlockingUri);
+    // logger.debug("meter blacklist blocking URI set to: " +
+    // meterBlacklistUri);
 
     Boolean authorized = false;
     String redirectPath = "";
@@ -499,7 +522,8 @@ public class Proxy extends HttpServlet {
       // Problem already logged
     }
 
-    // Get the redirect string and build the query-string part of the redirect URI
+    // Get the redirect string and build the query-string part of the redirect
+    // URI
     redirectUri = getRedirectUri(fullUri, uiUri);
     StringBuilder redirectQueryString = new StringBuilder(REDIRECT_PARAM);
     redirectQueryString.append(redirectUri);
@@ -528,8 +552,7 @@ public class Proxy extends HttpServlet {
       } else if (meter.equals(METER_WARNING_CODE)) {
         logger.info("Warned to subscribe by meter limit");
         authorized = false;
-        redirectPath =
-          uiUri + meterWarningUri + redirectQueryString.toString();
+        redirectPath = uiUri + meterWarningUri + redirectQueryString.toString();
 
         ApiService.incrementMeteringCount(remoteIp, partnerId);
       } else if (meter.equals(METER_BLACK_LIST_BLOCK_CODE)) {
@@ -547,10 +570,10 @@ public class Proxy extends HttpServlet {
       }
     } else if (auth.equals(NEED_LOGIN_CODE)) {
       // force user to log in
-      authorized = false;    
+      authorized = false;
       redirectPath = uiUri + loginUri + redirectQueryString.toString();
       logger.info("Party " + credentialId + " needs to login to access "
-          + fullUri + " at partner " + partnerId);
+                  + fullUri + " at partner " + partnerId);
     }
 
     if (!authorized) {
@@ -1062,9 +1085,8 @@ public class Proxy extends HttpServlet {
    */
   private void logAllCookiesInStore(CookieStore cookieStore) {
     for (org.apache.http.cookie.Cookie cookie : cookieStore.getCookies()) {
-      logger.log(Level.TRACE,
-                 "Cookie " + cookie.getName() + ": " + cookie.getValue() + "["
-                     + cookie.getDomain() + "][" + cookie.getPath() + "]");
+      logger.debug("Cookie " + cookie.getName() + ": " + cookie.getValue()
+                   + "[" + cookie.getDomain() + "][" + cookie.getPath() + "]");
     }
   }
 
@@ -1075,30 +1097,25 @@ public class Proxy extends HttpServlet {
    */
   private static void logAllServletRequestHeaders(HttpServletRequest request) {
     Enumeration<String> headerNames = request.getHeaderNames();
-    logger.log(Level.TRACE,
-               "------------------ Servlet Request Headers ------------------");
+    logger.debug("------------------ Servlet Request Headers ------------------");
     while (headerNames.hasMoreElements()) {
       String headerName = headerNames.nextElement();
       Enumeration<String> headers = request.getHeaders(headerName);
       while (headers.hasMoreElements()) {
         String headerValue = headers.nextElement();
-        logger.log(Level.TRACE, "\t" + headerName + ": " + headerValue);
+        logger.debug("\t" + headerName + ": " + headerValue);
       }
     }
-    logger.log(Level.TRACE,
-               "-------------------------------------------------------------");
+    logger.debug("-------------------------------------------------------------");
   }
 
   private void logAllUriRequestHeaders(HttpUriRequest request) {
-    logger.log(Level.TRACE,
-               "------------------ URI Request Headers ------------------");
+    logger.debug("------------------ URI Request Headers ------------------");
 
     for (Header header : request.getAllHeaders()) {
-      logger.log(Level.TRACE,
-                 "\t" + header.getName() + ": " + header.getValue());
+      logger.debug("\t" + header.getName() + ": " + header.getValue());
     }
-    logger.log(Level.TRACE,
-               "---------------------------------------------------------");
+    logger.debug("---------------------------------------------------------");
   }
 
   /**
@@ -1108,15 +1125,13 @@ public class Proxy extends HttpServlet {
    */
   private static void logAllServletResponseHeaders(HttpServletResponse response) {
     Collection<String> names = response.getHeaderNames();
-    logger.log(Level.TRACE,
-               "------------------ Servlet Response Headers ------------------");
+    logger.debug("------------------ Servlet Response Headers ------------------");
     for (String headerName : names) {
       for (String header : response.getHeaders(headerName)) {
-        logger.log(Level.TRACE, "\t" + headerName + ": " + header);
+        logger.debug("\t" + headerName + ": " + header);
       }
     }
-    logger.log(Level.TRACE,
-               "--------------------------------------------------------------");
+    logger.debug("--------------------------------------------------------------");
   }
 
   /**
