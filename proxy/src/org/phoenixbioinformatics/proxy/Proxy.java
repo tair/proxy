@@ -231,11 +231,7 @@ public class Proxy extends HttpServlet {
         if (cookies != null) {
           for (Cookie c : Arrays.asList(cookies)) {
             String cookieName = c.getName();
-<<<<<<< Updated upstream
-            logger.trace("Processing cookie " + cookieName + " with value "
-=======
             logger.debug("Processing cookie " + cookieName + " with value "
->>>>>>> Stashed changes
                          + c.getValue());
             logger.debug("Processing cookie " + cookieName + " with value "
                     + c.getValue());
