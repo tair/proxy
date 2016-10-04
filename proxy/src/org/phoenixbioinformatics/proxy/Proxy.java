@@ -92,6 +92,8 @@ public class Proxy extends HttpServlet {
 
   // cookie-related constants
 
+  /** domain for cookies */
+  private static final String COOKIE_DOMAIN = ".arabidopsis.org";
   /** session attribute for cookies */
   private static final String COOKIES_ATTRIBUTE = "cookies";
   /** name of the ptools web server session cookie */
@@ -191,7 +193,15 @@ public class Proxy extends HttpServlet {
       handleOptionsRequest(servletRequest, servletResponse, origins);
     } else if (action != null && action.equals("setCookies")) {
       logger.debug("Setting cookies...");
-      handleSetCookieRequest(servletRequest, servletResponse, origins);
+      ApiPartnerPatternImpl partnerPattern = new ApiPartnerPatternImpl();
+      HttpHostFactory hostFactory =
+          new HttpHostFactory(partnerPattern,
+                              new HttpPropertyImpl(),
+                              servletRequest.getHeader(X_FORWARDED_SCHEME),
+                              servletRequest.getServerName(),
+                              servletRequest.getLocalPort(),
+                              servletRequest.getHeader(X_FORWARDED_HOST));
+      handleSetCookieRequest(servletRequest, servletResponse, origins, hostFactory.getPartnerId());
     } else {
       // Get the complete URI including original domain and query string.
       String uri = servletRequest.getRequestURI().toString();
@@ -374,6 +384,7 @@ public class Proxy extends HttpServlet {
 
       logger.debug("Proxying request from " + proxyRequest.getIp() + "-->\""
                    + uriRequest.getRequestLine().getUri() + "\"");
+
       logger.debug("userIdentifier before configureProxyRequest(): "
                    + userIdentifier.toString());
       configureProxyRequest(servletRequest,
@@ -387,6 +398,7 @@ public class Proxy extends HttpServlet {
             servletResponse,
             proxyRequest,
             sourceHost,
+            partnerId,
             userIdentifier.toString());
       logger.debug("userIdentifier after proxy(): " + userIdentifier.toString());
     }
@@ -726,6 +738,7 @@ public class Proxy extends HttpServlet {
    * @param servletResponse the servlet response to send to the client
    * @param proxyRequest the proxy request
    * @param host the host to which to set the HOST header, the target host
+   * @param partnerId the identifier for the partner
    * @param userIdentifier the partner identifier for the user
    * @throws ServletException when there is a servlet problem, including URI
    *           syntax or handling issues
@@ -733,6 +746,7 @@ public class Proxy extends HttpServlet {
   private void proxy(final HttpSession session,
                      final HttpServletResponse servletResponse,
                      final ProxyRequest proxyRequest, final HttpHost host,
+                     final String partnerId,
                      final String userIdentifier) throws ServletException {
     logger.info("Proxying " + proxyRequest.getMethod()
                 + " URI from IP address " + proxyRequest.getIp() + ": "
@@ -752,7 +766,7 @@ public class Proxy extends HttpServlet {
         logger.debug("Proxy returned status " + statusCode + " for URI "
                      + proxyRequest.getCurrentUri());
 
-        handleResponseHeaders(servletResponse, proxyResponse);
+        handleResponseHeaders(servletResponse, proxyResponse, partnerId);
 
         // Sends response to caller based on partner server's response.
         if (statusCode >= HttpServletResponse.SC_MULTIPLE_CHOICES
@@ -915,23 +929,25 @@ public class Proxy extends HttpServlet {
    */
   private void handleSetCookieRequest(HttpServletRequest servletRequest,
                                       HttpServletResponse servletResponse,
-                                      List<String> origins) {
+                                      List<String> origins, String partnerId) {
 
     Cookie credentialIdCookie =
       new Cookie(CREDENTIAL_ID_COOKIE,
                  servletRequest.getParameter(CREDENTIAL_ID_COOKIE));
     credentialIdCookie.setPath("/");
+    credentialIdCookie.setDomain(servletRequest.getServerName());
     servletResponse.addCookie(credentialIdCookie);
     // PW-165
-    addCookie(servletResponse, credentialIdCookie);
+    addCookie(servletResponse, credentialIdCookie, partnerId);
 
     Cookie secretKeyCookie =
       new Cookie(SECRET_KEY_COOKIE,
                  servletRequest.getParameter(SECRET_KEY_COOKIE));
     secretKeyCookie.setPath("/");
+    credentialIdCookie.setDomain(servletRequest.getServerName());
     servletResponse.addCookie(secretKeyCookie);
     // PW-165
-    addCookie(servletResponse, secretKeyCookie);
+    addCookie(servletResponse, secretKeyCookie, partnerId);
 
     logger.debug("Setting cookies: credentialId = "
                  + credentialIdCookie.getValue() + "; secretKey = "
@@ -1131,9 +1147,10 @@ public class Proxy extends HttpServlet {
    *
    * @param clientResponse the HTTP servlet response being set
    * @param proxyResponse the HTTP response from the proxying
+   * @param partnerId the identifier for the partner
    */
   private static void handleResponseHeaders(HttpServletResponse clientResponse,
-                                            HttpResponse proxyResponse) {
+                                            HttpResponse proxyResponse, String partnerId) {
 
     Header[] headers = proxyResponse.getAllHeaders();
 
@@ -1151,14 +1168,14 @@ public class Proxy extends HttpServlet {
         credentialIdCookie.setMaxAge(0);
         clientResponse.addCookie(credentialIdCookie);
         // PW-165
-        addCookie(clientResponse, credentialIdCookie);
+        addCookie(clientResponse, credentialIdCookie, partnerId);
 
         Cookie secretKeyCookie = new Cookie(SECRET_KEY_COOKIE, null);
         secretKeyCookie.setPath("/");
         secretKeyCookie.setMaxAge(0);
         clientResponse.addCookie(secretKeyCookie);
         // PW-165
-        addCookie(clientResponse, secretKeyCookie);
+        addCookie(clientResponse, secretKeyCookie, partnerId);
 
       }
 
@@ -1173,7 +1190,7 @@ public class Proxy extends HttpServlet {
         secretKeyCookie.setPath("/");
         clientResponse.addCookie(secretKeyCookie);
         // PW-165
-        addCookie(clientResponse, secretKeyCookie);
+        addCookie(clientResponse, secretKeyCookie, partnerId);
       }
     }
   }
@@ -1184,9 +1201,10 @@ public class Proxy extends HttpServlet {
    * @param response the servlet response
    * @param cookie the cookie to add
    */
-  private static void addCookie(HttpServletResponse response, Cookie cookie) {
-    // cookie.setDomain(domain);
+  private static void addCookie(HttpServletResponse response, Cookie cookie, String partnerId) {
+    if (partnerId.equalsIgnoreCase("tair")) {
+    cookie.setDomain(COOKIE_DOMAIN);
     response.addCookie(cookie);
-    logAllServletResponseHeaders(response);
+    }
   }
 }
