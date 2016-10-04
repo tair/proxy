@@ -92,8 +92,6 @@ public class Proxy extends HttpServlet {
 
   // cookie-related constants
 
-  /** domain for cookies */
-  private static final String COOKIE_DOMAIN = ".arabidopsis.org";
   /** session attribute for cookies */
   private static final String COOKIES_ATTRIBUTE = "cookies";
   /** name of the ptools web server session cookie */
@@ -1194,7 +1192,7 @@ public class Proxy extends HttpServlet {
    * @param cookie the cookie to add
    */
   private static void addCookie(HttpServletResponse response, Cookie cookie) {
-    cookie.setDomain(COOKIE_DOMAIN);
+    // cookie.setDomain(domain);
     response.addCookie(cookie);
   }
 }
