@@ -229,6 +229,8 @@ public class Proxy extends HttpServlet {
             String cookieName = c.getName();
             logger.trace("Processing cookie " + cookieName + " with value "
                          + c.getValue());
+            logger.debug("Processing cookie " + cookieName + " with value "
+                    + c.getValue());
             if (cookieName.equals(SECRET_KEY_COOKIE)) {
               secretKey = c.getValue();
             } else if (cookieName.equals(CREDENTIAL_ID_COOKIE)) {
