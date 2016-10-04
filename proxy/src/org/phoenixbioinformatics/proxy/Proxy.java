@@ -193,14 +193,7 @@ public class Proxy extends HttpServlet {
       handleOptionsRequest(servletRequest, servletResponse, origins);
     } else if (action != null && action.equals("setCookies")) {
       logger.debug("Setting cookies...");
-      ApiPartnerPatternImpl partnerPattern = new ApiPartnerPatternImpl();
-      HttpHostFactory hostFactory =
-          new HttpHostFactory(partnerPattern,
-                              new HttpPropertyImpl(),
-                              servletRequest.getHeader(X_FORWARDED_SCHEME),
-                              servletRequest.getServerName(),
-                              servletRequest.getLocalPort(),
-                              servletRequest.getHeader(X_FORWARDED_HOST));
+      HttpHostFactory hostFactory = getHostFactory(servletRequest);
       handleSetCookieRequest(servletRequest, servletResponse, origins, hostFactory.getPartnerId());
     } else {
       // Get the complete URI including original domain and query string.
@@ -209,19 +202,8 @@ public class Proxy extends HttpServlet {
       logger.debug("\n==========\nIncoming URI: " + uri + " with query string "
                    + queryString + "\n==========");
       try {
-        ApiPartnerPatternImpl partnerPattern = new ApiPartnerPatternImpl();
-        HttpHostFactory hostFactory =
-          new HttpHostFactory(partnerPattern,
-                              new HttpPropertyImpl(),
-                              servletRequest.getHeader(X_FORWARDED_SCHEME),
-                              servletRequest.getServerName(),
-                              servletRequest.getLocalPort(),
-                              servletRequest.getHeader(X_FORWARDED_HOST));
-
+        HttpHostFactory hostFactory = getHostFactory(servletRequest);
         HttpHost sourceHost = hostFactory.getSourceHost();
-
-        // Set source string before using host factory further.
-        partnerPattern.setSourceUri(sourceHost.toHostString());
 
         HttpHost targetHost = hostFactory.getTargetHost();
         logHostAttributes(servletRequest,
@@ -283,6 +265,27 @@ public class Proxy extends HttpServlet {
         logger.error(REQUEST_HANDLING_ERROR, e);
       }
     }
+  }
+
+  /**
+   * Get the fully initialized host factory.
+   *
+   * @param servletRequest the HTTP servlet request
+   * @return the initialized host factory
+   */
+  public HttpHostFactory getHostFactory(HttpServletRequest servletRequest) {
+    ApiPartnerPatternImpl partnerPattern = new ApiPartnerPatternImpl();
+    HttpHostFactory hostFactory =
+        new HttpHostFactory(partnerPattern,
+                            new HttpPropertyImpl(),
+                            servletRequest.getHeader(X_FORWARDED_SCHEME),
+                            servletRequest.getServerName(),
+                            servletRequest.getLocalPort(),
+                            servletRequest.getHeader(X_FORWARDED_HOST));
+    HttpHost sourceHost = hostFactory.getSourceHost();
+    // Set source string before using host factory further.
+    partnerPattern.setSourceUri(sourceHost.toHostString());
+    return hostFactory;
   }
 
   /**
