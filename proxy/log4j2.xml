@@ -112,10 +112,14 @@
 	<!-- Proxy Servlet logging -->
 	<category name="org.phoenixbioinformatics.proxy.controller">
 		<priority value="DEBUG" />
+
 	</category>
+    <category name="org.phoenixbioinformatics.proxy.controller">
+        <priority value="DEBUG" />
+    </category>
 	
-	<category name="org.phoenixbioinformatics.proxy.model">
-		<priority value="DEBUG" />
+	<category name="org.phoenixbioinformatics.proxy">
+		<priority value="TRACE" />
 	</category>
 	
     <category name="org.phoenixbioinformatics.proxy.cache">
@@ -128,9 +132,9 @@
     
   <Loggers>
     <Root level="debug">
-      <AppenderRef ref="Console" level="debug"/>
+      <AppenderRef ref="Console" level="trace"/>
       <AppenderRef ref="File" level="error"/>
-      <AppenderRef ref="Debug" level="debug"/>
+      <AppenderRef ref="Debug" level="trace"/>
     </Root>
   </Loggers>
 	
