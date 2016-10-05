@@ -194,7 +194,10 @@ public class Proxy extends HttpServlet {
     } else if (action != null && action.equals("setCookies")) {
       logger.debug("Setting cookies...");
       HttpHostFactory hostFactory = getHostFactory(servletRequest);
-      handleSetCookieRequest(servletRequest, servletResponse, origins, hostFactory.getPartnerId());
+      handleSetCookieRequest(servletRequest,
+                             servletResponse,
+                             origins,
+                             hostFactory.getPartnerId());
     } else {
       // Get the complete URI including original domain and query string.
       String uri = servletRequest.getRequestURI().toString();
@@ -274,12 +277,12 @@ public class Proxy extends HttpServlet {
   public HttpHostFactory getHostFactory(HttpServletRequest servletRequest) {
     ApiPartnerPatternImpl partnerPattern = new ApiPartnerPatternImpl();
     HttpHostFactory hostFactory =
-        new HttpHostFactory(partnerPattern,
-                            new HttpPropertyImpl(),
-                            servletRequest.getHeader(X_FORWARDED_SCHEME),
-                            servletRequest.getServerName(),
-                            servletRequest.getLocalPort(),
-                            servletRequest.getHeader(X_FORWARDED_HOST));
+      new HttpHostFactory(partnerPattern,
+                          new HttpPropertyImpl(),
+                          servletRequest.getHeader(X_FORWARDED_SCHEME),
+                          servletRequest.getServerName(),
+                          servletRequest.getLocalPort(),
+                          servletRequest.getHeader(X_FORWARDED_HOST));
     HttpHost sourceHost = hostFactory.getSourceHost();
     // Set source string before using host factory further.
     partnerPattern.setSourceUri(sourceHost.toHostString());
@@ -745,8 +748,8 @@ public class Proxy extends HttpServlet {
   private void proxy(final HttpSession session,
                      final HttpServletResponse servletResponse,
                      final ProxyRequest proxyRequest, final HttpHost host,
-                     final String partnerId,
-                     final String userIdentifier) throws ServletException {
+                     final String partnerId, final String userIdentifier)
+      throws ServletException {
     logger.info("Proxying " + proxyRequest.getMethod()
                 + " URI from IP address " + proxyRequest.getIp() + ": "
                 + proxyRequest.getCurrentUri() + "-->"
@@ -765,7 +768,10 @@ public class Proxy extends HttpServlet {
         logger.debug("Proxy returned status " + statusCode + " for URI "
                      + proxyRequest.getCurrentUri());
 
-        handleResponseHeaders(servletResponse, proxyResponse, partnerId);
+        handleResponseHeaders(servletResponse,
+                              proxyResponse,
+                              partnerId,
+                              session);
 
         // Sends response to caller based on partner server's response.
         if (statusCode >= HttpServletResponse.SC_MULTIPLE_CHOICES
@@ -934,19 +940,19 @@ public class Proxy extends HttpServlet {
       new Cookie(CREDENTIAL_ID_COOKIE,
                  servletRequest.getParameter(CREDENTIAL_ID_COOKIE));
     credentialIdCookie.setPath("/");
-    credentialIdCookie.setDomain(servletRequest.getServerName());
+    // use default domain (current host)
     servletResponse.addCookie(credentialIdCookie);
-    // PW-165
-    addCookie(servletResponse, credentialIdCookie, partnerId);
+    // PW-165, add ".arabidopsis.org" domain cookie
+    addCookie(servletResponse, credentialIdCookie, partnerId, null);
 
     Cookie secretKeyCookie =
       new Cookie(SECRET_KEY_COOKIE,
                  servletRequest.getParameter(SECRET_KEY_COOKIE));
     secretKeyCookie.setPath("/");
-    credentialIdCookie.setDomain(servletRequest.getServerName());
+    // use default domain (current host)
     servletResponse.addCookie(secretKeyCookie);
-    // PW-165
-    addCookie(servletResponse, secretKeyCookie, partnerId);
+    // PW-165, add ".arabidopsis.org" domain cookie
+    addCookie(servletResponse, secretKeyCookie, partnerId, null);
 
     logger.debug("Setting cookies: credentialId = "
                  + credentialIdCookie.getValue() + "; secretKey = "
@@ -1147,41 +1153,45 @@ public class Proxy extends HttpServlet {
    * @param clientResponse the HTTP servlet response being set
    * @param proxyResponse the HTTP response from the proxying
    * @param partnerId the identifier for the partner
+   * @param session the HTTP session
    */
   private static void handleResponseHeaders(HttpServletResponse clientResponse,
-                                            HttpResponse proxyResponse, String partnerId) {
+                                            HttpResponse proxyResponse,
+                                            String partnerId,
+                                            HttpSession session) {
 
     Header[] headers = proxyResponse.getAllHeaders();
 
     for (int i = 0; i < headers.length; i++) {
 
       Header header = headers[i];
+      String name = header.getName();
 
       // Check for the logout signal from the partner
       // (the value of the special header doesn't matter).
-      if (header.getName().equals(LOGOUT_HEADER)) {
+      if (name.equals(LOGOUT_HEADER)) {
 
         // Remove the authentication-related cookies.
         Cookie credentialIdCookie = new Cookie(CREDENTIAL_ID_COOKIE, null);
         credentialIdCookie.setPath("/");
         credentialIdCookie.setMaxAge(0);
         clientResponse.addCookie(credentialIdCookie);
-        // PW-165
-        addCookie(clientResponse, credentialIdCookie, partnerId);
+        // PW-165, remove ".arabidopsis.org" domain cookie
+        addCookie(clientResponse, credentialIdCookie, partnerId, 0);
 
         Cookie secretKeyCookie = new Cookie(SECRET_KEY_COOKIE, null);
         secretKeyCookie.setPath("/");
         secretKeyCookie.setMaxAge(0);
         clientResponse.addCookie(secretKeyCookie);
-        // PW-165
-        addCookie(clientResponse, secretKeyCookie, partnerId);
+        // PW-165, add ".arabidopsis.org" domain cookie
+        addCookie(clientResponse, secretKeyCookie, partnerId, 0);
 
-      }
-
-      // Check for the password change signal from the partner (the value of the
-      // special header carries the new secret key).
-      if (header.getName().equals(PASSWORD_UPDATE_HEADER)) {
-
+        // Close the proxy server session to clear all state.
+        session.invalidate();
+      } else if (name.equals(PASSWORD_UPDATE_HEADER)) {
+        // Check for the password change signal from the partner (the value of
+        // the
+        // special header carries the new secret key).
         logger.debug("Request to reset secret key: " + header.getValue());
 
         Cookie secretKeyCookie =
@@ -1189,21 +1199,29 @@ public class Proxy extends HttpServlet {
         secretKeyCookie.setPath("/");
         clientResponse.addCookie(secretKeyCookie);
         // PW-165
-        addCookie(clientResponse, secretKeyCookie, partnerId);
+        addCookie(clientResponse, secretKeyCookie, partnerId, null);
       }
     }
   }
 
   /**
-   * Add a cookie to a servlet response, setting the cookie domain.
+   * Add a cookie to a servlet response, setting the cookie domain for TAIR
+   * partner cookies.
    *
    * @param response the servlet response
    * @param cookie the cookie to add
+   * @param partnerId the identifier for the partner
+   * @param expiry the maximum age in seconds of the cookie; set to 0 to expire
+   *          the cookie
    */
-  private static void addCookie(HttpServletResponse response, Cookie cookie, String partnerId) {
+  private static void addCookie(HttpServletResponse response, Cookie cookie,
+                                String partnerId, Integer expiry) {
     if (partnerId.equalsIgnoreCase("tair")) {
-    cookie.setDomain(COOKIE_DOMAIN);
-    response.addCookie(cookie);
+      cookie.setDomain(COOKIE_DOMAIN);
+      if (expiry != null) {
+        cookie.setMaxAge(expiry);
+      }
+      response.addCookie(cookie);
     }
   }
 }
