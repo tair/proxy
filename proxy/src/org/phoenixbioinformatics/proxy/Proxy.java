@@ -104,11 +104,6 @@ public class Proxy extends HttpServlet {
   private static final String CREDENTIAL_ID_COOKIE = "credentialId";
   /** name of the Phoenix secret key cookie */
   private static final String SECRET_KEY_COOKIE = "secretKey";
-  /**
-   * name of the Phoenix user identifier cookie; package access for sharing to
-   * request
-   */
-  static final String USER_IDENTIFIER_COOKIE = "userIdentifier";
 
   // miscellaneous constants
 
