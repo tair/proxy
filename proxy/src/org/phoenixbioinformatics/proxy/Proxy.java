@@ -663,8 +663,12 @@ public class Proxy extends HttpServlet {
 
     // Put the cookie store with any returned session cookie into the session.
     cookieStore = localContext.getCookieStore();
+    try {
     logger.debug("Cookie store after proxying: " + cookieStore.toString());
     session.setAttribute(COOKIES_ATTRIBUTE, localContext.getCookieStore());
+    } catch (IllegalStateException e) {
+      // invalid session after logout, ignore
+    }
   }
 
   /**
