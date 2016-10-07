@@ -112,9 +112,13 @@
 	<!-- Proxy Servlet logging -->
 	<category name="org.phoenixbioinformatics.proxy.controller">
 		<priority value="DEBUG" />
+
 	</category>
+    <category name="org.phoenixbioinformatics.proxy.controller">
+        <priority value="DEBUG" />
+    </category>
 	
-	<category name="org.phoenixbioinformatics.proxy.model">
+	<category name="org.phoenixbioinformatics.proxy">
 		<priority value="DEBUG" />
 	</category>
 	

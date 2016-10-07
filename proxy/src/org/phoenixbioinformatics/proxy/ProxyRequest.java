@@ -54,6 +54,9 @@ public class ProxyRequest implements Serializable {
   /** the IP address making the request */
   private String ip = null;
 
+  /** name of the Phoenix user identifier cookie */
+  private static final String USER_IDENTIFIER_COOKIE = "userIdentifier";
+
   /** session attribute name for proxy request object */
   private static final String PROXY_REQUEST = "proxyRequest";
 
@@ -136,8 +139,8 @@ public class ProxyRequest implements Serializable {
   /**
    * Given a request with a cookie header, and given a non-null user identifier,
    * extract the value, add the user identifier cookie to it, and add the
-   * extended header to the request to proxy. If the method does add the
-   * cookie, it returns true; otherwise, false
+   * extended header to the request to proxy. If the method does add the cookie,
+   * it returns true; otherwise, false
    *
    * @param request the servlet request
    * @param headerName the actual name of the cookie header
@@ -145,7 +148,8 @@ public class ProxyRequest implements Serializable {
    * @return true if cookie added, false if not
    */
   private boolean addExtendedCookieHeader(HttpServletRequest request,
-                                       String headerName, String userIdentifier) {
+                                          String headerName,
+                                          String userIdentifier) {
     boolean added = false;
     if (userIdentifier != null) {
       // id exists, add the userIdentifier cookie to the end of the header value
@@ -154,13 +158,12 @@ public class ProxyRequest implements Serializable {
         String headerValue = headers.nextElement();
         if (headerValue != null) {
           headerValue =
-            headerValue + "; " + Proxy.USER_IDENTIFIER_COOKIE + "="
-                + userIdentifier;
+            headerValue + "; " + USER_IDENTIFIER_COOKIE + "=" + userIdentifier;
         }
         requestToProxy.addHeader(headerName, headerValue);
         added = true;
-        logger.log(Level.TRACE, "\tAdded header " + headerName
-                                + " to proxy request: " + headerValue);
+        logger.debug("\tAdded header " + headerName + " to proxy request: "
+                     + headerValue);
       }
     }
     return added;
