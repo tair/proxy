@@ -65,6 +65,10 @@ import org.phoenixbioinformatics.properties.ProxyProperties;
 
 @WebServlet(urlPatterns = { "/proxy/*" })
 public class Proxy extends HttpServlet {
+  private static final String QUERY_PREFIX = "?";
+
+  private static final String PARAM_PREFIX = "&";
+
   /** logger for this class */
   private static final Logger logger = LogManager.getLogger(Proxy.class);
 
@@ -72,7 +76,7 @@ public class Proxy extends HttpServlet {
   private static final long serialVersionUID = 1L;
 
   /** URI parameter for redirecting */
-  private static final String REDIRECT_PARAM = "&redirect=";
+  private static final String REDIRECT_PARAM = "redirect=";
 
   // header-related constants
 
@@ -418,7 +422,7 @@ public class Proxy extends HttpServlet {
     builder.append(hostName);
     builder.append(path);
     if (query != null) {
-      builder.append("?");
+      builder.append(QUERY_PREFIX);
       builder.append(query);
     }
 
@@ -552,7 +556,7 @@ public class Proxy extends HttpServlet {
       } else if (meter.equals(METER_WARNING_CODE)) {
         logger.info("Warned to subscribe by meter limit");
         authorized = false;
-        redirectPath = uiUri + meterWarningUri + redirectQueryString.toString();
+        redirectPath = uiUri + meterWarningUri + PARAM_PREFIX + redirectQueryString.toString();
 
         ApiService.incrementMeteringCount(remoteIp, partnerId);
       } else if (meter.equals(METER_BLACK_LIST_BLOCK_CODE)) {
@@ -560,18 +564,18 @@ public class Proxy extends HttpServlet {
         logger.info("Blocked from no-metered-access content");
         authorized = false;
         redirectPath =
-          uiUri + meterBlacklistUri + redirectQueryString.toString();
+          uiUri + meterBlacklistUri+ PARAM_PREFIX + redirectQueryString.toString();
         logger.info("redirectPath: " + redirectPath);
       } else {
         logger.info("Blocked from paid content by meter limit");
         authorized = false;
         redirectPath =
-          uiUri + meterBlockingUri + redirectQueryString.toString();
+          uiUri + meterBlockingUri+ PARAM_PREFIX + redirectQueryString.toString();
       }
     } else if (auth.equals(NEED_LOGIN_CODE)) {
       // force user to log in
       authorized = false;
-      redirectPath = uiUri + loginUri + redirectQueryString.toString();
+      redirectPath = uiUri + loginUri + QUERY_PREFIX + redirectQueryString.toString();
       logger.info("Party " + credentialId + " needs to login to access "
                   + fullUri + " at partner " + partnerId);
     }
@@ -836,7 +840,7 @@ public class Proxy extends HttpServlet {
         }
 
         if (uri.getQuery() != null) {
-          builder.append("?");
+          builder.append(QUERY_PREFIX);
           builder.append(uri.getQuery());
         }
 
