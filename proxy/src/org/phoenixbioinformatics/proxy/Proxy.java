@@ -505,8 +505,8 @@ public class Proxy extends HttpServlet {
     // meterBlacklistUri);
 
     Boolean authorized = false;
-    String redirectPath = "";
-    String redirectUri = "";
+    String redirectUri = ""; // complete URI to which to redirect here
+    String nestedRedirectUri = ""; // nested redirect param for next redirection
     String auth = NOT_OK_CODE;
 
     logger.info("checkAccess API parameters: " + fullUri + ", " + partnerId
@@ -526,11 +526,11 @@ public class Proxy extends HttpServlet {
       // Problem already logged
     }
 
-    // Get the redirect string and build the query-string part of the redirect
-    // URI
-    redirectUri = getRedirectUri(fullUri, uiUri);
-    StringBuilder redirectQueryString = new StringBuilder(REDIRECT_PARAM);
-    redirectQueryString.append(redirectUri);
+    // Get the redirect string and build the query string
+    nestedRedirectUri = getRedirectUri(fullUri, uiUri);
+    StringBuilder builder = new StringBuilder(REDIRECT_PARAM);
+    builder.append(nestedRedirectUri);
+    String redirectQueryString = builder.toString();
 
     // Handle the various status codes.
 
@@ -556,26 +556,35 @@ public class Proxy extends HttpServlet {
       } else if (meter.equals(METER_WARNING_CODE)) {
         logger.info("Warned to subscribe by meter limit");
         authorized = false;
-        redirectPath = uiUri + meterWarningUri + PARAM_PREFIX + redirectQueryString.toString();
-
+        builder = new StringBuilder(uiUri);
+        builder.append(meterWarningUri);
+        builder.append(PARAM_PREFIX);
+        builder.append(redirectQueryString);
+        redirectUri = builder.toString();
         ApiService.incrementMeteringCount(remoteIp, partnerId);
       } else if (meter.equals(METER_BLACK_LIST_BLOCK_CODE)) {
         // PW-287
         logger.info("Blocked from no-metered-access content");
         authorized = false;
-        redirectPath =
-          uiUri + meterBlacklistUri+ PARAM_PREFIX + redirectQueryString.toString();
-        logger.info("redirectPath: " + redirectPath);
+        builder = new StringBuilder(uiUri);
+        builder.append(meterBlacklistUri);
+        builder.append(PARAM_PREFIX);
+        builder.append(redirectQueryString);
+        redirectUri = builder.toString();
       } else {
         logger.info("Blocked from paid content by meter limit");
         authorized = false;
-        redirectPath =
-          uiUri + meterBlockingUri+ PARAM_PREFIX + redirectQueryString.toString();
+        builder = new StringBuilder(uiUri);
+        builder.append(meterBlockingUri);
+        builder.append(PARAM_PREFIX);
+        builder.append(redirectQueryString);
+        redirectUri = builder.toString();
       }
     } else if (auth.equals(NEED_LOGIN_CODE)) {
       // force user to log in
       authorized = false;
-      redirectPath = uiUri + loginUri + QUERY_PREFIX + redirectQueryString.toString();
+      redirectUri =
+        getLoginRedirectUri(uiUri, loginUri, redirectQueryString);
       logger.info("Party " + credentialId + " needs to login to access "
                   + fullUri + " at partner " + partnerId);
     }
@@ -584,11 +593,35 @@ public class Proxy extends HttpServlet {
       // One or another status requires a redirect.
       logger.info("Party " + credentialId + " not authorized for " + fullUri
                   + " at partner " + partnerId + ", redirecting to "
-                  + redirectPath);
-      servletResponse.sendRedirect(redirectPath);
+                  + redirectUri);
+      servletResponse.sendRedirect(redirectUri);
     }
 
     return authorized;
+  }
+
+  /**
+   * Get the complete login-redirect path given the user-interface host, the
+   * login path, and the redirect query string. This method builds the complete
+   * string and prefixes the redirect query string with & or ? as appropriate.
+   *
+   * @param uiUri the user interface host
+   * @param loginUri the login path
+   * @param redirectQueryString the
+   * @return
+   */
+  private String getLoginRedirectUri(String uiUri, String loginUri,
+                                     String redirectQueryString) {
+    String prefix = QUERY_PREFIX;
+    if (loginUri.contains(QUERY_PREFIX)) {
+      // ? already present, use & prefix instead
+      prefix = PARAM_PREFIX;
+    }
+    StringBuilder builder = new StringBuilder(uiUri);
+    builder.append(loginUri);
+    builder.append(prefix);
+    builder.append(redirectQueryString);
+    return builder.toString();
   }
 
   /**
@@ -668,8 +701,8 @@ public class Proxy extends HttpServlet {
     // Put the cookie store with any returned session cookie into the session.
     cookieStore = localContext.getCookieStore();
     try {
-    logger.debug("Cookie store after proxying: " + cookieStore.toString());
-    session.setAttribute(COOKIES_ATTRIBUTE, localContext.getCookieStore());
+      logger.debug("Cookie store after proxying: " + cookieStore.toString());
+      session.setAttribute(COOKIES_ATTRIBUTE, localContext.getCookieStore());
     } catch (IllegalStateException e) {
       // invalid session after logout, ignore
     }
