@@ -501,7 +501,7 @@ public class Proxy extends HttpServlet {
       StringBuilder builder = new StringBuilder(sourceHost.getSchemeName());
       builder.append("://");
       builder.append(sourceHost.getHostName());
-      if (sourceHost.getPort() != 80) {
+      if (sourceHost.getPort() != 80 && sourceHost.getPort() != -1) {
         builder.append(":");
         builder.append(sourceHost.getPort());
       }
