@@ -373,6 +373,7 @@ public class Proxy extends HttpServlet {
                               partnerId,
                               credentialId,
                               fullRequestUri,
+                              sourceHost.toHostString(),
                               remoteIp,
                               servletResponse,
                               userIdentifier)) {
@@ -466,6 +467,8 @@ public class Proxy extends HttpServlet {
    * @param credentialId client's partyId to use for authentication
    * @param fullUri client's full request path. example:
    *          https://test.arabidopsis.org/test/test.html
+   * @param sourceHost client's source authority. example:
+   *          https://test.arabidopsis.org
    * @param remoteIp client's IP address
    * @param servletResponse client's response to be modified if ther request to
    *          partner's server is denied.
@@ -475,7 +478,7 @@ public class Proxy extends HttpServlet {
    */
   private Boolean authorizeProxyRequest(String secretKey, String partnerId,
                                         String credentialId, String fullUri,
-                                        String remoteIp,
+                                        String sourceHost, String remoteIp,
                                         HttpServletResponse servletResponse,
                                         StringBuilder userIdentifier)
       throws IOException {
@@ -492,6 +495,12 @@ public class Proxy extends HttpServlet {
     partner.setPartnerId(partnerId);
     // Get attributes from partner
     String uiUri = partner.getUiUri();
+    if (uiUri == null) {
+      // null database field, use the source host (scheme and authority of the
+      // incoming full URI)
+      uiUri = sourceHost;
+      logger.debug("Using source host as UI URI: " + sourceHost);
+    }
     String loginUri = partner.getLoginUri();
     String meterWarningUri =
       partner.getUiMeterUri() + "?exceed=abouttoexceed&partnerId=" + partnerId;
@@ -587,8 +596,7 @@ public class Proxy extends HttpServlet {
     } else if (auth.equals(NEED_LOGIN_CODE)) {
       // force user to log in
       authorized = false;
-      redirectUri =
-        getLoginRedirectUri(uiUri, loginUri, redirectQueryString);
+      redirectUri = getLoginRedirectUri(uiUri, loginUri, redirectQueryString);
       logger.info("Party " + credentialId + " needs to login to access "
                   + fullUri + " at partner " + partnerId);
     }
@@ -620,6 +628,9 @@ public class Proxy extends HttpServlet {
     if (loginUri.contains(QUERY_PREFIX)) {
       // ? already present, use & prefix instead
       prefix = PARAM_PREFIX;
+    }
+    if (uiUri == null) {
+      // null database field, extract uiUri as domain of redirect
     }
     StringBuilder builder = new StringBuilder(uiUri);
     builder.append(loginUri);
