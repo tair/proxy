@@ -373,7 +373,7 @@ public class Proxy extends HttpServlet {
                               partnerId,
                               credentialId,
                               fullRequestUri,
-                              sourceHost.toHostString(),
+                              sourceHost,
                               remoteIp,
                               servletResponse,
                               userIdentifier)) {
@@ -478,7 +478,7 @@ public class Proxy extends HttpServlet {
    */
   private Boolean authorizeProxyRequest(String secretKey, String partnerId,
                                         String credentialId, String fullUri,
-                                        String sourceHost, String remoteIp,
+                                        HttpHost sourceHost, String remoteIp,
                                         HttpServletResponse servletResponse,
                                         StringBuilder userIdentifier)
       throws IOException {
@@ -498,7 +498,14 @@ public class Proxy extends HttpServlet {
     if (uiUri == null) {
       // null database field, use the source host (scheme and authority of the
       // incoming full URI)
-      uiUri = sourceHost;
+      StringBuilder builder = new StringBuilder(sourceHost.getSchemeName());
+      builder.append("://");
+      builder.append(sourceHost.getHostName());
+      if (sourceHost.getPort() != 80) {
+        builder.append(":");
+        builder.append(sourceHost.getPort());
+      }
+      uiUri = builder.toString();
       logger.debug("Using source host as UI URI: " + sourceHost);
     }
     String loginUri = partner.getLoginUri();
@@ -624,13 +631,13 @@ public class Proxy extends HttpServlet {
    */
   private String getLoginRedirectUri(String uiUri, String loginUri,
                                      String redirectQueryString) {
+    if (uiUri == null) {
+      throw new RuntimeException("Null user interface URI for partner");
+    }
     String prefix = QUERY_PREFIX;
     if (loginUri.contains(QUERY_PREFIX)) {
       // ? already present, use & prefix instead
       prefix = PARAM_PREFIX;
-    }
-    if (uiUri == null) {
-      // null database field, extract uiUri as domain of redirect
     }
     StringBuilder builder = new StringBuilder(uiUri);
     builder.append(loginUri);
