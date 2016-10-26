@@ -225,6 +225,8 @@ public class Proxy extends HttpServlet {
             String cookieName = c.getName();
             logger.debug("Processing cookie " + cookieName + " with value "
                          + c.getValue());
+            logger.debug("Processing cookie " + cookieName + " with value "
+                    + c.getValue());
             if (cookieName.equals(SECRET_KEY_COOKIE)) {
               secretKey = c.getValue();
             } else if (cookieName.equals(CREDENTIAL_ID_COOKIE)) {
@@ -371,6 +373,7 @@ public class Proxy extends HttpServlet {
                               partnerId,
                               credentialId,
                               fullRequestUri,
+                              sourceHost,
                               remoteIp,
                               servletResponse,
                               userIdentifier)) {
@@ -403,6 +406,7 @@ public class Proxy extends HttpServlet {
             sourceHost,
             partnerId,
             userIdentifier.toString());
+      logger.debug("userIdentifier after proxy(): " + userIdentifier.toString());
     }
   }
 
@@ -463,6 +467,8 @@ public class Proxy extends HttpServlet {
    * @param credentialId client's partyId to use for authentication
    * @param fullUri client's full request path. example:
    *          https://test.arabidopsis.org/test/test.html
+   * @param sourceHost client's source authority. example:
+   *          https://test.arabidopsis.org
    * @param remoteIp client's IP address
    * @param servletResponse client's response to be modified if ther request to
    *          partner's server is denied.
@@ -472,7 +478,7 @@ public class Proxy extends HttpServlet {
    */
   private Boolean authorizeProxyRequest(String secretKey, String partnerId,
                                         String credentialId, String fullUri,
-                                        String remoteIp,
+                                        HttpHost sourceHost, String remoteIp,
                                         HttpServletResponse servletResponse,
                                         StringBuilder userIdentifier)
       throws IOException {
@@ -489,6 +495,19 @@ public class Proxy extends HttpServlet {
     partner.setPartnerId(partnerId);
     // Get attributes from partner
     String uiUri = partner.getUiUri();
+    if (uiUri == null) {
+      // null database field, use the source host (scheme and authority of the
+      // incoming full URI)
+      StringBuilder builder = new StringBuilder(sourceHost.getSchemeName());
+      builder.append("://");
+      builder.append(sourceHost.getHostName());
+      if (sourceHost.getPort() != 80 && sourceHost.getPort() != -1) {
+        builder.append(":");
+        builder.append(sourceHost.getPort());
+      }
+      uiUri = builder.toString();
+      logger.debug("Using source host as UI URI: " + sourceHost);
+    }
     String loginUri = partner.getLoginUri();
     String meterWarningUri =
       partner.getUiMeterUri() + "?exceed=abouttoexceed&partnerId=" + partnerId;
@@ -521,6 +540,7 @@ public class Proxy extends HttpServlet {
                                remoteIp);
       auth = accessOutput.status;
       userIdentifier.append(accessOutput.userIdentifier);
+      logger.debug("userIdentifier: " + userIdentifier.toString());
     } catch (Exception e) {
       // Problem making the API call, continue with "Not OK" default status
       // Problem already logged
@@ -583,8 +603,7 @@ public class Proxy extends HttpServlet {
     } else if (auth.equals(NEED_LOGIN_CODE)) {
       // force user to log in
       authorized = false;
-      redirectUri =
-        getLoginRedirectUri(uiUri, loginUri, redirectQueryString);
+      redirectUri = getLoginRedirectUri(uiUri, loginUri, redirectQueryString);
       logger.info("Party " + credentialId + " needs to login to access "
                   + fullUri + " at partner " + partnerId);
     }
@@ -612,6 +631,9 @@ public class Proxy extends HttpServlet {
    */
   private String getLoginRedirectUri(String uiUri, String loginUri,
                                      String redirectQueryString) {
+    if (uiUri == null) {
+      throw new RuntimeException("Null user interface URI for partner");
+    }
     String prefix = QUERY_PREFIX;
     if (loginUri.contains(QUERY_PREFIX)) {
       // ? already present, use & prefix instead
@@ -691,7 +713,7 @@ public class Proxy extends HttpServlet {
       createLocalContextWithCookiesAndTarget(host,
                                              cookieStore,
                                              request.getURI().getHost());
-    client = HttpClientBuilder.create().disableRedirectHandling().build();
+    client = HttpClientBuilder.create().disableContentCompression().disableRedirectHandling().build();
     // Execute the request on the proxied server. Ignore returned string.
     // TODO: try adding host as first param, see if it does the right thing.
     // client.execute(host, request, responseHandler, localContext);
