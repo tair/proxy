@@ -19,6 +19,7 @@ import org.apache.http.message.BasicNameValuePair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.phoenixbioinformatics.http.RequestFactory;
+import org.phoenixbioinformatics.properties.ProxyProperties;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -344,4 +345,18 @@ public class ApiService extends AbstractApiService {
       return e.getMessage();
     }
   }
+
+public static void sendMeteringEmail(String remoteIp, String partnerId, String credentialId) {
+		String to = "andrey@arabidopsis.org";//ProxyProperties.getProperty("mail.to");
+		String from = ProxyProperties.getProperty("mail.from");
+		String content = "partnerId:"+partnerId+" is about to exceed the limit for remoteIp:"+remoteIp+" credentialId:"+credentialId;
+		String subject = "partnerId:"+partnerId+" is about to exceed the limit for remoteIp:"+remoteIp;
+		
+		logger.debug("Sending email to " + to + " from " + from + ". Subject: " + subject );
+		logger.debug("Content: " + content);
+		
+		EmailUtility.send(to, from, subject, content);	
+}
+
+
 }
