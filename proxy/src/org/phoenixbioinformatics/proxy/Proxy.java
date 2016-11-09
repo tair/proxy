@@ -152,21 +152,24 @@ public class Proxy extends HttpServlet {
     "Redirect status code but no location header in response";
 
   //PW-207 redirecting to http://ui.arabidopsis.org/error=xxx
-  private static final String UI_URL =	ProxyProperties.getProperty("ui.uri.error", "https://ui.arabidopsis.org/error=");
+  private static final String UI_URL =	ProxyProperties.getProperty("ui.uri", "https://ui.arabidopsis.org");
   
   @Override
   protected void service(HttpServletRequest servletRequest,
                          HttpServletResponse servletResponse)
       throws ServletException, IOException {
+	  String partnerId = "tair";
     try {
       logAllServletRequestHeaders(servletRequest);
       handleProxyRequest(servletRequest, servletResponse);
       logAllServletResponseHeaders(servletResponse);
+      
     } catch (RuntimeException | InvalidPartnerException e) {
       // Log unchecked exception here and don't propagate.
       logger.error(RUNTIME_EXCEPTION_ERROR, e);
       //PW-207
-      String error_url = UI_URL + e.getMessage();
+      partnerId = getHostFactory(servletRequest).getPartnerId();
+      String error_url = UI_URL+"/error?partnerId="+partnerId+"&error="+e.getMessage();
       servletResponse.sendRedirect(error_url);
     }
   }
