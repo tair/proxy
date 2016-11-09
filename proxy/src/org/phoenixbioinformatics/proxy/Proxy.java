@@ -152,7 +152,7 @@ public class Proxy extends HttpServlet {
     "Redirect status code but no location header in response";
 
   //PW-207 redirecting to http://ui.arabidopsis.org/error=xxx
-  private static final String UI_URL =	ProxyProperties.getProperty("ui.uri", "http://ui.arabidopsis.org/error=");
+  private static final String UI_URL =	ProxyProperties.getProperty("ui.uri.error", "https://ui.arabidopsis.org/error=");
   
   @Override
   protected void service(HttpServletRequest servletRequest,
