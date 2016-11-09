@@ -151,6 +151,9 @@ public class Proxy extends HttpServlet {
   private static final String REDIRECT_ERROR =
     "Redirect status code but no location header in response";
 
+  //PW-207 redirecting to http://ui.arabidopsis.org/error=xxx
+  private static final String UI_URL =	ProxyProperties.getProperty("ui.uri", "http://ui.arabidopsis.org/error=");
+  
   @Override
   protected void service(HttpServletRequest servletRequest,
                          HttpServletResponse servletResponse)
@@ -159,11 +162,12 @@ public class Proxy extends HttpServlet {
       logAllServletRequestHeaders(servletRequest);
       handleProxyRequest(servletRequest, servletResponse);
       logAllServletResponseHeaders(servletResponse);
-    } catch (RuntimeException e) {
+    } catch (RuntimeException | InvalidPartnerException e) {
       // Log unchecked exception here and don't propagate.
       logger.error(RUNTIME_EXCEPTION_ERROR, e);
-    } catch (Exception e) {
-      // Don't propagate checked exceptions out of servlet, already logged
+      //PW-207
+      String error_url = UI_URL + e.getMessage();
+      servletResponse.sendRedirect(error_url);
     }
   }
 
@@ -264,7 +268,7 @@ public class Proxy extends HttpServlet {
                           secretKey);
       } catch (ServletException | UnsupportedHttpMethodException | IOException e) {
         // Log checked exceptions here, then ignore.
-        logger.error(REQUEST_HANDLING_ERROR, e);
+        logger.error(REQUEST_HANDLING_ERROR, e);//PW-207
       }
     }
   }
@@ -613,7 +617,7 @@ public class Proxy extends HttpServlet {
       logger.info("Party " + credentialId + " not authorized for " + fullUri
                   + " at partner " + partnerId + ", redirecting to "
                   + redirectUri);
-      servletResponse.sendRedirect(redirectUri);
+      servletResponse.sendRedirect(redirectUri);//
     }
 
     return authorized;
