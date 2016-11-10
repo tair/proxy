@@ -163,8 +163,6 @@ public class Proxy extends HttpServlet {
       logAllServletRequestHeaders(servletRequest);
       handleProxyRequest(servletRequest, servletResponse);
       logAllServletResponseHeaders(servletResponse);
-      //just for testing
-      throw new InvalidPartnerException();
     } catch (RuntimeException | InvalidPartnerException e) {
       // Log unchecked exception here and don't propagate.
       logger.error(RUNTIME_EXCEPTION_ERROR, e);
