@@ -1277,15 +1277,16 @@ public class Proxy extends HttpServlet {
         // Check for the password change signal from the partner (the value of
         // the
         // special header carries the new secret key).
-        logger.debug("Request to reset secret key: " + header.getValue());
-
-        Cookie secretKeyCookie =
-          new Cookie(SECRET_KEY_COOKIE, header.getValue());
-        secretKeyCookie.setPath("/");
-        clientResponse.addCookie(secretKeyCookie);
-        // PW-165
-        addCookie(clientResponse, secretKeyCookie, partnerId, null);
+//        logger.debug("Request to reset secret key: " + header.getValue());
+//
+//        Cookie secretKeyCookie =
+//          new Cookie(SECRET_KEY_COOKIE, header.getValue());
+//        secretKeyCookie.setPath("/");
+//        clientResponse.addCookie(secretKeyCookie);
+//        // PW-165
+//        addCookie(clientResponse, secretKeyCookie, partnerId, null);
         
+        logger.debug("Request to reset token: " + header.getValue());
         Cookie tokenCookie =
 	        new Cookie(JWT_TOKEN_COOKIE, header.getValue());
 	      tokenCookie.setPath("/");
