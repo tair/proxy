@@ -91,6 +91,7 @@ public class Proxy extends HttpServlet {
   /** name of custom header indicating password update */
   private static final String PASSWORD_UPDATE_HEADER =
     "Phoenix-Proxy-PasswordUpdate";
+  private static final String SECRETKEY_UPDATE_HEADER = "Phoenix-Proxy-SecretKeyUpdate";
   /** name of custom header indicating user logged out of partner */
   private static final String LOGOUT_HEADER = "Phoenix-Proxy-Logout";
 
@@ -1273,19 +1274,22 @@ public class Proxy extends HttpServlet {
 
         // Close the proxy server session to clear all state.
         session.invalidate();
-      } else if (name.equals(PASSWORD_UPDATE_HEADER)) {
+      } else if (name.equals(SECRETKEY_UPDATE_HEADER)) {
         // Check for the password change signal from the partner (the value of
         // the
         // special header carries the new secret key).
-//        logger.debug("Request to reset secret key: " + header.getValue());
-//
-//        Cookie secretKeyCookie =
-//          new Cookie(SECRET_KEY_COOKIE, header.getValue());
-//        secretKeyCookie.setPath("/");
-//        clientResponse.addCookie(secretKeyCookie);
-//        // PW-165
-//        addCookie(clientResponse, secretKeyCookie, partnerId, null);
-        
+        logger.debug("Request to reset secret key: " + header.getValue());
+
+        Cookie secretKeyCookie =
+          new Cookie(SECRET_KEY_COOKIE, header.getValue());
+        secretKeyCookie.setPath("/");
+        clientResponse.addCookie(secretKeyCookie);
+        // PW-165
+        addCookie(clientResponse, secretKeyCookie, partnerId, null);
+      } else if (name.equals(PASSWORD_UPDATE_HEADER)) {
+          // Check for the password change signal from the partner (the value of
+          // the
+          // special header carries the new token).
         logger.debug("Request to reset token: " + header.getValue());
         Cookie tokenCookie =
 	        new Cookie(JWT_TOKEN_COOKIE, header.getValue());
