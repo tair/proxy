@@ -286,6 +286,7 @@ public class ApiService extends AbstractApiService {
       String content =
         callApi(urn, RequestFactory.HttpMethod.GET, "secretKey=" + loginKey
                                                     + ";credentialId=" + credentialId
+                                                    + ";token=" + token
                                                     + ";");
       Gson gson = new Gson();
       return gson.fromJson(content, AccessOutput.class);
