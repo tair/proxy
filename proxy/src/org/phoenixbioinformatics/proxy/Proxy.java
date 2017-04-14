@@ -564,7 +564,7 @@ public class Proxy extends HttpServlet {
     }
 
     // Get the redirect string and build the query string
-    nestedRedirectUri = getRedirectUri(fullUri, uiUri);
+    nestedRedirectUri = getRedirectUri(fullUri, uiUri, remoteIp);
     StringBuilder builder = new StringBuilder(REDIRECT_PARAM);
     builder.append(nestedRedirectUri);
     String redirectQueryString = builder.toString();
@@ -672,13 +672,13 @@ public class Proxy extends HttpServlet {
    * @param uiUri the URI containing the UI scheme and host
    * @return the transformed URI to which to redirect
    */
-  public String getRedirectUri(String fullUri, String uiUri) {
+  public String getRedirectUri(String fullUri, String uiUri, String remoteIp) {
     String redirectUri = null;
 
     logger.debug("Full URI to use for redirect: " + fullUri);
 
     try {
-      redirectUri = URLEncoder.encode(fullUri, UTF_8);
+      redirectUri = URLEncoder.encode(fullUri + "&remoteIp=" + remoteIp, UTF_8);
 
       logger.debug("Encoded URI for redirect: " + redirectUri);
 
