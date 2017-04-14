@@ -547,7 +547,7 @@ public class Proxy extends HttpServlet {
     }
 
     // Get the redirect string and build the query string
-    nestedRedirectUri = getRedirectUri(fullUri, uiUri, remoteIp);
+    nestedRedirectUri = getRedirectUri(fullUri, uiUri);
     StringBuilder builder = new StringBuilder(REDIRECT_PARAM);
     builder.append(nestedRedirectUri);
     String redirectQueryString = builder.toString();
@@ -613,7 +613,7 @@ public class Proxy extends HttpServlet {
       logger.info("Party " + credentialId + " not authorized for " + fullUri
                   + " at partner " + partnerId + ", redirecting to "
                   + redirectUri);
-      servletResponse.sendRedirect(redirectUri);
+      servletResponse.sendRedirect(redirectUri + "&remoteIp=" +remoteIp);
     }
 
     return authorized;
@@ -655,13 +655,13 @@ public class Proxy extends HttpServlet {
    * @param uiUri the URI containing the UI scheme and host
    * @return the transformed URI to which to redirect
    */
-  public String getRedirectUri(String fullUri, String uiUri, String remoteIp) {
+  public String getRedirectUri(String fullUri, String uiUri) {
     String redirectUri = null;
 
     logger.debug("Full URI to use for redirect: " + fullUri);
 
     try {
-      redirectUri = URLEncoder.encode(fullUri + "&remoteIp=" + remoteIp, UTF_8);
+      redirectUri = URLEncoder.encode(fullUri, UTF_8);
 
       logger.debug("Encoded URI for redirect: " + redirectUri);
 
