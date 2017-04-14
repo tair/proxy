@@ -613,7 +613,7 @@ public class Proxy extends HttpServlet {
       logger.info("Party " + credentialId + " not authorized for " + fullUri
                   + " at partner " + partnerId + ", redirecting to "
                   + redirectUri);
-      servletResponse.sendRedirect(redirectUri);
+      servletResponse.sendRedirect(redirectUri + "&remoteIp=" +remoteIp);
     }
 
     return authorized;
