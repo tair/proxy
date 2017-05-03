@@ -577,7 +577,7 @@ public class Proxy extends HttpServlet {
                   + " at partner " + partnerId);
 
       String meter =
-        ApiService.checkMeteringLimit(remoteIp, partnerId, fullUri);
+        ApiService.checkMeteringLimit(remoteIp, partnerId, fullUri, token);
 
       if (meter.equals(OK_CODE)) {
         logger.info("Allowed free access to content by metering");
