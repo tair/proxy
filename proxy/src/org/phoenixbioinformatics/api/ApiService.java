@@ -305,11 +305,11 @@ public class ApiService extends AbstractApiService {
    * @param ip client's IP address.
    * @return String indicating client's metering status. (OK, Warn, Blocked)
    */
-  public static String checkMeteringLimit(String ip, String partnerId, String fullUri) {
+  public static String checkMeteringLimit(String ip, String partnerId, String fullUri, String token) {
     String urn = METERS_URN + "/ip/" + ip + "/limit/?partnerId=" + partnerId +"&uri="+fullUri;
 
     try {
-      String content = callApi(urn, RequestFactory.HttpMethod.GET);
+      String content = callApi(urn, RequestFactory.HttpMethod.GET, "token=" + token + ";");
       Gson gson = new Gson();
       CheckMeteringLimitOutput out =
         gson.fromJson(content, CheckMeteringLimitOutput.class);
