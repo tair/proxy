@@ -90,7 +90,8 @@ public abstract class AbstractApiService {
     if (status != HttpStatus.SC_OK && status != HttpStatus.SC_CREATED) {
       logger.debug("Status code is not OK: " + status);
       //PW-207 redirect to error page could be done here
-      throw new IOException("Bad status code: " + String.valueOf(status));
+      throw new IOException("Bad status code: " + String.valueOf(status)
+      +"\nCookieString: " + "apiKey=" + API_KEY + ";" + cookieString);
     }
     String content = EntityUtils.toString(response.getEntity());
 
