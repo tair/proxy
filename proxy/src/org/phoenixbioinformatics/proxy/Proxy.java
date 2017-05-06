@@ -254,7 +254,7 @@ public class Proxy extends HttpServlet {
                        servletRequest.getQueryString());
         String remoteIp = getIpAddress(servletRequest);
 
-        logRequest(fullRequestUri, remoteIp, credentialId, sessionId);
+        logRequest(fullRequestUri, remoteIp, credentialId, sessionId, token);
 
         // TODO use source or target host for HOST header based on partner
         // option
@@ -338,11 +338,11 @@ public class Proxy extends HttpServlet {
    * @param sessionId the session ID of the partner session, if any
    */
   private void logRequest(String uri, String ip, String credentialId,
-                          String sessionId) {
+                          String sessionId, String token) {
     // Log a page view for "real" URIs, exclude embedded images, js, etc.
     if (!isEmbeddedFile(uri)) {
       logger.debug("Creating page view for URI " + uri);
-      ApiService.createPageView(ip, uri, credentialId, sessionId);
+      ApiService.createPageView(ip, uri, credentialId, sessionId, token);
     }
   }
 
@@ -582,7 +582,7 @@ public class Proxy extends HttpServlet {
       if (meter.equals(OK_CODE)) {
         logger.info("Allowed free access to content by metering");
         authorized = true;
-        ApiService.incrementMeteringCount(remoteIp, partnerId);
+        ApiService.incrementMeteringCount(remoteIp, partnerId, token);
 
       } else if (meter.equals(METER_WARNING_CODE)) {
         logger.info("Warned to subscribe by meter limit");
@@ -592,7 +592,7 @@ public class Proxy extends HttpServlet {
         builder.append(PARAM_PREFIX);
         builder.append(redirectQueryString);
         redirectUri = builder.toString();
-        ApiService.incrementMeteringCount(remoteIp, partnerId);
+        ApiService.incrementMeteringCount(remoteIp, partnerId, token);
       } else if (meter.equals(METER_BLACK_LIST_BLOCK_CODE)) {
         // PW-287
         logger.info("Blocked from no-metered-access content");

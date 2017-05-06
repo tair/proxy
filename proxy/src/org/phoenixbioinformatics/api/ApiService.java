@@ -150,7 +150,7 @@ public class ApiService extends AbstractApiService {
    * Creates a page view log entry
    */
   public static void createPageView(String ip, String uri, String partyId,
-                                    String sessionId) {
+                                    String sessionId, String token) {
     String urn = PAGE_VIEWS_URN + "/";
     Date curDate = new Date();
     SimpleDateFormat format = new SimpleDateFormat();
@@ -165,7 +165,7 @@ public class ApiService extends AbstractApiService {
     params.add(new BasicNameValuePair("ip", ip));
 
     try {
-      callApi(urn, RequestFactory.HttpMethod.POST, "", params);
+      callApi(urn, RequestFactory.HttpMethod.POST, "token="+token, params);
     } catch (Exception e) {
       logger.error(LOGGING_ERROR + urn);
       StringBuilder builder = new StringBuilder("[parameters: ");
@@ -194,7 +194,7 @@ public class ApiService extends AbstractApiService {
   public static PartnerDetailOutput getPartnerDetailInfo(String partnerId) {
     String urn = PARTNERS_URN + "/?partnerId=" + partnerId;
     try {
-      String content = callApi(urn, RequestFactory.HttpMethod.GET);
+      String content = callApi(urn, RequestFactory.HttpMethod.GET);// GET partners/ is an open request, we don't pass a token here
       Gson gson = new Gson();
       Type type = new TypeToken<List<PartnerDetailOutput>>() {
       }.getType();
@@ -329,12 +329,12 @@ public class ApiService extends AbstractApiService {
    * @return String indicating the access status (OK, NeedSubscription,
    *         NeedLogin)
    */
-  public static String incrementMeteringCount(String ip, String partnerId) {
+  public static String incrementMeteringCount(String ip, String partnerId, String token) {
     String urn =
       METERS_URN + "/ip/" + ip + "/increment/?partnerId=" + partnerId;
 
     try {
-      String content = callApi(urn, RequestFactory.HttpMethod.POST);
+      String content = callApi(urn, RequestFactory.HttpMethod.POST, "token=" + token);
       Gson gson = new Gson();
       IncrementMeteringCountOutput out =
         gson.fromJson(content, IncrementMeteringCountOutput.class);
