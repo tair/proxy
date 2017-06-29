@@ -730,7 +730,8 @@ public class Proxy extends HttpServlet {
       createLocalContextWithCookiesAndTarget(host,
                                              cookieStore,
                                              request.getURI().getHost());
-    client = HttpClientBuilder.create().disableContentCompression().disableRedirectHandling().build();
+    //client = HttpClientBuilder.create().disableContentCompression().disableRedirectHandling().build();//vet
+    client = HttpClientBuilder.create().disableRedirectHandling().build();
     // Execute the request on the proxied server. Ignore returned string.
     // TODO: try adding host as first param, see if it does the right thing.
     // client.execute(host, request, responseHandler, localContext);
