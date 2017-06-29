@@ -730,11 +730,11 @@ public class Proxy extends HttpServlet {
       createLocalContextWithCookiesAndTarget(host,
                                              cookieStore,
                                              request.getURI().getHost());
-    client = HttpClientBuilder.create().disableContentCompression().disableRedirectHandling().build();//PROD
+    //client = HttpClientBuilder.create().disableContentCompression().disableRedirectHandling().build();//PROD
     
     //https://checkgzipcompression.com/?url=https%3A%2F%2Fbiocyc-staging.org
     //shows GZIP is not enabled
-    //client = HttpClientBuilder.create().disableRedirectHandling().build(); 
+   client = HttpClientBuilder.create().disableRedirectHandling().build(); 
     
     // Execute the request on the proxied server. Ignore returned string.
     // TODO: try adding host as first param, see if it does the right thing.
