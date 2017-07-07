@@ -731,30 +731,27 @@ public class Proxy extends HttpServlet {
                                              cookieStore,
                                              request.getURI().getHost());
     // 1. create client
-    logger.info("vet disableContentCompression (like PROD) create client start");
     long time = System.currentTimeMillis();
      client = HttpClientBuilder.create().disableContentCompression().disableRedirectHandling().build();//PROD
-    time = ((System.currentTimeMillis() - time) / 1000);
-    logger.info("vet disableContentCompression (like PROD) create client end in " + time + " seconds.");
+    time = ((System.currentTimeMillis() - time));
+    logger.info("vet disableContentCompression (like PROD) CREATE CLIENT done in " + time + " milliSeconds.");
     //https://checkgzipcompression.com/?url=https%3A%2F%2Fbiocyc-staging.org
     //shows GZIP is not enabled
     //client = HttpClientBuilder.create().disableRedirectHandling().build(); 
     
      //2. logAllUriRequestHeaders
-    logger.info("vet disableContentCompression (like PROD) logAllUriRequestHeaders start");
     time = System.currentTimeMillis();
      logAllUriRequestHeaders(request);
-    time = ((System.currentTimeMillis() - time) / 1000);
-    logger.info("vet disableContentCompression (like PROD) logAllUriRequestHeaders end in " + time + " seconds.");
+    time = ((System.currentTimeMillis() - time));
+    logger.info("vet disableContentCompression (like PROD) logAllUriRequestHeaders done in " + time + " milliSeconds.");
 
     //3. execute 
     // Execute the request on the proxied server. Ignore returned string.
     // TODO: try adding host as first param, see if it does the right thing.
-    logger.info("vet disableContentCompression (like PROD) + host not passed - execute start");
     time = System.currentTimeMillis();
      client.execute(request, responseHandler, localContext);
-    time = ((System.currentTimeMillis() - time) / 1000);
-    logger.info("vet disableContentCompression (like PROD) + host not passed - execute end in " + time + " seconds.");
+    time = ((System.currentTimeMillis() - time));
+    logger.info("vet disableContentCompression (like PROD) + host not passed - execute done in " + time + " milliSeconds.");
      
     //4. Put the cookie store with any returned session cookie into the session.
     cookieStore = localContext.getCookieStore();

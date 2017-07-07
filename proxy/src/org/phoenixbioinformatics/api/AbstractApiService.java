@@ -81,11 +81,20 @@ public abstract class AbstractApiService {
     }
 
     request.addHeader("Cookie", "apiKey=" + API_KEY + ";" + cookieString);
-    CloseableHttpClient client = HttpClientBuilder.create().build();
+    //1. create client
+    long time = System.currentTimeMillis();
+     CloseableHttpClient client = HttpClientBuilder.create().build();
+    time = ((System.currentTimeMillis() - time));
+    logger.info("vet API (compression ENABLED) CREATE CLIENT done in " + time + " milliSeconds.");
     // debug statement. TODO: remove in final produce to reduce spam
     logger.debug("Making " + methodString + " request: " + API_URL + urn);
-    response = client.execute(request);
-
+    
+    //2. execute
+    time = System.currentTimeMillis();
+     response = client.execute(request);
+    time = ((System.currentTimeMillis() - time));
+    logger.info("vet API (compression ENABLED) EXECUTET done in " + time + " milliSeconds.");
+    
     int status = response.getStatusLine().getStatusCode();
     if (status != HttpStatus.SC_OK && status != HttpStatus.SC_CREATED) {
       logger.debug("Status code is not OK: " + status);
