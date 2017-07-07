@@ -726,15 +726,21 @@ public class Proxy extends HttpServlet {
     // proxy server session to maintain the session from the back-end server.
     CookieStore cookieStore =
       (CookieStore)session.getAttribute(COOKIES_ATTRIBUTE);
+    
+    // 0. createLocalContextWithCookiesAndTarget
+    long time = System.currentTimeMillis();
     HttpClientContext localContext =
       createLocalContextWithCookiesAndTarget(host,
                                              cookieStore,
                                              request.getURI().getHost());
+    time = ((System.currentTimeMillis() - time));
+    logger.info("createLocalContextWithCookiesAndTarget completed in " + time + " milliSeconds. host:"+ host);
+    
     // 1. create client
-    long time = System.currentTimeMillis();
+    time = System.currentTimeMillis();
      client = HttpClientBuilder.create().disableContentCompression().disableRedirectHandling().build();//PROD
     time = ((System.currentTimeMillis() - time));
-    logger.info("vet disableContentCompression (like PROD) CREATE CLIENT done in " + time + " milliSeconds.");
+    logger.info("disableContentCompression (like on PROD) CREATE CLIENT completed in " + time + " milliSeconds. host:"+ host);
     //https://checkgzipcompression.com/?url=https%3A%2F%2Fbiocyc-staging.org
     //shows GZIP is not enabled
     //client = HttpClientBuilder.create().disableRedirectHandling().build(); 
@@ -743,7 +749,7 @@ public class Proxy extends HttpServlet {
     time = System.currentTimeMillis();
      logAllUriRequestHeaders(request);
     time = ((System.currentTimeMillis() - time));
-    logger.info("vet disableContentCompression (like PROD) logAllUriRequestHeaders done in " + time + " milliSeconds.");
+    logger.info("disableContentCompression (like on PROD) logAllUriRequestHeaders completed in " + time + " milliSeconds. host:"+ host);
 
     //3. execute 
     // Execute the request on the proxied server. Ignore returned string.
@@ -751,7 +757,7 @@ public class Proxy extends HttpServlet {
     time = System.currentTimeMillis();
      client.execute(request, responseHandler, localContext);
     time = ((System.currentTimeMillis() - time));
-    logger.info("vet disableContentCompression (like PROD) + host not passed - execute done in " + time + " milliSeconds.");
+    logger.info("disableContentCompression (like on PROD) + host not passed - execute completed in " + time + " milliSeconds. host:"+ host);
      
     //4. Put the cookie store with any returned session cookie into the session.
     cookieStore = localContext.getCookieStore();

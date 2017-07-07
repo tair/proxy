@@ -85,7 +85,7 @@ public abstract class AbstractApiService {
     long time = System.currentTimeMillis();
      CloseableHttpClient client = HttpClientBuilder.create().build();
     time = ((System.currentTimeMillis() - time));
-    logger.info("vet API (compression ENABLED) CREATE CLIENT done in " + time + " milliSeconds.");
+    logger.info("API (compression ENABLED) CREATE CLIENT completed in " + time + " milliSeconds. method:"+methodString+" urn:"+urn);
     // debug statement. TODO: remove in final produce to reduce spam
     logger.debug("Making " + methodString + " request: " + API_URL + urn);
     
@@ -93,7 +93,7 @@ public abstract class AbstractApiService {
     time = System.currentTimeMillis();
      response = client.execute(request);
     time = ((System.currentTimeMillis() - time));
-    logger.info("vet API (compression ENABLED) EXECUTET done in " + time + " milliSeconds.");
+    logger.info("API (compression ENABLED) EXECUTE completed in " + time + " milliSeconds. method:"+methodString+" urn:"+urn);
     
     int status = response.getStatusLine().getStatusCode();
     if (status != HttpStatus.SC_OK && status != HttpStatus.SC_CREATED) {
