@@ -81,15 +81,26 @@ public abstract class AbstractApiService {
     }
 
     request.addHeader("Cookie", "apiKey=" + API_KEY + ";" + cookieString);
-    CloseableHttpClient client = HttpClientBuilder.create().build();
+    //1. create client
+    long time = System.currentTimeMillis();
+     CloseableHttpClient client = HttpClientBuilder.create().build();
+    time = ((System.currentTimeMillis() - time));
+    logger.info("API (compression ENABLED) CREATE CLIENT completed in " + time + " milliSeconds. method:"+methodString+" urn:"+urn);
     // debug statement. TODO: remove in final produce to reduce spam
     logger.debug("Making " + methodString + " request: " + API_URL + urn);
-    response = client.execute(request);
-
+    
+    //2. execute
+    time = System.currentTimeMillis();
+     response = client.execute(request);
+    time = ((System.currentTimeMillis() - time));
+    logger.info("API (compression ENABLED) EXECUTE completed in " + time + " milliSeconds. method:"+methodString+" urn:"+urn);
+    
     int status = response.getStatusLine().getStatusCode();
     if (status != HttpStatus.SC_OK && status != HttpStatus.SC_CREATED) {
       logger.debug("Status code is not OK: " + status);
-      throw new IOException("Bad status code: " + String.valueOf(status));
+      //PW-207 redirect to error page could be done here
+      throw new IOException("Bad status code: " + String.valueOf(status)
+      +"\nCookieString: " + "apiKey=" + API_KEY + ";" + cookieString);
     }
     String content = EntityUtils.toString(response.getEntity());
 
