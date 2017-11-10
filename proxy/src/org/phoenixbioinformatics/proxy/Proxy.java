@@ -248,13 +248,11 @@ public class Proxy extends HttpServlet {
                        servletRequest.getPathInfo(),
                        servletRequest.getQueryString());
         ArrayList<String> remoteIpList = getIpAddressList(servletRequest);
-        String remoteIp = "";
-        StringBuilder ipListStringBuilder = new StringBuilder("");
-        for (String ip : remoteIpList){
-        	ipListStringBuilder.append(ip + ";");
-        }
+        String ipListString = String.join(",", remoteIpList);
         //log all the ips that are detected for testing
         logger.debug("Ip Address Detected: " + ipListStringBuilder);
+        
+        String remoteIp = remoteIpList.get(0);
         for (String ip : remoteIpList){
         
         //check if remoteIp is subscribed
@@ -1190,8 +1188,7 @@ public class Proxy extends HttpServlet {
    * @return a boolean value which indicates if the string is a valid ip address
    */
   static Boolean validateIp(String headerValue) {
-	  InetAddressValidator inetValidator = new InetAddressValidator();
-		if (inetValidator.isValid(headerValue)) {
+		if (InetAddressValidator.getInstance().isValid(headerValue)) {
 			return true;
 		}
 	  return false;
