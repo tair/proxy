@@ -249,6 +249,12 @@ public class Proxy extends HttpServlet {
                        servletRequest.getQueryString());
         ArrayList<String> remoteIpList = getIpAddressList(servletRequest);
         String remoteIp = "";
+        StringBuilder ipListStringBuilder = new StringBuilder("");
+        for (String ip : remoteIpList){
+        	ipListStringBuilder.append(ip + ";");
+        }
+        //log all the ips that are detected for testing
+        logger.debug("Ip Address Detected: " + ipListStringBuilder);
         for (String ip : remoteIpList){
         
         //check if remoteIp is subscribed
