@@ -262,7 +262,7 @@ public class Proxy extends HttpServlet {
         ArrayList<String> remoteIpList = getIpAddressList(servletRequest);
         String ipListString = String.join(",", remoteIpList);
         //log all the ips that are detected for testing
-        logger.debug("Ip Address Detected: " + ipListStringBuilder);
+        logger.debug("Ip Address Detected: " + ipListString);
         
         String remoteIp = remoteIpList.get(0);
         for (String ip : remoteIpList){
@@ -274,7 +274,8 @@ public class Proxy extends HttpServlet {
                                      secretKey,
                                      hostFactory.getPartnerId(),
                                      credentialId,
-                                     ip);
+                                     ip,
+                                     token);
             if (accessOutput.status.equals(OK_CODE)) {
             	remoteIp = ip;
             	break;
