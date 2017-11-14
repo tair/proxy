@@ -158,7 +158,7 @@ public class ApiService extends AbstractApiService {
     format = new SimpleDateFormat("yyyy-MM-dd hh:mm:ssZ");
     String pageViewDate = format.format(curDate);
 
-    List<org.omg.CORBA.NameValuePair> params = new ArrayList<NameValuePair>(2);
+    List<BasicNameValuePair> params = new ArrayList<NameValuePair>(2);
     params.add(new BasicNameValuePair("pageViewDate", pageViewDate));
     params.add(new BasicNameValuePair("uri", uri));
     params.add(new BasicNameValuePair("sessionId", sessionId));
