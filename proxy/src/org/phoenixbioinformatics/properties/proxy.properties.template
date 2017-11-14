@@ -6,7 +6,7 @@ mail.smtp.auth=true
 mail.username=${aws.mail.username}
 mail.password=${aws.mail.password}
 mail.from=${proxy.mail.from}
-metering.email.to=${proxy.mail.to}
+mail.to=${proxy.mail.to}
 ui.uri=https\://${proxy.ui.uri}
 ui.meter.warning=/#/contentaccess/metering?exceed=abouttoexceed&partnerId=
 ui.meter.blocking=/#/contentaccess/metering?exceed=exceeded&partnerId=
