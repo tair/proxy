@@ -290,7 +290,7 @@ public class Proxy extends HttpServlet {
         	remoteIp = remoteIpList.get(0);
         }
 
-        logRequest(fullRequestUri, remoteIp, credentialId, sessionId, token);
+        logRequest(fullRequestUri, remoteIp, ipListString, credentialId, sessionId, token);
 
         // TODO use source or target host for HOST header based on partner
         // option
@@ -373,12 +373,12 @@ public class Proxy extends HttpServlet {
    * @param credentialId the party ID of the user, if logged in
    * @param sessionId the session ID of the partner session, if any
    */
-  private void logRequest(String uri, String ip, String credentialId,
+  private void logRequest(String uri, String ip, String ipListString, String credentialId,
                           String sessionId, String token) {
     // Log a page view for "real" URIs, exclude embedded images, js, etc.
     if (!isEmbeddedFile(uri)) {
       logger.debug("Creating page view for URI " + uri);
-      ApiService.createPageView(ip, uri, credentialId, sessionId, token);
+      ApiService.createPageView(ip, ipListString, uri, credentialId, sessionId, token);
     }
   }
 

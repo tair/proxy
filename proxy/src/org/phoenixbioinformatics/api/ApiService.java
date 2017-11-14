@@ -150,7 +150,7 @@ public class ApiService extends AbstractApiService {
   /**
    * Creates a page view log entry
    */
-  public static void createPageView(String ip, String uri, String partyId,
+  public static void createPageView(String ip, String ipListString, String uri, String partyId,
                                     String sessionId, String token) {
     String urn = PAGE_VIEWS_URN + "/";
     Date curDate = new Date();
@@ -158,12 +158,13 @@ public class ApiService extends AbstractApiService {
     format = new SimpleDateFormat("yyyy-MM-dd hh:mm:ssZ");
     String pageViewDate = format.format(curDate);
 
-    List<NameValuePair> params = new ArrayList<NameValuePair>(2);
+    List<org.omg.CORBA.NameValuePair> params = new ArrayList<NameValuePair>(2);
     params.add(new BasicNameValuePair("pageViewDate", pageViewDate));
     params.add(new BasicNameValuePair("uri", uri));
     params.add(new BasicNameValuePair("sessionId", sessionId));
     params.add(new BasicNameValuePair("partyId", partyId));
     params.add(new BasicNameValuePair("ip", ip));
+    params.add(new BasicNameValuePair("ipList", ipListString));
 
     try {
       callApi(urn, RequestFactory.HttpMethod.POST, "token="+token, params);
