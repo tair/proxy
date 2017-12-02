@@ -193,8 +193,9 @@ public class ApiService extends AbstractApiService {
    */
   public static PartnerDetailOutput getPartnerDetailInfo(String partnerId) {
     String urn = PARTNERS_URN + "/?partnerId=" + partnerId;
+    String content = null;
     try {
-      String content = callApi(urn, RequestFactory.HttpMethod.GET);
+      content = callApi(urn, RequestFactory.HttpMethod.GET);
       Gson gson = new Gson();
       Type type = new TypeToken<List<PartnerDetailOutput>>() {
       }.getType();
@@ -214,6 +215,9 @@ public class ApiService extends AbstractApiService {
       return null;
     } catch (IOException e) {
       logger.error(PARTNER_INFO_ERROR, e);
+      logger.error("API call: GET " + urn);
+      logger.error("Returned data: " + content);
+      logger.error("SYSTEM STATUS: free memorey:" + Runtime.getRuntime().freeMemory());
       return null;
     }
   }
@@ -229,8 +233,9 @@ public class ApiService extends AbstractApiService {
    */
   public static PartnerOutput getPartnerInfo(String uri) {
     String urn = PARTNERS_URN + PATTERNS_URI + "?sourceUri=" + uri;
+    String content = null;
     try {
-      String content = callApi(urn, RequestFactory.HttpMethod.GET);
+      content = callApi(urn, RequestFactory.HttpMethod.GET);
       Gson gson = new Gson();
       Type type = new TypeToken<List<PartnerOutput>>() {
       }.getType();
@@ -250,6 +255,9 @@ public class ApiService extends AbstractApiService {
       return null;
     } catch (IOException e) {
       logger.error(PARTNER_ID_ERROR, e);
+      logger.error("API call: GET " + urn);
+      logger.error("Returned data: " + content);
+      logger.error("SYSTEM STATUS: free memorey:" + Runtime.getRuntime().freeMemory());
       return null;
     }
   }
