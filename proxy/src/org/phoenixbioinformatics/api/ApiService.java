@@ -23,6 +23,9 @@ import org.phoenixbioinformatics.http.RequestFactory;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
+import java.lang.management.ManagementFactory;
+import com.sun.management.OperatingSystemMXBean;
+
 
 /**
  * Handles all requests to API services
@@ -218,6 +221,9 @@ public class ApiService extends AbstractApiService {
       logger.error("API call: GET " + urn);
       logger.error("Returned data: " + content);
       logger.error("SYSTEM STATUS: free memorey:" + Runtime.getRuntime().freeMemory());
+      OperatingSystemMXBean osbean = (OperatingSystemMXBean)ManagementFactory.getOperatingSystemMXBean();
+      logger.error("JVM cpu usage: "+ osbean.getProcessCpuLoad() );
+      logger.error("System cpu usage: "+ osbean.getSystemCpuLoad());
       return null;
     }
   }
@@ -258,6 +264,9 @@ public class ApiService extends AbstractApiService {
       logger.error("API call: GET " + urn);
       logger.error("Returned data: " + content);
       logger.error("SYSTEM STATUS: free memorey:" + Runtime.getRuntime().freeMemory());
+      OperatingSystemMXBean osbean = (OperatingSystemMXBean)ManagementFactory.getOperatingSystemMXBean();
+      logger.error("JVM cpu usage: "+ osbean.getProcessCpuLoad() );
+      logger.error("System cpu usage: "+ osbean.getSystemCpuLoad());
       return null;
     }
   }
