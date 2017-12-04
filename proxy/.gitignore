@@ -8,3 +8,4 @@ build.properties
 /build/
 '${sys:catalina.home}'/
 
+/bin/
