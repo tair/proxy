@@ -59,8 +59,8 @@ public class ApiService extends AbstractApiService {
   private static final String LOGGING_ERROR =
     "Page view logging API Call error on URI ";
 
-  // PWL-551: hard code partner info
-  private static final String PARTNER_ID = ProxyProperties.getProperty("partner.id");
+  // PWL-556: set default partner id
+  private static final String DEFAULT_PARTNER_ID = ProxyProperties.getProperty("partner.id");
 
   /**
    * Data transfer object for authorization API call
@@ -99,13 +99,22 @@ public class ApiService extends AbstractApiService {
     }
 
     public static PartnerOutput createInstance(String sourceUri) {
-      String mapJson = ProxyProperties.getProperty("uri.map").replaceAll("\'","");
-      HashMap<String, String> map = new Gson().fromJson(mapJson, new TypeToken<HashMap<String, String>>(){}.getType());
-      String targetUri = map.get(sourceUri);
-      if (targetUri == null) {
+      String partnerId = null;
+      String targetUri = null;
+      String mapContent = ProxyProperties.getProperty("partner.map").replaceAll("\'","");
+      Gson parser = new Gson();
+      Type type = new TypeToken<HashMap<String, String>>(){}.getType();
+      HashMap<String, String> map = parser.fromJson(mapContent, type);
+      String partnerInfoContent = map.get(sourceUri);
+      if (partnerInfoContent == null) {
+        partnerId = DEFAULT_PARTNER_ID;
         targetUri = ProxyProperties.getProperty("default.uri");
+      } else {
+        HashMap<String, String> partnerInfo = parser.fromJson(partnerInfoContent.replaceAll("\'",""), type);
+        partnerId = partnerInfo.get("partnerId");
+        targetUri = partnerInfo.get("targetUri");
       }
-      return new PartnerOutput(PARTNER_ID, sourceUri, targetUri);
+      return new PartnerOutput(partnerId, sourceUri, targetUri);
     }
   }
   
@@ -146,8 +155,9 @@ public class ApiService extends AbstractApiService {
       this.uiMeterUri = uiMeterUri;
     }
 
-    public static PartnerDetailOutput createInstance() {
-      String loginUri = ProxyProperties.getProperty("ui.login") + PARTNER_ID;
+    public static PartnerDetailOutput createInstance(String partnerId) {
+      if (partnerId == null || partnerId == "") partnerId = DEFAULT_PARTNER_ID;
+      String loginUri = ProxyProperties.getProperty("ui.login") + partnerId;
       String defaultLoginRedirect = ProxyProperties.getProperty("uri.default.redirect");
       String uiUri = ProxyProperties.getProperty("ui.uri");
       String uiMeterUri = ProxyProperties.getProperty("uri.meter");
@@ -259,7 +269,7 @@ public class ApiService extends AbstractApiService {
       return null;
     }
     */
-    return PartnerDetailOutput.createInstance();
+    return PartnerDetailOutput.createInstance(partnerId);
   }
   
   /**
