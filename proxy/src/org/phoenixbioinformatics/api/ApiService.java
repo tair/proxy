@@ -135,6 +135,27 @@ public class ApiService extends AbstractApiService {
     public String defaultLoginRedirect;
     public String uiUri;
     public String uiMeterUri;
+
+    private PartnerDetailOutput(String loginUri,
+                                String defaultLoginRedirect,
+                                String uiUri,
+                                String uiMeterUri) {
+      this.loginUri = loginUri;
+      this.defaultLoginRedirect = defaultLoginRedirect;
+      this.uiUri = uiUri;
+      this.uiMeterUri = uiMeterUri;
+    }
+
+    public static PartnerDetailOutput createInstance() {
+      String loginUri = ProxyProperties.getProperty("ui.login") + PARTNER_ID;
+      String defaultLoginRedirect = ProxyProperties.getProperty("uri.default.redirect";)
+      String uiUri = ProxyProperties.getProperty("ui.uri";)
+      String uiMeterUri = ProxyProperties.getProperty("uri.meter";)
+      return new PartnerDetailOutput(loginUri,
+                                     defaultLoginRedirect,
+                                     uiUri,
+                                     uiMeterUri);
+    }
   }
   
   /**
@@ -211,6 +232,8 @@ public class ApiService extends AbstractApiService {
    * @return PartnerDetailObject
    */
   public static PartnerDetailOutput getPartnerDetailInfo(String partnerId) {
+    // PWL-554: hard code partner detail info
+    /*
     String urn = PARTNERS_URN + "/?partnerId=" + partnerId;
     try {
       String content = callApi(urn, RequestFactory.HttpMethod.GET);
@@ -235,6 +258,8 @@ public class ApiService extends AbstractApiService {
       logger.error(PARTNER_INFO_ERROR, e);
       return null;
     }
+    */
+    return PartnerDetailOutput.createInstance();
   }
   
   /**
