@@ -99,7 +99,7 @@ public class ApiService extends AbstractApiService {
     }
 
     public static PartnerOutput createInstance(String sourceUri) {
-      String mapJson = ProxyProperties.getProperty("uri.map");
+      String mapJson = ProxyProperties.getProperty("uri.map").replaceAll("\'","");
       HashMap<String, String> map = new Gson().fromJson(mapJson, new TypeToken<HashMap<String, String>>(){}.getType());
       String targetUri = map.get(sourceUri);
       if (targetUri == null) {
