@@ -99,19 +99,27 @@ public class ApiService extends AbstractApiService {
     }
 
     public static PartnerOutput createInstance(String sourceUri) {
-      String partnerId = null;
-      String targetUri = null;
+      // set as default values
+      String partnerId = DEFAULT_PARTNER_ID;
+      String targetUri = ProxyProperties.getProperty("default.uri");
       String mapContent = ProxyProperties.getProperty("partner.map");
-      Gson parser = new Gson();
-      Type type = new TypeToken<HashMap<String, HashMap<String, String>>>(){}.getType();
-      HashMap<String, HashMap<String, String>> map = parser.fromJson(mapContent, type);
-      HashMap<String, String> partnerInfo = map.get(sourceUri);
-      if (partnerInfo == null) {
-        partnerId = DEFAULT_PARTNER_ID;
-        targetUri = ProxyProperties.getProperty("default.uri");
+      if (mapContent != null) {
+        try {
+          Gson parser = new Gson();
+          Type type = new TypeToken<HashMap<String, HashMap<String, String>>>(){}.getType();
+          HashMap<String, HashMap<String, String>> map = parser.fromJson(mapContent, type);
+          HashMap<String, String> partnerInfo = map.get(sourceUri);
+          if (partnerInfo != null) {
+            partnerId = partnerInfo.get("partnerId");
+            targetUri = partnerInfo.get("targetUri");
+          } else {
+            logger.info("No partner mapping info for " + sourceUri + ". Use default partner info.");
+          }
+        } catch (Exception e) {
+          logger.info("Failed to load partner info map. Use default partner info.");
+        }
       } else {
-        partnerId = partnerInfo.get("partnerId");
-        targetUri = partnerInfo.get("targetUri");
+        logger.info("Partner info map is undefined. Use default partner info.");
       }
       return new PartnerOutput(partnerId, sourceUri, targetUri);
     }
