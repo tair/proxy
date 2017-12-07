@@ -60,7 +60,7 @@ public class ApiService extends AbstractApiService {
     "Page view logging API Call error on URI ";
 
   // PWL-551: hard code partner info
-  private static final String PARTNER_ID = ProxyProperties.getProperty('partner.id');
+  private static final String PARTNER_ID = ProxyProperties.getProperty("partner.id");
 
   /**
    * Data transfer object for authorization API call
@@ -103,7 +103,7 @@ public class ApiService extends AbstractApiService {
       HashMap<String, String> map = new Gson().fromJson(mapJson, new TypeToken<HashMap<String, String>>(){}.getType());
       String targetUri = map.get(sourceUri);
       if (targetUri == null) {
-        targetUri = ProxyProperties.getProperty('default.uri');
+        targetUri = ProxyProperties.getProperty("default.uri");
       }
       return new PartnerOutput(PARTNER_ID, sourceUri, targetUri);
     }
