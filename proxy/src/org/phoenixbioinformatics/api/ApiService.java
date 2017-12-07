@@ -101,16 +101,15 @@ public class ApiService extends AbstractApiService {
     public static PartnerOutput createInstance(String sourceUri) {
       String partnerId = null;
       String targetUri = null;
-      String mapContent = ProxyProperties.getProperty("partner.map").replaceAll("\'","");
+      String mapContent = ProxyProperties.getProperty("partner.map");
       Gson parser = new Gson();
-      Type type = new TypeToken<HashMap<String, String>>(){}.getType();
-      HashMap<String, String> map = parser.fromJson(mapContent, type);
-      String partnerInfoContent = map.get(sourceUri);
-      if (partnerInfoContent == null) {
+      Type type = new TypeToken<HashMap<String, HashMap<String, String>>>(){}.getType();
+      HashMap<String, HashMap<String, String>> map = parser.fromJson(mapContent, type);
+      HashMap<String, String> partnerInfo = map.get(sourceUri);
+      if (partnerInfo == null) {
         partnerId = DEFAULT_PARTNER_ID;
         targetUri = ProxyProperties.getProperty("default.uri");
       } else {
-        HashMap<String, String> partnerInfo = parser.fromJson(partnerInfoContent.replaceAll("\'",""), type);
         partnerId = partnerInfo.get("partnerId");
         targetUri = partnerInfo.get("targetUri");
       }
