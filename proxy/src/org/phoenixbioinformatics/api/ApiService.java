@@ -22,7 +22,7 @@ import org.phoenixbioinformatics.http.RequestFactory;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
-
+import org.phoenixbioinformatics.properties.ProxyProperties;
 
 /**
  * Handles all requests to API services
@@ -59,6 +59,9 @@ public class ApiService extends AbstractApiService {
   private static final String LOGGING_ERROR =
     "Page view logging API Call error on URI ";
 
+  // PWL-551: hard code partner info
+  private static final String PARTNER_ID = ProxyProperties.getProperty('partner.id');
+
   /**
    * Data transfer object for authorization API call
    */
@@ -88,6 +91,22 @@ public class ApiService extends AbstractApiService {
     public String partnerId;
     public String sourceUri;
     public String targetUri;
+
+    private PartnerOutput(String pId, String sUri, String tUri) {
+      this.partnerId = pId;
+      this.sourceUri = sUri;
+      this.targetUri = tUri;
+    }
+
+    public static PartnerOutput createInstance(String sourceUri) {
+      String mapJson = ProxyProperties.getProperty("uri.map");
+      HashMap<String, String> map = new Gson().fromJson(mapJson, new TypeToken<HashMap<String, String>>(){}.getType());
+      String targetUri = map.get(sourceUri);
+      if (targetUri == null) {
+        targetUri = ProxyProperties.getProperty('default.uri');
+      }
+      return new PartnerOutput(PARTNER_ID, sourceUri, targetUri);
+    }
   }
   
   /**
@@ -228,6 +247,8 @@ public class ApiService extends AbstractApiService {
    * @return unique identifier for the partner corresponding to the request URI
    */
   public static PartnerOutput getPartnerInfo(String uri) {
+    // PWL-551: hard code partner info
+    /*
     String urn = PARTNERS_URN + PATTERNS_URI + "?sourceUri=" + uri;
     try {
       String content = callApi(urn, RequestFactory.HttpMethod.GET);
@@ -252,6 +273,8 @@ public class ApiService extends AbstractApiService {
       logger.error(PARTNER_ID_ERROR, e);
       return null;
     }
+    */
+    return PartnerOutput.createInstance(uri);
   }
 
   /**
