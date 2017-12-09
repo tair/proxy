@@ -23,7 +23,7 @@ import org.phoenixbioinformatics.properties.ProxyProperties;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
-
+import org.phoenixbioinformatics.properties.ProxyProperties;
 
 /**
  * Handles all requests to API services
@@ -60,6 +60,9 @@ public class ApiService extends AbstractApiService {
   private static final String LOGGING_ERROR =
     "Page view logging API Call error on URI ";
 
+  // PWL-556: set default partner id
+  private static final String DEFAULT_PARTNER_ID = ProxyProperties.getProperty("partner.id");
+
   /**
    * Data transfer object for authorization API call
    */
@@ -89,6 +92,38 @@ public class ApiService extends AbstractApiService {
     public String partnerId;
     public String sourceUri;
     public String targetUri;
+
+    private PartnerOutput(String pId, String sUri, String tUri) {
+      this.partnerId = pId;
+      this.sourceUri = sUri;
+      this.targetUri = tUri;
+    }
+
+    public static PartnerOutput createInstance(String sourceUri) {
+      // set as default values
+      String partnerId = DEFAULT_PARTNER_ID;
+      String targetUri = ProxyProperties.getProperty("default.uri");
+      String mapContent = ProxyProperties.getProperty("partner.map");
+      if (mapContent != null) {
+        try {
+          Gson parser = new Gson();
+          Type type = new TypeToken<HashMap<String, HashMap<String, String>>>(){}.getType();
+          HashMap<String, HashMap<String, String>> map = parser.fromJson(mapContent, type);
+          HashMap<String, String> partnerInfo = map.get(sourceUri);
+          if (partnerInfo != null) {
+            partnerId = partnerInfo.get("partnerId");
+            targetUri = partnerInfo.get("targetUri");
+          } else {
+            logger.info("No partner mapping info for " + sourceUri + ". Use default partner info.");
+          }
+        } catch (Exception e) {
+          logger.info("Failed to load partner info map. Use default partner info.");
+        }
+      } else {
+        logger.info("Partner info map is undefined. Use default partner info.");
+      }
+      return new PartnerOutput(partnerId, sourceUri, targetUri);
+    }
   }
   
   /**
@@ -117,6 +152,28 @@ public class ApiService extends AbstractApiService {
     public String defaultLoginRedirect;
     public String uiUri;
     public String uiMeterUri;
+
+    private PartnerDetailOutput(String loginUri,
+                                String defaultLoginRedirect,
+                                String uiUri,
+                                String uiMeterUri) {
+      this.loginUri = loginUri;
+      this.defaultLoginRedirect = defaultLoginRedirect;
+      this.uiUri = uiUri;
+      this.uiMeterUri = uiMeterUri;
+    }
+
+    public static PartnerDetailOutput createInstance(String partnerId) {
+      if (partnerId == null || partnerId == "") partnerId = DEFAULT_PARTNER_ID;
+      String loginUri = ProxyProperties.getProperty("ui.login") + partnerId;
+      String defaultLoginRedirect = ProxyProperties.getProperty("uri.default.redirect");
+      String uiUri = ProxyProperties.getProperty("ui.uri");
+      String uiMeterUri = ProxyProperties.getProperty("uri.meter");
+      return new PartnerDetailOutput(loginUri,
+                                     defaultLoginRedirect,
+                                     uiUri,
+                                     uiMeterUri);
+    }
   }
   
   /**
@@ -193,6 +250,8 @@ public class ApiService extends AbstractApiService {
    * @return PartnerDetailObject
    */
   public static PartnerDetailOutput getPartnerDetailInfo(String partnerId) {
+    // PWL-554: hard code partner detail info
+    /*
     String urn = PARTNERS_URN + "/?partnerId=" + partnerId;
     try {
       String content = callApi(urn, RequestFactory.HttpMethod.GET);// GET partners/ is an open request, we don't pass a token here
@@ -217,6 +276,8 @@ public class ApiService extends AbstractApiService {
       logger.error(PARTNER_INFO_ERROR, e);
       return null;
     }
+    */
+    return PartnerDetailOutput.createInstance(partnerId);
   }
   
   /**
@@ -229,6 +290,8 @@ public class ApiService extends AbstractApiService {
    * @return unique identifier for the partner corresponding to the request URI
    */
   public static PartnerOutput getPartnerInfo(String uri) {
+    // PWL-551: hard code partner info
+    /*
     String urn = PARTNERS_URN + PATTERNS_URI + "?sourceUri=" + uri;
     try {
       String content = callApi(urn, RequestFactory.HttpMethod.GET);
@@ -253,6 +316,8 @@ public class ApiService extends AbstractApiService {
       logger.error(PARTNER_ID_ERROR, e);
       return null;
     }
+    */
+    return PartnerOutput.createInstance(uri);
   }
 
   /**
