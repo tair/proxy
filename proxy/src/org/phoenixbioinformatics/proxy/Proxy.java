@@ -28,6 +28,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.validator.routines.InetAddressValidator;
 import org.apache.http.Header;
 import org.apache.http.HttpHeaders;
 import org.apache.http.HttpHost;
@@ -258,9 +259,37 @@ public class Proxy extends HttpServlet {
                        sourceHost.getHostName(),
                        servletRequest.getPathInfo(),
                        servletRequest.getQueryString());
-        String remoteIp = getIpAddress(servletRequest);
-
-        logRequest(fullRequestUri, remoteIp, credentialId, sessionId, token);
+        ArrayList<String> remoteIpList = getIpAddressList(servletRequest);
+        String ipListString = String.join(",", remoteIpList);
+        //log all the ips that are detected for testing
+        logger.debug("Ip Address Detected: " + ipListString);
+        
+        String remoteIp = remoteIpList.get(0);
+        for (String ip : remoteIpList){
+        
+        //check if remoteIp is subscribed
+        try {
+            ApiService.AccessOutput accessOutput =
+              ApiService.checkAccess(fullRequestUri,
+                                     secretKey,
+                                     hostFactory.getPartnerId(),
+                                     credentialId,
+                                     ip,
+                                     token);
+            if (accessOutput.status.equals(OK_CODE)) {
+            	remoteIp = ip;
+            	break;
+            }
+        } catch (Exception e) {
+            // Problem making the API call, continue with "Not OK" default status
+            // Problem already logged
+        }
+        }
+        // if no ip is subscribed, pick the first ip
+        if (remoteIp.equals("")){
+        	remoteIp = remoteIpList.get(0);
+        }
+        logRequest(fullRequestUri, remoteIp, ipListString, credentialId, sessionId, token);
 
         // TODO use source or target host for HOST header based on partner
         // option
@@ -343,12 +372,12 @@ public class Proxy extends HttpServlet {
    * @param credentialId the party ID of the user, if logged in
    * @param sessionId the session ID of the partner session, if any
    */
-  private void logRequest(String uri, String ip, String credentialId,
+  private void logRequest(String uri, String ip, String ipListString, String credentialId,
                           String sessionId, String token) {
     // Log a page view for "real" URIs, exclude embedded images, js, etc.
     if (!isEmbeddedFile(uri)) {
       logger.debug("Creating page view for URI " + uri);
-      ApiService.createPageView(ip, uri, credentialId, sessionId, token);
+      ApiService.createPageView(ip, ipListString, uri, credentialId, sessionId, token);
     }
   }
 
@@ -1141,6 +1170,7 @@ public class Proxy extends HttpServlet {
    * @param request the HTTP servlet request containing the IP address
    * @return the remote IP address
    */
+  @Deprecated
   private static String getIpAddress(HttpServletRequest request) {
     String ipAddress = request.getHeader(REMOTE_ADDR);
 
@@ -1153,26 +1183,71 @@ public class Proxy extends HttpServlet {
       }
     }
 
-    ipAddress = canonicalizeIpAddress(ipAddress);
+    //ipAddress = canonicalizeIpAddress(ipAddress);
 
     return ipAddress;
   }
 
   /**
-   * Produce a standard IP address with no leading or trailing blanks. If the
-   * input string is a comma-delimited list of addresses, the result will be the
-   * last address in the list. Package access allows use in test classes.
+   * Produce a list of standard IP addresses with no leading or trailing blanks. If the
+   * input string is a comma-delimited list of addresses, the result will be all the 
+   * list of addresses.
    *
    * @param ipAddress an IP address or list of IP addresses
-   * @return a single IP address with no leading or trailing blanks
+   * @return list of IP address with no leading or trailing blanks
    */
-  static String canonicalizeIpAddress(String ipAddress) {
+  static ArrayList<String> canonicalizeIpAddress(String ipAddress) {
+	ArrayList<String> result= new ArrayList<String>();
     if (ipAddress.contains(",")) {
       String[] list = ipAddress.split(",");
-      // Set the returned address to the last address in the list.
-      ipAddress = list[list.length - 1];
+      for (String item: list){
+    	  result.add(item.trim());
+      }
+    }else{
+    	result.add(ipAddress.trim());
     }
-    return ipAddress.trim();
+    return result;
+  }
+  
+  /**
+   * Validate if a string is a valid ip address. Checks both ipv4 and ipv6.
+   *
+   * @param an input string
+   * @return a boolean value which indicates if the string is a valid ip address
+   */
+  static Boolean validateIp(String headerValue) {
+		if (InetAddressValidator.getInstance().isValid(headerValue)) {
+			return true;
+		}
+	  return false;
+  }
+  
+  /**
+   * Get a list of addresses of the requester from the request. This method
+   * gets the Remote_Addr header value, the x-forwarded-for header
+   * value, the HTTP request remote address or any other possible header values. 
+   * If the resulting string is a list of comma-separated IP addresses, add each
+   * one into the final list.
+   * @param request the HTTP servlet request containing the IP address
+   * @return the remote IP address list
+   */
+  private static ArrayList<String> getIpAddressList(HttpServletRequest request) {
+    ArrayList<String> result = new ArrayList<String>();
+    Enumeration<String> headerNames = request.getHeaderNames();
+    while (headerNames.hasMoreElements()) {
+      String headerName = headerNames.nextElement();
+      Enumeration<String> headers = request.getHeaders(headerName);
+      while (headers.hasMoreElements()) {
+        String headerValue = headers.nextElement();
+        for (String canonicalizeIp : canonicalizeIpAddress(headerValue)){
+        	if(validateIp(canonicalizeIp)){
+        		result.add(canonicalizeIp);
+        	}
+        }
+      }
+    }
+
+    return result;
   }
 
   /**
