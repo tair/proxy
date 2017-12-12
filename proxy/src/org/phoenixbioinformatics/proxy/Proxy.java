@@ -544,6 +544,11 @@ public class Proxy extends HttpServlet {
     } catch (Exception e) {
       // Problem making the API call, continue with "Not OK" default status
       // Problem already logged
+      // PWL-556: bypass and eligible for free access
+      logger.info("Check access failed. Bypassing proxy/paywall - Allowed free access to content.");
+      // PWL-556: This is explicitly needed   
+      userIdentifier.append((String)null);
+      authorized = true;
     }
 
     // Get the redirect string and build the query string
@@ -564,41 +569,46 @@ public class Proxy extends HttpServlet {
       logger.info("Party " + credentialId
                   + " needs to subscribe to see paid content " + fullUri
                   + " at partner " + partnerId);
+      try {
+        String meter =
+          ApiService.checkMeteringLimit(remoteIp, partnerId, fullUri);
 
-      String meter =
-        ApiService.checkMeteringLimit(remoteIp, partnerId, fullUri);
+        if (meter.equals(OK_CODE)) {
+          logger.info("Allowed free access to content by metering");
+          authorized = true;
+          ApiService.incrementMeteringCount(remoteIp, partnerId);
 
-      if (meter.equals(OK_CODE)) {
-        logger.info("Allowed free access to content by metering");
+        } else if (meter.equals(METER_WARNING_CODE)) {
+          logger.info("Warned to subscribe by meter limit");
+          authorized = false;
+          builder = new StringBuilder(uiUri);
+          builder.append(meterWarningUri);
+          builder.append(PARAM_PREFIX);
+          builder.append(redirectQueryString);
+          redirectUri = builder.toString();
+          ApiService.incrementMeteringCount(remoteIp, partnerId);
+        } else if (meter.equals(METER_BLACK_LIST_BLOCK_CODE)) {
+          // PW-287
+          logger.info("Blocked from no-metered-access content");
+          authorized = false;
+          builder = new StringBuilder(uiUri);
+          builder.append(meterBlacklistUri);
+          builder.append(PARAM_PREFIX);
+          builder.append(redirectQueryString);
+          redirectUri = builder.toString();
+        } else {
+          logger.info("Blocked from paid content by meter limit");
+          authorized = false;
+          builder = new StringBuilder(uiUri);
+          builder.append(meterBlockingUri);
+          builder.append(PARAM_PREFIX);
+          builder.append(redirectQueryString);
+          redirectUri = builder.toString();
+        }
+      } catch (Exception e) {
+        // PWL-556: Bypass and allow free access
+        logger.info("Check meter limit failed. Bypassing proxy/paywall - Allowed free access to content.");
         authorized = true;
-        ApiService.incrementMeteringCount(remoteIp, partnerId);
-
-      } else if (meter.equals(METER_WARNING_CODE)) {
-        logger.info("Warned to subscribe by meter limit");
-        authorized = false;
-        builder = new StringBuilder(uiUri);
-        builder.append(meterWarningUri);
-        builder.append(PARAM_PREFIX);
-        builder.append(redirectQueryString);
-        redirectUri = builder.toString();
-        ApiService.incrementMeteringCount(remoteIp, partnerId);
-      } else if (meter.equals(METER_BLACK_LIST_BLOCK_CODE)) {
-        // PW-287
-        logger.info("Blocked from no-metered-access content");
-        authorized = false;
-        builder = new StringBuilder(uiUri);
-        builder.append(meterBlacklistUri);
-        builder.append(PARAM_PREFIX);
-        builder.append(redirectQueryString);
-        redirectUri = builder.toString();
-      } else {
-        logger.info("Blocked from paid content by meter limit");
-        authorized = false;
-        builder = new StringBuilder(uiUri);
-        builder.append(meterBlockingUri);
-        builder.append(PARAM_PREFIX);
-        builder.append(redirectQueryString);
-        redirectUri = builder.toString();
       }
     } else if (auth.equals(NEED_LOGIN_CODE)) {
       // force user to log in
