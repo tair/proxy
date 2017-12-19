@@ -168,7 +168,7 @@ public class ApiService extends AbstractApiService {
       String loginUri = ProxyProperties.getProperty("ui.login") + partnerId;
       String defaultLoginRedirect = ProxyProperties.getProperty("uri.default.redirect");
       String uiUri = ProxyProperties.getProperty("ui.uri");
-      String uiMeterUri = ProxyProperties.getProperty("uri.meter");
+      String uiMeterUri = ProxyProperties.getProperty("ui.meter");
       return new PartnerDetailOutput(loginUri,
                                      defaultLoginRedirect,
                                      uiUri,
