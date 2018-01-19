@@ -65,6 +65,7 @@ public class ApiService extends AbstractApiService {
   public class AccessOutput {
     public String status;
     public String userIdentifier;
+    public String ip;
   }
 
   /**
@@ -271,7 +272,7 @@ public class ApiService extends AbstractApiService {
    */
   public static AccessOutput checkAccess(String url, String loginKey,
                                          String partnerId, String credentialId,
-                                         String remoteIp) {
+                                         String remoteIpList) {
     try {
       url = URLEncoder.encode(url, "UTF-8");
     } catch (UnsupportedEncodingException e) {
@@ -280,7 +281,7 @@ public class ApiService extends AbstractApiService {
 
     String urn =
       AUTHORIZATION_URN + "/access/?partnerId=" + partnerId + "&url=" + url
-          + "&ip=" + remoteIp;
+          + "&ipList=" + remoteIpList;
     try {
       String content =
         callApi(urn, RequestFactory.HttpMethod.GET, "secretKey=" + loginKey

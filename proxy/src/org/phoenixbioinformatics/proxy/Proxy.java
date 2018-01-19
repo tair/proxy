@@ -253,30 +253,29 @@ public class Proxy extends HttpServlet {
         logger.debug("Ip Address Detected: " + ipListString);
         
         String remoteIp = remoteIpList.get(0);
-        for (String ip : remoteIpList){
-        
-        //check if remoteIp is subscribed
+        String partnerId = hostFactory.getPartnerId();
+        StringBuilder userIdentifier = new StringBuilder();
+        	String auth = NOT_OK_CODE;
+
+        logger.info("checkAccess API parameters: " + fullRequestUri + ", " + partnerId
+                    + ", " + secretKey + ", " + credentialId + ", " + remoteIp);
+
         try {
-            ApiService.AccessOutput accessOutput =
-              ApiService.checkAccess(fullRequestUri,
-                                     secretKey,
-                                     hostFactory.getPartnerId(),
-                                     credentialId,
-                                     ip,
-                                     token);
-            if (accessOutput.status.equals(OK_CODE)) {
-            	remoteIp = ip;
-            	break;
-            }
+          ApiService.AccessOutput accessOutput =
+            ApiService.checkAccess(fullRequestUri,
+                                   secretKey,
+                                   partnerId,
+                                   credentialId,
+                                   ipListString);
+          auth = accessOutput.status;
+          remoteIp = accessOutput.ip;
+          userIdentifier.append(accessOutput.userIdentifier);
+          logger.debug("userIdentifier: " + userIdentifier.toString());
         } catch (Exception e) {
-            // Problem making the API call, continue with "Not OK" default status
-            // Problem already logged
+          // Problem making the API call, continue with "Not OK" default status
+          // Problem already logged
         }
-        }
-        // if no ip is subscribed, pick the first ip
-        if (remoteIp.equals("")){
-        	remoteIp = remoteIpList.get(0);
-        }
+
         logRequest(fullRequestUri, remoteIp, ipListString, credentialId, sessionId);
 
         // TODO use source or target host for HOST header based on partner
@@ -290,7 +289,8 @@ public class Proxy extends HttpServlet {
                           fullRequestUri,
                           remoteIp,
                           credentialId,
-                          secretKey);
+                          secretKey,
+                          userIdentifier);
       } catch (ServletException | UnsupportedHttpMethodException | IOException e) {
         // Log checked exceptions here, then ignore.
         logger.error(REQUEST_HANDLING_ERROR, e);
@@ -391,11 +391,8 @@ public class Proxy extends HttpServlet {
                                  String uri, String partnerId,
                                  HttpHost targetHost, HttpHost sourceHost,
                                  String fullRequestUri, String remoteIp,
-                                 String credentialId, String secretKey)
+                                 String credentialId, String secretKey, StringBuilder userIdentifier)
       throws IOException, UnsupportedHttpMethodException, ServletException {
-
-    // Use StringBuilder to get id from authorize method for later use.
-    StringBuilder userIdentifier = new StringBuilder();
 
     // Determine whether to proxy the request.
     if (authorizeProxyRequest(secretKey,
