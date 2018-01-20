@@ -66,6 +66,7 @@ public class ApiService extends AbstractApiService {
     public String status;
     public String userIdentifier;
     public String ip;
+    public String isPaidContent;
   }
 
   /**
@@ -151,20 +152,23 @@ public class ApiService extends AbstractApiService {
    * Creates a page view log entry
    */
   public static void createPageView(String ip, String ipListString, String uri, String partyId,
-                                    String sessionId) {
+                                    String sessionId, String partnerId, String isPaidContent, String meterStatus) {
     String urn = PAGE_VIEWS_URN + "/";
     Date curDate = new Date();
     SimpleDateFormat format = new SimpleDateFormat();
     format = new SimpleDateFormat("yyyy-MM-dd hh:mm:ssZ");
     String pageViewDate = format.format(curDate);
 
-    List<NameValuePair> params = new ArrayList<NameValuePair>(2);
+    List<org.omg.CORBA.NameValuePair> params = new ArrayList<NameValuePair>(2);
     params.add(new BasicNameValuePair("pageViewDate", pageViewDate));
     params.add(new BasicNameValuePair("uri", uri));
     params.add(new BasicNameValuePair("sessionId", sessionId));
     params.add(new BasicNameValuePair("partyId", partyId));
     params.add(new BasicNameValuePair("ip", ip));
     params.add(new BasicNameValuePair("ipList", ipListString));
+    params.add(new BasicNameValuePair("partnerId", partnerId));
+    params.add(new BasicNameValuePair("isPaidContent", isPaidContent));
+    params.add(new BasicNameValuePair("meterStatus", meterStatus));
 
     try {
       callApi(urn, RequestFactory.HttpMethod.POST, "", params);

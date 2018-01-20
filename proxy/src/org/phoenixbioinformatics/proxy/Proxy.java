@@ -121,6 +121,7 @@ public class Proxy extends HttpServlet {
 
   // API codes
   private static final String NEED_LOGIN_CODE = "NeedLogin";
+  private static final String NEED_SUBSCRIPTION_CODE = "NeedSubscription";
   private static final String METER_WARNING_CODE = "Warning";
   private static final String METER_BLACK_LIST_BLOCK_CODE = "BlackListBlock"; // PW-287
   private static final String OK_CODE = "OK";
@@ -256,6 +257,7 @@ public class Proxy extends HttpServlet {
         String partnerId = hostFactory.getPartnerId();
         StringBuilder userIdentifier = new StringBuilder();
         	String auth = NOT_OK_CODE;
+        	String isPaidContent = "N";
 
         logger.info("checkAccess API parameters: " + fullRequestUri + ", " + partnerId
                     + ", " + secretKey + ", " + credentialId + ", " + remoteIp);
@@ -270,13 +272,12 @@ public class Proxy extends HttpServlet {
           auth = accessOutput.status;
           remoteIp = accessOutput.ip;
           userIdentifier.append(accessOutput.userIdentifier);
+          isPaidContent = accessOutput.isPaidContent;
           logger.debug("userIdentifier: " + userIdentifier.toString());
         } catch (Exception e) {
           // Problem making the API call, continue with "Not OK" default status
           // Problem already logged
         }
-
-        logRequest(fullRequestUri, remoteIp, ipListString, credentialId, sessionId);
 
         // TODO use source or target host for HOST header based on partner
         // option
@@ -290,7 +291,11 @@ public class Proxy extends HttpServlet {
                           remoteIp,
                           credentialId,
                           secretKey,
-                          userIdentifier);
+                          userIdentifier,
+                          ipListString,
+                          sessionId,
+                          isPaidContent,
+                          auth);
       } catch (ServletException | UnsupportedHttpMethodException | IOException e) {
         // Log checked exceptions here, then ignore.
         logger.error(REQUEST_HANDLING_ERROR, e);
@@ -360,11 +365,11 @@ public class Proxy extends HttpServlet {
    * @param sessionId the session ID of the partner session, if any
    */
   private void logRequest(String uri, String ip, String ipListString, String credentialId,
-                          String sessionId) {
+                          String sessionId, String partnerId, String isPaidContent, String meterStatus) {
     // Log a page view for "real" URIs, exclude embedded images, js, etc.
     if (!isEmbeddedFile(uri)) {
       logger.debug("Creating page view for URI " + uri);
-      ApiService.createPageView(ip, ipListString, uri, credentialId, sessionId);
+      ApiService.createPageView(ip, ipListString, uri, credentialId, sessionId, partnerId, isPaidContent, meterStatus);
     }
   }
 
@@ -391,7 +396,9 @@ public class Proxy extends HttpServlet {
                                  String uri, String partnerId,
                                  HttpHost targetHost, HttpHost sourceHost,
                                  String fullRequestUri, String remoteIp,
-                                 String credentialId, String secretKey, StringBuilder userIdentifier)
+                                 String credentialId, String secretKey, 
+                                 StringBuilder userIdentifier, String ipListString,
+                                 String sessionId, String isPaidContent, String auth)
       throws IOException, UnsupportedHttpMethodException, ServletException {
 
     // Determine whether to proxy the request.
@@ -402,7 +409,10 @@ public class Proxy extends HttpServlet {
                               sourceHost,
                               remoteIp,
                               servletResponse,
-                              userIdentifier)) {
+                              ipListString,
+                              sessionId,
+                              isPaidContent,
+                              auth)) {
       // Authorized by the API, so proceed.
 
       ProxyRequest proxyRequest =
@@ -506,7 +516,8 @@ public class Proxy extends HttpServlet {
                                         String credentialId, String fullUri,
                                         HttpHost sourceHost, String remoteIp,
                                         HttpServletResponse servletResponse,
-                                        StringBuilder userIdentifier)
+                                        String ipListString, String sessionId, 
+                                        String isPaidContent, String auth)
       throws IOException {
 
     if (isEmbeddedFile(fullUri)) {
@@ -552,25 +563,6 @@ public class Proxy extends HttpServlet {
     Boolean authorized = false;
     String redirectUri = ""; // complete URI to which to redirect here
     String nestedRedirectUri = ""; // nested redirect param for next redirection
-    String auth = NOT_OK_CODE;
-
-    logger.info("checkAccess API parameters: " + fullUri + ", " + partnerId
-                + ", " + secretKey + ", " + credentialId + ", " + remoteIp);
-
-    try {
-      ApiService.AccessOutput accessOutput =
-        ApiService.checkAccess(fullUri,
-                               secretKey,
-                               partnerId,
-                               credentialId,
-                               remoteIp);
-      auth = accessOutput.status;
-      userIdentifier.append(accessOutput.userIdentifier);
-      logger.debug("userIdentifier: " + userIdentifier.toString());
-    } catch (Exception e) {
-      // Problem making the API call, continue with "Not OK" default status
-      // Problem already logged
-    }
 
     // Get the redirect string and build the query string
     nestedRedirectUri = getRedirectUri(fullUri, uiUri);
@@ -579,13 +571,13 @@ public class Proxy extends HttpServlet {
     String redirectQueryString = builder.toString();
 
     // Handle the various status codes.
-
+    String meterStatus = 'N';
     if (auth.equals(OK_CODE)) {
       // grant access
       authorized = true;
       logger.info("Party " + credentialId + " authorized for free content "
                   + fullUri + " at partner " + partnerId);
-    } else if (auth.equals("NeedSubscription")) {
+    } else if (auth.equals(NEED_SUBSCRIPTION_CODE)) {
       // check metering status and redirect or proxy as appropriate
       logger.info("Party " + credentialId
                   + " needs to subscribe to see paid content " + fullUri
@@ -607,6 +599,7 @@ public class Proxy extends HttpServlet {
         builder.append(PARAM_PREFIX);
         builder.append(redirectQueryString);
         redirectUri = builder.toString();
+        meterStatus = "W";
         ApiService.incrementMeteringCount(remoteIp, partnerId);
       } else if (meter.equals(METER_BLACK_LIST_BLOCK_CODE)) {
         // PW-287
@@ -617,6 +610,7 @@ public class Proxy extends HttpServlet {
         builder.append(PARAM_PREFIX);
         builder.append(redirectQueryString);
         redirectUri = builder.toString();
+        meterStatus = "M"; //M for must subscribe
       } else {
         logger.info("Blocked from paid content by meter limit");
         authorized = false;
@@ -625,6 +619,7 @@ public class Proxy extends HttpServlet {
         builder.append(PARAM_PREFIX);
         builder.append(redirectQueryString);
         redirectUri = builder.toString();
+        meterStatus = "B";
       }
     } else if (auth.equals(NEED_LOGIN_CODE)) {
       // force user to log in
@@ -641,6 +636,7 @@ public class Proxy extends HttpServlet {
                   + redirectUri);
       servletResponse.sendRedirect(redirectUri + "&remoteIp=" +remoteIp);
     }
+    logRequest(fullUri, remoteIp, ipListString, credentialId, sessionId, partnerId, isPaidContent, meterStatus);
 
     return authorized;
   }
