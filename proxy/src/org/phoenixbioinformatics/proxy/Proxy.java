@@ -280,7 +280,8 @@ public class Proxy extends HttpServlet {
                                    secretKey,
                                    partnerId,
                                    credentialId,
-                                   ipListString);
+                                   ipListString,
+                                   token);
           auth = accessOutput.status;
           remoteIp = accessOutput.ip;
           userIdentifier.append(accessOutput.userIdentifier);
@@ -659,7 +660,7 @@ public class Proxy extends HttpServlet {
                   + redirectUri);
       servletResponse.sendRedirect(redirectUri + "&remoteIp=" +remoteIp);
     }
-    logRequest(fullUri, remoteIp, ipListString, credentialId, sessionId, partnerId, isPaidContent, meterStatus);
+    logRequest(fullUri, remoteIp, ipListString, credentialId, sessionId, partnerId, isPaidContent, meterStatus, token);
 
     return authorized;
   }
