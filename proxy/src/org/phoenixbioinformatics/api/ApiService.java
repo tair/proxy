@@ -188,8 +188,9 @@ public class ApiService extends AbstractApiService {
     HashMap<String, ApiService.PartnerOutput> partnerMap =
       new HashMap<String, ApiService.PartnerOutput>();
     String urn = PARTNERS_URN + PATTERNS_URI;
+    String content = null;
     try {
-      String content = callApi(urn, RequestFactory.HttpMethod.GET);
+      content = callApi(urn, RequestFactory.HttpMethod.GET);
       Gson gson = new Gson();
       Type type = new TypeToken<List<PartnerOutput>>() {
       }.getType();
@@ -199,7 +200,7 @@ public class ApiService extends AbstractApiService {
         partnerMap.put(entry.sourceUri, entry);
       }
     } catch (IOException e) {
-      logger.error(ALL_PARTNER_ERROR, e);
+      logAPIError(ALL_PARTNER_ERROR, e, urn, "GET", content);
       return null;
     }
 
@@ -227,11 +228,13 @@ public class ApiService extends AbstractApiService {
     params.add(new BasicNameValuePair("partnerId", partnerId));
     params.add(new BasicNameValuePair("isPaidContent", isPaidContent));
     params.add(new BasicNameValuePair("meterStatus", meterStatus));
+    
+    String content = null;
 
     try {
-      callApi(urn, RequestFactory.HttpMethod.POST, "token="+token, params);
+    	  content = callApi(urn, RequestFactory.HttpMethod.POST, "token="+token, params);
     } catch (Exception e) {
-      logger.error(LOGGING_ERROR + urn);
+      logAPIError(LOGGING_ERROR, e, urn, "POST", content);
       StringBuilder builder = new StringBuilder("[parameters: ");
       String sep = "";
       for (NameValuePair pair : params) {
@@ -353,8 +356,9 @@ public class ApiService extends AbstractApiService {
     String urn =
       AUTHORIZATION_URN + "/access/?partnerId=" + partnerId + "&url=" + url
           + "&ipList=" + remoteIpList;
+    String content = null;
     try {
-      String content =
+      content =
         callApi(urn, RequestFactory.HttpMethod.GET, "secretKey=" + loginKey
                                                     + ";credentialId=" + credentialId
                                                     + ";token=" + token
@@ -362,10 +366,10 @@ public class ApiService extends AbstractApiService {
       Gson gson = new Gson();
       return gson.fromJson(content, AccessOutput.class);
     } catch (IOException e) {
-      logger.error(ACCESS_ERROR, e);
+      logAPIError(ACCESS_ERROR, e, urn, "GET", content);
       throw new RuntimeException(ACCESS_ERROR + ": " + e.getMessage(), e);
     } catch (Exception e) {
-      logger.error(UNEXPECTED_ERROR, e);
+      logAPIError(UNEXPECTED_ERROR, e, urn, "GET", content);
       throw new RuntimeException("Unexpected error making API call: " + e.getMessage(), e);
     }
   }
@@ -378,16 +382,17 @@ public class ApiService extends AbstractApiService {
    */
   public static String checkMeteringLimit(String ip, String partnerId, String fullUri, String token) {
     String urn = METERS_URN + "/ip/" + ip + "/limit/?partnerId=" + partnerId +"&uri="+fullUri;
+    String content = null;
 
     try {
-      String content = callApi(urn, RequestFactory.HttpMethod.GET, "token=" + token + ";");
+    	  content = callApi(urn, RequestFactory.HttpMethod.GET, "token=" + token + ";");
       Gson gson = new Gson();
       CheckMeteringLimitOutput out =
         gson.fromJson(content, CheckMeteringLimitOutput.class);
 
       return out.status;
     } catch (IOException e) {
-      logger.debug(METERING_LIMIT_ERROR, e);
+      logAPIError(METERING_LIMIT_ERROR, e, urn, "GET", content);
       return e.getMessage();
     }
   }
@@ -404,9 +409,10 @@ public class ApiService extends AbstractApiService {
   public static String incrementMeteringCount(String ip, String partnerId, String token) {
     String urn =
       METERS_URN + "/ip/" + ip + "/increment/?partnerId=" + partnerId;
+    String content = null;
 
-    try {
-      String content = callApi(urn, RequestFactory.HttpMethod.POST, "token=" + token);
+    try {	
+    	  content = callApi(urn, RequestFactory.HttpMethod.POST, "token=" + token);
       Gson gson = new Gson();
       IncrementMeteringCountOutput out =
         gson.fromJson(content, IncrementMeteringCountOutput.class);
@@ -414,7 +420,7 @@ public class ApiService extends AbstractApiService {
 
       return message;
     } catch (IOException e) {
-      logger.debug(INCREMENT_METERING_COUNT_ERROR, e);
+      logAPIError(INCREMENT_METERING_COUNT_ERROR, e, urn, "POST", content);
       return e.getMessage();
     }
   }
@@ -430,6 +436,12 @@ public static void sendMeteringEmail(String remoteIp, String partnerId, String c
 		
 		EmailUtility.send(to, from, subject, content);	
 }
-
-
+  
+  private static void logAPIError(String msg, Exception e, String urn, String method, String content) {
+	  logger.debug(msg, e);
+      logger.debug("API call: " + method + " " + urn);
+      logger.debug("Returned data: " + content);
+  }
 }
+
+
