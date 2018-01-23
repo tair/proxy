@@ -414,7 +414,6 @@ public class Proxy extends HttpServlet {
                                  StringBuilder userIdentifier, String ipListString,
                                  String sessionId, String isPaidContent, String auth,
                                  String token)
-                                 )
       throws IOException, UnsupportedHttpMethodException, ServletException {
 
     // Determine whether to proxy the request.
