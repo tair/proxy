@@ -69,6 +69,8 @@ public class ApiService extends AbstractApiService {
   public class AccessOutput {
     public String status;
     public String userIdentifier;
+    public String ip;
+    public String isPaidContent;
   }
 
   /**
@@ -208,7 +210,7 @@ public class ApiService extends AbstractApiService {
    * Creates a page view log entry
    */
   public static void createPageView(String ip, String ipListString, String uri, String partyId,
-                                    String sessionId, String token) {
+                                    String sessionId, String partnerId, String isPaidContent, String meterStatus, String token) {
     String urn = PAGE_VIEWS_URN + "/";
     Date curDate = new Date();
     SimpleDateFormat format = new SimpleDateFormat();
@@ -222,6 +224,9 @@ public class ApiService extends AbstractApiService {
     params.add(new BasicNameValuePair("partyId", partyId));
     params.add(new BasicNameValuePair("ip", ip));
     params.add(new BasicNameValuePair("ipList", ipListString));
+    params.add(new BasicNameValuePair("partnerId", partnerId));
+    params.add(new BasicNameValuePair("isPaidContent", isPaidContent));
+    params.add(new BasicNameValuePair("meterStatus", meterStatus));
 
     try {
       callApi(urn, RequestFactory.HttpMethod.POST, "token="+token, params);
@@ -338,7 +343,7 @@ public class ApiService extends AbstractApiService {
    */
   public static AccessOutput checkAccess(String url, String loginKey,
                                          String partnerId, String credentialId,
-                                         String remoteIp, String token) {
+                                         String remoteIpList, String token) {
     try {
       url = URLEncoder.encode(url, "UTF-8");
     } catch (UnsupportedEncodingException e) {
@@ -347,7 +352,7 @@ public class ApiService extends AbstractApiService {
 
     String urn =
       AUTHORIZATION_URN + "/access/?partnerId=" + partnerId + "&url=" + url
-          + "&ip=" + remoteIp;
+          + "&ipList=" + remoteIpList;
     try {
       String content =
         callApi(urn, RequestFactory.HttpMethod.GET, "secretKey=" + loginKey
