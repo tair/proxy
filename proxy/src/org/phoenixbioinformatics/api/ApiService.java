@@ -197,7 +197,7 @@ public class ApiService extends AbstractApiService {
         partnerMap.put(entry.sourceUri, entry);
       }
     } catch (IOException e) {
-      logAPIError(ALL_PARTNER_ERROR, e, urn, content);
+      logAPIError(ALL_PARTNER_ERROR, e, urn, "GET", content);
       return null;
     }
 
@@ -227,7 +227,7 @@ public class ApiService extends AbstractApiService {
     try {
     	  content = callApi(urn, RequestFactory.HttpMethod.POST, "", params);
     } catch (Exception e) {
-      logAPIError(LOGGING_ERROR, e, urn, content);
+      logAPIError(LOGGING_ERROR, e, urn, "POST", content);
       StringBuilder builder = new StringBuilder("[parameters: ");
       String sep = "";
       for (NameValuePair pair : params) {
@@ -357,10 +357,10 @@ public class ApiService extends AbstractApiService {
       Gson gson = new Gson();
       return gson.fromJson(content, AccessOutput.class);
     } catch (IOException e) {
-      logAPIError(ACCESS_ERROR, e, urn, content);
+      logAPIError(ACCESS_ERROR, e, urn, "GET", content);
       throw new RuntimeException(ACCESS_ERROR + ": " + e.getMessage(), e);
     } catch (Exception e) {
-      logAPIError(UNEXPECTED_ERROR, e, urn, content);
+      logAPIError(UNEXPECTED_ERROR, e, urn, "GET", content);
       throw new RuntimeException("Unexpected error making API call: " + e.getMessage(), e);
     }
   }
@@ -383,7 +383,7 @@ public class ApiService extends AbstractApiService {
 
       return out.status;
     } catch (IOException e) {
-      logAPIError(METERING_LIMIT_ERROR, e, urn, content);
+      logAPIError(METERING_LIMIT_ERROR, e, urn, "GET", content);
       return e.getMessage();
     }
   }
@@ -411,14 +411,14 @@ public class ApiService extends AbstractApiService {
 
       return message;
     } catch (IOException e) {
-      logAPIError(INCREMENT_METERING_COUNT_ERROR, e, urn, content);
+      logAPIError(INCREMENT_METERING_COUNT_ERROR, e, urn, "POST", content);
       return e.getMessage();
     }
   }
   
-  private static void logAPIError(String msg, Exception e, String urn, String content) {
+  private static void logAPIError(String msg, Exception e, String urn, String method, String content) {
 	  logger.debug(msg, e);
-      logger.debug("API call: GET " + urn);
+      logger.debug("API call: " + method + " " + urn);
       logger.debug("Returned data: " + content);
   }
 }
