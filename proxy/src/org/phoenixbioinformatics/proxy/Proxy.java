@@ -129,6 +129,16 @@ public class Proxy extends HttpServlet {
   private static final String METER_BLACK_LIST_BLOCK_CODE = "BlackListBlock"; // PW-287
   private static final String OK_CODE = "OK";
   private static final String NOT_OK_CODE = "NOT OK";
+  
+  // Meter status codes
+  private static final String METER_WARNING_STATUS_CODE = "W";
+  private static final String METER_BLACK_LIST_STATUS_CODE = "M";
+  private static final String METER_BLOCK_STATUS_CODE = "B";
+  private static final String METER_NOT_METERED_STATUS_CODE = "N";
+  
+  // Paid content codes
+  private static final String IS_PAID_CONTENT = "Y";
+  private static final String NOT_PAID_CONTENT = "N";
 
   // property-based constants
   // TAIR-2734
@@ -269,7 +279,7 @@ public class Proxy extends HttpServlet {
         String partnerId = hostFactory.getPartnerId();
         StringBuilder userIdentifier = new StringBuilder();
         	String auth = NOT_OK_CODE;
-        	String isPaidContent = "N";
+        	String isPaidContent = NOT_PAID_CONTENT;
 
         logger.info("checkAccess API parameters: " + fullRequestUri + ", " + partnerId
                     + ", " + secretKey + ", " + credentialId + ", " + remoteIp);
@@ -590,7 +600,7 @@ public class Proxy extends HttpServlet {
     String redirectQueryString = builder.toString();
 
     // Handle the various status codes.
-    String meterStatus = 'N';
+    String meterStatus = METER_NOT_METERED_STATUS_CODE;
     if (auth.equals(OK_CODE)) {
       // grant access
       authorized = true;
@@ -618,7 +628,7 @@ public class Proxy extends HttpServlet {
           builder.append(PARAM_PREFIX);
           builder.append(redirectQueryString);
           redirectUri = builder.toString();
-          meterStatus = "W";
+          meterStatus = METER_WARNING_STATUS_CODE;
           ApiService.incrementMeteringCount(remoteIp, partnerId, token);
         } else if (meter.equals(METER_BLACK_LIST_BLOCK_CODE)) {
           // PW-287
@@ -629,7 +639,7 @@ public class Proxy extends HttpServlet {
           builder.append(PARAM_PREFIX);
           builder.append(redirectQueryString);
           redirectUri = builder.toString();
-          meterStatus = "M"; //M for must subscribe
+          meterStatus = METER_BLACK_LIST_STATUS_CODE;
         } else {
           logger.info("Blocked from paid content by meter limit");
           authorized = false;
@@ -638,7 +648,7 @@ public class Proxy extends HttpServlet {
           builder.append(PARAM_PREFIX);
           builder.append(redirectQueryString);
           redirectUri = builder.toString();
-          meterStatus = "B";
+          meterStatus = METER_BLOCK_STATUS_CODE;
         }
       } catch (Exception e) {
         // PWL-556: Bypass and allow free access
