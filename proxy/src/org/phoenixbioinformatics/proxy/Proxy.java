@@ -134,8 +134,8 @@ public class Proxy extends HttpServlet {
   private static final String METER_NOT_METERED_STATUS_CODE = "N";
   
   // Paid content codes
-  private static final String IS_PAID_CONTENT = "Y";
-  private static final String NOT_PAID_CONTENT = "N";
+  private static final String IS_PAID_CONTENT = "T";
+  private static final String NOT_PAID_CONTENT = "F";
 
   // property-based constants
   // TAIR-2734
