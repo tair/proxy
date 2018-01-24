@@ -68,6 +68,8 @@ public class ApiService extends AbstractApiService {
   public class AccessOutput {
     public String status;
     public String userIdentifier;
+    public String ip;
+    public String isPaidContent;
   }
 
   /**
@@ -207,8 +209,8 @@ public class ApiService extends AbstractApiService {
   /**
    * Creates a page view log entry
    */
-  public static void createPageView(String ip, String uri, String partyId,
-                                    String sessionId) {
+  public static void createPageView(String ip, String ipListString, String uri, String partyId,
+                                    String sessionId, String partnerId, String isPaidContent, String meterStatus) {
     String urn = PAGE_VIEWS_URN + "/";
     Date curDate = new Date();
     SimpleDateFormat format = new SimpleDateFormat();
@@ -221,9 +223,12 @@ public class ApiService extends AbstractApiService {
     params.add(new BasicNameValuePair("sessionId", sessionId));
     params.add(new BasicNameValuePair("partyId", partyId));
     params.add(new BasicNameValuePair("ip", ip));
+    params.add(new BasicNameValuePair("ipList", ipListString));
+    params.add(new BasicNameValuePair("partnerId", partnerId));
+    params.add(new BasicNameValuePair("isPaidContent", isPaidContent));
+    params.add(new BasicNameValuePair("meterStatus", meterStatus));
     
     String content = null;
-
     try {
     	  content = callApi(urn, RequestFactory.HttpMethod.POST, "", params);
     } catch (Exception e) {
@@ -238,7 +243,7 @@ public class ApiService extends AbstractApiService {
         sep = ", ";
       }
       builder.append("]");
-      logger.error(builder.toString(), e);
+      logger.error(builder.toString());
     }
   }
 
@@ -338,7 +343,7 @@ public class ApiService extends AbstractApiService {
    */
   public static AccessOutput checkAccess(String url, String loginKey,
                                          String partnerId, String credentialId,
-                                         String remoteIp) {
+                                         String remoteIpList) {
     try {
       url = URLEncoder.encode(url, "UTF-8");
     } catch (UnsupportedEncodingException e) {
@@ -347,7 +352,7 @@ public class ApiService extends AbstractApiService {
 
     String urn =
       AUTHORIZATION_URN + "/access/?partnerId=" + partnerId + "&url=" + url
-          + "&ip=" + remoteIp;
+          + "&ipList=" + remoteIpList;
     String content = null;
     try {
       content =

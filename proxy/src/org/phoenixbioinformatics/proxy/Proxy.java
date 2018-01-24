@@ -28,6 +28,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.validator.routines.InetAddressValidator;
 import org.apache.http.Header;
 import org.apache.http.HttpHeaders;
 import org.apache.http.HttpHost;
@@ -120,10 +121,21 @@ public class Proxy extends HttpServlet {
 
   // API codes
   private static final String NEED_LOGIN_CODE = "NeedLogin";
+  private static final String NEED_SUBSCRIPTION_CODE = "NeedSubscription";
   private static final String METER_WARNING_CODE = "Warning";
   private static final String METER_BLACK_LIST_BLOCK_CODE = "BlackListBlock"; // PW-287
   private static final String OK_CODE = "OK";
   private static final String NOT_OK_CODE = "NOT OK";
+  
+  // Meter status codes
+  private static final String METER_WARNING_STATUS_CODE = "W";
+  private static final String METER_BLACK_LIST_STATUS_CODE = "M";
+  private static final String METER_BLOCK_STATUS_CODE = "B";
+  private static final String METER_NOT_METERED_STATUS_CODE = "N";
+  
+  // Paid content codes
+  private static final String IS_PAID_CONTENT = "T";
+  private static final String NOT_PAID_CONTENT = "F";
 
   // property-based constants
   // TAIR-2734
@@ -246,9 +258,36 @@ public class Proxy extends HttpServlet {
                        sourceHost.getHostName(),
                        servletRequest.getPathInfo(),
                        servletRequest.getQueryString());
-        String remoteIp = getIpAddress(servletRequest);
+        ArrayList<String> remoteIpList = getIpAddressList(servletRequest);
+        String ipListString = String.join(",", remoteIpList);
+        //log all the ips that are detected for testing
+        logger.debug("Ip Address Detected: " + ipListString);
+        
+        String remoteIp = remoteIpList.get(0);
+        String partnerId = hostFactory.getPartnerId();
+        StringBuilder userIdentifier = new StringBuilder();
+        	String auth = NOT_OK_CODE;
+        	String isPaidContent = NOT_PAID_CONTENT;
 
-        logRequest(fullRequestUri, remoteIp, credentialId, sessionId);
+        logger.info("checkAccess API parameters: " + fullRequestUri + ", " + partnerId
+                    + ", " + secretKey + ", " + credentialId + ", " + remoteIp);
+
+        try {
+          ApiService.AccessOutput accessOutput =
+            ApiService.checkAccess(fullRequestUri,
+                                   secretKey,
+                                   partnerId,
+                                   credentialId,
+                                   ipListString);
+          auth = accessOutput.status;
+          remoteIp = accessOutput.ip;
+          userIdentifier.append(accessOutput.userIdentifier);
+          isPaidContent = accessOutput.isPaidContent;
+          logger.debug("userIdentifier: " + userIdentifier.toString());
+        } catch (Exception e) {
+          // Problem making the API call, continue with "Not OK" default status
+          // Problem already logged
+        }
 
         // TODO use source or target host for HOST header based on partner
         // option
@@ -261,7 +300,12 @@ public class Proxy extends HttpServlet {
                           fullRequestUri,
                           remoteIp,
                           credentialId,
-                          secretKey);
+                          secretKey,
+                          userIdentifier,
+                          ipListString,
+                          sessionId,
+                          isPaidContent,
+                          auth);
       } catch (ServletException | UnsupportedHttpMethodException | IOException e) {
         // Log checked exceptions here, then ignore.
         logger.error(REQUEST_HANDLING_ERROR, e);
@@ -330,12 +374,12 @@ public class Proxy extends HttpServlet {
    * @param credentialId the party ID of the user, if logged in
    * @param sessionId the session ID of the partner session, if any
    */
-  private void logRequest(String uri, String ip, String credentialId,
-                          String sessionId) {
+  private void logRequest(String uri, String ip, String ipListString, String credentialId,
+                          String sessionId, String partnerId, String isPaidContent, String meterStatus) {
     // Log a page view for "real" URIs, exclude embedded images, js, etc.
     if (!isEmbeddedFile(uri)) {
       logger.debug("Creating page view for URI " + uri);
-      ApiService.createPageView(ip, uri, credentialId, sessionId);
+      ApiService.createPageView(ip, ipListString, uri, credentialId, sessionId, partnerId, isPaidContent, meterStatus);
     }
   }
 
@@ -362,11 +406,10 @@ public class Proxy extends HttpServlet {
                                  String uri, String partnerId,
                                  HttpHost targetHost, HttpHost sourceHost,
                                  String fullRequestUri, String remoteIp,
-                                 String credentialId, String secretKey)
+                                 String credentialId, String secretKey, 
+                                 StringBuilder userIdentifier, String ipListString,
+                                 String sessionId, String isPaidContent, String auth)
       throws IOException, UnsupportedHttpMethodException, ServletException {
-
-    // Use StringBuilder to get id from authorize method for later use.
-    StringBuilder userIdentifier = new StringBuilder();
 
     // Determine whether to proxy the request.
     if (authorizeProxyRequest(secretKey,
@@ -376,7 +419,10 @@ public class Proxy extends HttpServlet {
                               sourceHost,
                               remoteIp,
                               servletResponse,
-                              userIdentifier)) {
+                              ipListString,
+                              sessionId,
+                              isPaidContent,
+                              auth)) {
       // Authorized by the API, so proceed.
 
       ProxyRequest proxyRequest =
@@ -480,7 +526,8 @@ public class Proxy extends HttpServlet {
                                         String credentialId, String fullUri,
                                         HttpHost sourceHost, String remoteIp,
                                         HttpServletResponse servletResponse,
-                                        StringBuilder userIdentifier)
+                                        String ipListString, String sessionId, 
+                                        String isPaidContent, String auth)
       throws IOException {
 
     if (isEmbeddedFile(fullUri)) {
@@ -526,30 +573,6 @@ public class Proxy extends HttpServlet {
     Boolean authorized = false;
     String redirectUri = ""; // complete URI to which to redirect here
     String nestedRedirectUri = ""; // nested redirect param for next redirection
-    String auth = NOT_OK_CODE;
-
-    logger.info("checkAccess API parameters: " + fullUri + ", " + partnerId
-                + ", " + secretKey + ", " + credentialId + ", " + remoteIp);
-
-    try {
-      ApiService.AccessOutput accessOutput =
-        ApiService.checkAccess(fullUri,
-                               secretKey,
-                               partnerId,
-                               credentialId,
-                               remoteIp);
-      auth = accessOutput.status;
-      userIdentifier.append(accessOutput.userIdentifier);
-      logger.debug("userIdentifier: " + userIdentifier.toString());
-    } catch (Exception e) {
-      // Problem making the API call, continue with "Not OK" default status
-      // Problem already logged
-      // PWL-556: bypass and eligible for free access
-      logger.info("Check access failed. Bypassing proxy/paywall - Allowed free access to content.");
-      // PWL-556: This is explicitly needed   
-      userIdentifier.append((String)null);
-      authorized = true;
-    }
 
     // Get the redirect string and build the query string
     nestedRedirectUri = getRedirectUri(fullUri, uiUri);
@@ -558,13 +581,13 @@ public class Proxy extends HttpServlet {
     String redirectQueryString = builder.toString();
 
     // Handle the various status codes.
-
+    String meterStatus = METER_NOT_METERED_STATUS_CODE;
     if (auth.equals(OK_CODE)) {
       // grant access
       authorized = true;
       logger.info("Party " + credentialId + " authorized for free content "
                   + fullUri + " at partner " + partnerId);
-    } else if (auth.equals("NeedSubscription")) {
+    } else if (auth.equals(NEED_SUBSCRIPTION_CODE)) {
       // check metering status and redirect or proxy as appropriate
       logger.info("Party " + credentialId
                   + " needs to subscribe to see paid content " + fullUri
@@ -586,6 +609,7 @@ public class Proxy extends HttpServlet {
           builder.append(PARAM_PREFIX);
           builder.append(redirectQueryString);
           redirectUri = builder.toString();
+          meterStatus = METER_WARNING_STATUS_CODE;
           ApiService.incrementMeteringCount(remoteIp, partnerId);
         } else if (meter.equals(METER_BLACK_LIST_BLOCK_CODE)) {
           // PW-287
@@ -596,6 +620,7 @@ public class Proxy extends HttpServlet {
           builder.append(PARAM_PREFIX);
           builder.append(redirectQueryString);
           redirectUri = builder.toString();
+          meterStatus = METER_BLACK_LIST_STATUS_CODE;
         } else {
           logger.info("Blocked from paid content by meter limit");
           authorized = false;
@@ -604,6 +629,7 @@ public class Proxy extends HttpServlet {
           builder.append(PARAM_PREFIX);
           builder.append(redirectQueryString);
           redirectUri = builder.toString();
+          meterStatus = METER_BLOCK_STATUS_CODE;
         }
       } catch (Exception e) {
         // PWL-556: Bypass and allow free access
@@ -625,6 +651,7 @@ public class Proxy extends HttpServlet {
                   + redirectUri);
       servletResponse.sendRedirect(redirectUri + "&remoteIp=" +remoteIp);
     }
+    logRequest(fullUri, remoteIp, ipListString, credentialId, sessionId, partnerId, isPaidContent, meterStatus);
 
     return authorized;
   }
@@ -1124,6 +1151,7 @@ public class Proxy extends HttpServlet {
    * @param request the HTTP servlet request containing the IP address
    * @return the remote IP address
    */
+  @Deprecated
   private static String getIpAddress(HttpServletRequest request) {
     String ipAddress = request.getHeader(REMOTE_ADDR);
 
@@ -1136,26 +1164,71 @@ public class Proxy extends HttpServlet {
       }
     }
 
-    ipAddress = canonicalizeIpAddress(ipAddress);
+    //ipAddress = canonicalizeIpAddress(ipAddress);
 
     return ipAddress;
   }
 
   /**
-   * Produce a standard IP address with no leading or trailing blanks. If the
-   * input string is a comma-delimited list of addresses, the result will be the
-   * last address in the list. Package access allows use in test classes.
+   * Produce a list of standard IP addresses with no leading or trailing blanks. If the
+   * input string is a comma-delimited list of addresses, the result will be all the 
+   * list of addresses.
    *
    * @param ipAddress an IP address or list of IP addresses
-   * @return a single IP address with no leading or trailing blanks
+   * @return list of IP address with no leading or trailing blanks
    */
-  static String canonicalizeIpAddress(String ipAddress) {
+  static ArrayList<String> canonicalizeIpAddress(String ipAddress) {
+	ArrayList<String> result= new ArrayList<String>();
     if (ipAddress.contains(",")) {
       String[] list = ipAddress.split(",");
-      // Set the returned address to the last address in the list.
-      ipAddress = list[list.length - 1];
+      for (String item: list){
+    	  result.add(item.trim());
+      }
+    }else{
+    	result.add(ipAddress.trim());
     }
-    return ipAddress.trim();
+    return result;
+  }
+  
+  /**
+   * Validate if a string is a valid ip address. Checks both ipv4 and ipv6.
+   *
+   * @param an input string
+   * @return a boolean value which indicates if the string is a valid ip address
+   */
+  static Boolean validateIp(String headerValue) {
+		if (InetAddressValidator.getInstance().isValid(headerValue)) {
+			return true;
+		}
+	  return false;
+  }
+  
+  /**
+   * Get a list of addresses of the requester from the request. This method
+   * gets the Remote_Addr header value, the x-forwarded-for header
+   * value, the HTTP request remote address or any other possible header values. 
+   * If the resulting string is a list of comma-separated IP addresses, add each
+   * one into the final list.
+   * @param request the HTTP servlet request containing the IP address
+   * @return the remote IP address list
+   */
+  private static ArrayList<String> getIpAddressList(HttpServletRequest request) {
+    ArrayList<String> result = new ArrayList<String>();
+    Enumeration<String> headerNames = request.getHeaderNames();
+    while (headerNames.hasMoreElements()) {
+      String headerName = headerNames.nextElement();
+      Enumeration<String> headers = request.getHeaders(headerName);
+      while (headers.hasMoreElements()) {
+        String headerValue = headers.nextElement();
+        for (String canonicalizeIp : canonicalizeIpAddress(headerValue)){
+        	if(validateIp(canonicalizeIp)){
+        		result.add(canonicalizeIp);
+        	}
+        }
+      }
+    }
+
+    return result;
   }
 
   /**
