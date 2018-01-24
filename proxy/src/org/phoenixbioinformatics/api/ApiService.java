@@ -184,7 +184,7 @@ public class ApiService extends AbstractApiService {
         sep = ", ";
       }
       builder.append("]");
-      logger.error(builder.toString(), e);
+      logger.error(builder.toString());
     }
   }
 
