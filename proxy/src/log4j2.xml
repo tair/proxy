@@ -11,11 +11,15 @@
       <PatternLayout pattern="%d{MM/dd/yyyy HH:mm:ss,SSS} %-5p [%C] %m%n"/>
     </Console>
     
-    <File name="File" fileName="${sys:catalina.home}/logs/paywall.log">
+    <RollingFile name="File" fileName="/Users/muller/logs/paywall.log"
+    	         filePattern="logs/$${date:yyyy-MM}/paywall-%d{MM-dd-yyyy}-%i.log.gz">
       <PatternLayout>
         <Pattern>%d{MM/dd/yyyy HH:mm:ss,SSS} %-5p [%C] %m%n</Pattern>
       </PatternLayout>
-    </File>
+      <Policies>
+        <SizeBasedTriggeringPolicy size="500 MB"/>
+      </Policies>
+    </RollingFile>
     
     <RollingFile name="Debug" fileName="${sys:catalina.home}/logs/paywall-debug.log"
                  filePattern="logs/$${date:yyyy-MM}/app-%d{MM-dd-yyyy}-%i.log.gz">
