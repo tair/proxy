@@ -166,11 +166,34 @@ public class ApiService extends AbstractApiService {
     }
 
     public static PartnerDetailOutput createInstance(String partnerId) {
+    	   // set as default values
       if (partnerId == null || partnerId == "") partnerId = DEFAULT_PARTNER_ID;
-      String loginUri = ProxyProperties.getProperty("ui.login") + partnerId;
+      String loginUri = ProxyProperties.getProperty("ui.login");
       String defaultLoginRedirect = ProxyProperties.getProperty("uri.default.redirect");
       String uiUri = ProxyProperties.getProperty("ui.uri");
       String uiMeterUri = ProxyProperties.getProperty("ui.meter");
+
+      String mapContent = ProxyProperties.getProperty("partner.detail.map");
+      if (mapContent != null) {
+        try {
+          Gson parser = new Gson();
+          Type type = new TypeToken<HashMap<String, HashMap<String, String>>>(){}.getType();
+          HashMap<String, HashMap<String, String>> map = parser.fromJson(mapContent, type);
+          HashMap<String, String> partnerDetailInfo = map.get(partnerId);
+          if (partnerDetailInfo != null) {
+            loginUri = partnerDetailInfo.get("loginUri");
+            defaultLoginRedirect = partnerDetailInfo.get("defaultLoginRedirect");
+            uiUri = partnerDetailInfo.get("uiUri");
+            uiMeterUri = partnerDetailInfo.get("uiMeterUri");
+          } else {
+            logger.info("No partner mapping info for " + partnerId + ". Use default partner info.");
+          }
+        } catch (Exception e) {
+          logger.info("Failed to load partner info map. Use default partner info.");
+        }
+      } else {
+        logger.info("Partner info map is undefined. Use default partner info.");
+      }
       return new PartnerDetailOutput(loginUri,
                                      defaultLoginRedirect,
                                      uiUri,
