@@ -165,13 +165,13 @@ public class ApiService extends AbstractApiService {
     }
 
     public static PartnerDetailOutput createInstance(String partnerId) {
+    	   // set as default values
       if (partnerId == null || partnerId == "") partnerId = DEFAULT_PARTNER_ID;
       String loginUri = ProxyProperties.getProperty("ui.login");
       String defaultLoginRedirect = ProxyProperties.getProperty("uri.default.redirect");
       String uiUri = ProxyProperties.getProperty("ui.uri");
       String uiMeterUri = ProxyProperties.getProperty("ui.meter");
 
-   // set as default values
       String mapContent = ProxyProperties.getProperty("partner.detail.map");
       if (mapContent != null) {
         try {
@@ -194,9 +194,9 @@ public class ApiService extends AbstractApiService {
         logger.info("Partner info map is undefined. Use default partner info.");
       }
       return new PartnerDetailOutput(loginUri,
-              defaultLoginRedirect,
-              uiUri,
-              uiMeterUri);
+                                     defaultLoginRedirect,
+                                     uiUri,
+                                     uiMeterUri);
     }
   }
   
