@@ -561,7 +561,7 @@ public class Proxy extends HttpServlet {
     partner.setPartnerId(partnerId);
     // Get attributes from partner
     String uiUri = partner.getUiUri();
-    if (uiUri == null) {
+    if (uiUri == null || partnerId != "tair") {
       // null database field, use the source host (scheme and authority of the
       // incoming full URI)
       StringBuilder builder = new StringBuilder(sourceHost.getSchemeName());
