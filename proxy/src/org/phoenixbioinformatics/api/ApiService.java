@@ -240,6 +240,9 @@ public class ApiService extends AbstractApiService {
     SimpleDateFormat format = new SimpleDateFormat();
     format = new SimpleDateFormat("yyyy-MM-dd hh:mm:ssZ");
     String pageViewDate = format.format(curDate);
+    if (uri.length() >2000) {
+    		uri = uri.substring(0, 1950) + "__truncated_for_uri_longer_than_2000";
+    }
 
     List<NameValuePair> params = new ArrayList<NameValuePair>(2);
     params.add(new BasicNameValuePair("pageViewDate", pageViewDate));
