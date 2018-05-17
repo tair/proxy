@@ -169,7 +169,15 @@ public class Proxy extends HttpServlet {
       throws ServletException, IOException {
     try {
       logAllServletRequestHeaders(servletRequest);
+      // PWL-625: Add measure to method duration
+      long startTime = System.currentTimeMillis();
       handleProxyRequest(servletRequest, servletResponse);
+      long stopTime = System.currentTimeMillis();
+      long elapsedTime = stopTime - startTime;
+      int threshold = 5;
+      if (elapsedTime >= threshold * 1000) {
+        logger.debug("@@@@@@@@Request to proxy server " + servletRequest.getRequestURI().toString() + " takes " + elapsedTime + " ms to response@@@@@@@@@");
+      }
       logAllServletResponseHeaders(servletResponse);
     } catch (RuntimeException e) {
       // Log unchecked exception here and don't propagate.
@@ -755,7 +763,16 @@ public class Proxy extends HttpServlet {
     // TODO: try adding host as first param, see if it does the right thing.
     // client.execute(host, request, responseHandler, localContext);
     logAllUriRequestHeaders(request);
+
+    // PWL-625: Add measure to method duration
+    long startTime = System.currentTimeMillis();
     client.execute(request, responseHandler, localContext);
+    long stopTime = System.currentTimeMillis();
+    long elapsedTime = stopTime - startTime;
+    int threshold = 5;
+    if (elapsedTime >= threshold * 1000) {
+      logger.debug("@@@@@@@@Request to content server " + request.getRequestLine().getUri() + " takes " + elapsedTime + " ms to response@@@@@@@@@");
+    }
 
     // Put the cookie store with any returned session cookie into the session.
     cookieStore = localContext.getCookieStore();
