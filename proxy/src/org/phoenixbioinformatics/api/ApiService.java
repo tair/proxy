@@ -237,7 +237,7 @@ public class ApiService extends AbstractApiService {
     String urn = PAGE_VIEWS_URN + "/";
     Date curDate = new Date();
     SimpleDateFormat format = new SimpleDateFormat();
-    format = new SimpleDateFormat("yyyy-MM-dd hh:mm:ssZ");
+    format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ssZ");
     String pageViewDate = format.format(curDate);
     if (uri.length() >2000) {
     		uri = uri.substring(0, 1950) + "__truncated_for_uri_longer_than_2000";
