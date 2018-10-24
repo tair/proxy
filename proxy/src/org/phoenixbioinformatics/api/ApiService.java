@@ -403,6 +403,12 @@ public class ApiService extends AbstractApiService {
    * @return String indicating client's metering status. (OK, Warn, Blocked)
    */
   public static String checkMeteringLimit(String ip, String partnerId, String fullUri) {
+    try {
+      fullUri = URLEncoder.encode(fullUri, "UTF-8");
+    } catch (UnsupportedEncodingException e) {
+      logger.debug("Encoding faiure", e);
+    }
+    
     String urn = METERS_URN + "/ip/" + ip + "/limit/?partnerId=" + partnerId +"&uri="+fullUri;
     String content = null;
 
