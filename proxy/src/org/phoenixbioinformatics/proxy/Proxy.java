@@ -126,6 +126,7 @@ public class Proxy extends HttpServlet {
   private static final String NEED_LOGIN_CODE = "NeedLogin";
   private static final String NEED_SUBSCRIPTION_CODE = "NeedSubscription";
   private static final String METER_WARNING_CODE = "Warning";
+  private static final String METER_BLOCK_CODE = "Block"; // PW-646
   private static final String METER_BLACK_LIST_BLOCK_CODE = "BlackListBlock"; // PW-287
   private static final String OK_CODE = "OK";
   private static final String NOT_OK_CODE = "NOT OK";
@@ -640,7 +641,7 @@ public class Proxy extends HttpServlet {
           builder.append(redirectQueryString);
           redirectUri = builder.toString();
           meterStatus = METER_BLACK_LIST_STATUS_CODE;
-        } else {
+        } else if (meter.equals(METER_BLOCK_CODE)) {
           logger.info("Blocked from paid content by meter limit");
           authorized = false;
           builder = new StringBuilder(uiUri);
@@ -649,6 +650,10 @@ public class Proxy extends HttpServlet {
           builder.append(redirectQueryString);
           redirectUri = builder.toString();
           meterStatus = METER_BLOCK_STATUS_CODE;
+        } else {
+          // PWL-646: Bypass and allow free access for unexpected status such as 404
+          logger.info("Check meter limit returned with unexpected code: " + meter + ". Bypassing proxy/paywall - Allowed free access to content.");
+          authorized = true;
         }
       } catch (Exception e) {
         // PWL-556: Bypass and allow free access
