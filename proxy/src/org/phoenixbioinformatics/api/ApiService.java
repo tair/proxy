@@ -406,7 +406,14 @@ public class ApiService extends AbstractApiService {
    * @param ip client's IP address.
    * @return String indicating client's metering status. (OK, Warn, Blocked)
    */
+
   public static String checkMeteringLimit(String ip, String partnerId, String fullUri, String token) {
+    try {
+      fullUri = URLEncoder.encode(fullUri, "UTF-8");
+    } catch (UnsupportedEncodingException e) {
+      logger.debug("Encoding faiure", e);
+    }
+    
     String urn = METERS_URN + "/ip/" + ip + "/limit/?partnerId=" + partnerId +"&uri="+fullUri;
     String content = null;
 
