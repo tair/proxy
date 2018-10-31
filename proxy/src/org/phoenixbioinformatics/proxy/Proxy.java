@@ -167,9 +167,14 @@ public class Proxy extends HttpServlet {
   private static final String REDIRECT_ERROR =
     "Redirect status code but no location header in response";
 
+  // PWL-625
+  private static final int PROXY_REQUEST_THRESHOLD = 5;
+  private static final int CONTENT_REQUEST_THRESHOLD = 5;
+  private static final String LOG_MARKER = "@@@@@@@@";
+
   //PW-207 redirecting to http://ui.arabidopsis.org/error=xxx
   private static final String UI_URL =	ProxyProperties.getProperty("ui.uri", "https://ui.arabidopsis.org");
-  
+
   @Override
   protected void service(HttpServletRequest servletRequest,
                          HttpServletResponse servletResponse)
@@ -177,7 +182,14 @@ public class Proxy extends HttpServlet {
 	  String partnerId = "tair";
     try {
       logAllServletRequestHeaders(servletRequest);
+      // PWL-625: Add measure to method duration
+      long startTime = System.currentTimeMillis();
       handleProxyRequest(servletRequest, servletResponse);
+      long stopTime = System.currentTimeMillis();
+      long elapsedTime = stopTime - startTime;
+      if (elapsedTime >= PROXY_REQUEST_THRESHOLD * 1000) {
+        logger.debug(LOG_MARKER + " Request to proxy server " + servletRequest.getRequestURI().toString() + " takes " + elapsedTime + " ms to response " + LOG_MARKER);
+      }
       logAllServletResponseHeaders(servletResponse);
     } catch (RuntimeException | InvalidPartnerException e) {
       // Log unchecked exception here and don't propagate.
@@ -779,7 +791,15 @@ public class Proxy extends HttpServlet {
     // TODO: try adding host as first param, see if it does the right thing.
     // client.execute(host, request, responseHandler, localContext);
     logAllUriRequestHeaders(request);
+
+    // PWL-625: Add measure to method duration
+    long startTime = System.currentTimeMillis();
     client.execute(request, responseHandler, localContext);
+    long stopTime = System.currentTimeMillis();
+    long elapsedTime = stopTime - startTime;
+    if (elapsedTime >= CONTENT_REQUEST_THRESHOLD * 1000) {
+      logger.debug(LOG_MARKER + "Request to content server " + request.getRequestLine().getUri() + " takes " + elapsedTime + " ms to response " + LOG_MARKER);
+    }
 
     // Put the cookie store with any returned session cookie into the session.
     cookieStore = localContext.getCookieStore();
