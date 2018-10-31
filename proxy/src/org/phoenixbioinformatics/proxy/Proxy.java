@@ -92,6 +92,7 @@ public class Proxy extends HttpServlet {
   /** name of custom header indicating password update */
   private static final String PASSWORD_UPDATE_HEADER =
     "Phoenix-Proxy-PasswordUpdate";
+  private static final String SECRETKEY_UPDATE_HEADER = "Phoenix-Proxy-SecretKeyUpdate";
   /** name of custom header indicating user logged out of partner */
   private static final String LOGOUT_HEADER = "Phoenix-Proxy-Logout";
 
@@ -109,6 +110,8 @@ public class Proxy extends HttpServlet {
   private static final String CREDENTIAL_ID_COOKIE = "credentialId";
   /** name of the Phoenix secret key cookie */
   private static final String SECRET_KEY_COOKIE = "secretKey";
+  /** name of the Phoenix jwt token */
+  private static final String JWT_TOKEN_COOKIE = "token";
 
   // miscellaneous constants
 
@@ -169,10 +172,14 @@ public class Proxy extends HttpServlet {
   private static final int CONTENT_REQUEST_THRESHOLD = 5;
   private static final String LOG_MARKER = "@@@@@@@@";
 
+  //PW-207 redirecting to http://ui.arabidopsis.org/error=xxx
+  private static final String UI_URL =	ProxyProperties.getProperty("ui.uri", "https://ui.arabidopsis.org");
+
   @Override
   protected void service(HttpServletRequest servletRequest,
                          HttpServletResponse servletResponse)
       throws ServletException, IOException {
+	  String partnerId = "tair";
     try {
       logAllServletRequestHeaders(servletRequest);
       // PWL-625: Add measure to method duration
@@ -184,11 +191,13 @@ public class Proxy extends HttpServlet {
         logger.debug(LOG_MARKER + " Request to proxy server " + servletRequest.getRequestURI().toString() + " takes " + elapsedTime + " ms to response " + LOG_MARKER);
       }
       logAllServletResponseHeaders(servletResponse);
-    } catch (RuntimeException e) {
+    } catch (RuntimeException | InvalidPartnerException e) {
       // Log unchecked exception here and don't propagate.
       logger.error(RUNTIME_EXCEPTION_ERROR, e);
-    } catch (Exception e) {
-      // Don't propagate checked exceptions out of servlet, already logged
+      //PW-207
+      partnerId = getHostFactory(servletRequest).getPartnerId();
+      String error_url = UI_URL+"/#/error?partnerId="+partnerId+"&error="+e.getMessage();
+      servletResponse.sendRedirect(error_url);
     }
   }
 
@@ -243,6 +252,7 @@ public class Proxy extends HttpServlet {
         // support session logging
         String credentialId = null;
         String secretKey = null;
+        String token = null;
         String sessionId = null;
         Cookie cookies[] = servletRequest.getCookies();
         if (cookies != null) {
@@ -256,6 +266,8 @@ public class Proxy extends HttpServlet {
               secretKey = c.getValue();
             } else if (cookieName.equals(CREDENTIAL_ID_COOKIE)) {
               credentialId = c.getValue();
+            } else if (cookieName.equals(JWT_TOKEN_COOKIE)) {
+              token = c.getValue();
             } else if (cookieName.equals(TOMCAT_SESSION_COOKIE)) {
               // Tomcat/Apache session support
               sessionId = c.getValue();
@@ -291,7 +303,8 @@ public class Proxy extends HttpServlet {
                                    secretKey,
                                    partnerId,
                                    credentialId,
-                                   ipListString);
+                                   ipListString,
+                                   token);
           auth = accessOutput.status;
           remoteIp = accessOutput.ip;
           userIdentifier.append(accessOutput.userIdentifier);
@@ -314,14 +327,15 @@ public class Proxy extends HttpServlet {
                           remoteIp,
                           credentialId,
                           secretKey,
-                          userIdentifier,
-                          ipListString,
-                          sessionId,
-                          isPaidContent,
-                          auth);
+						 userIdentifier,
+						 ipListString,
+						 sessionId,
+						 isPaidContent,
+						 auth,
+						 token);
       } catch (ServletException | UnsupportedHttpMethodException | IOException e) {
         // Log checked exceptions here, then ignore.
-        logger.error(REQUEST_HANDLING_ERROR, e);
+        logger.error(REQUEST_HANDLING_ERROR, e);//PW-207
       }
     }
   }
@@ -388,11 +402,11 @@ public class Proxy extends HttpServlet {
    * @param sessionId the session ID of the partner session, if any
    */
   private void logRequest(String uri, String ip, String ipListString, String credentialId,
-                          String sessionId, String partnerId, String isPaidContent, String meterStatus) {
+                          String sessionId, String partnerId, String isPaidContent, String meterStatus, String token) {
     // Log a page view for "real" URIs, exclude embedded images, js, etc.
     if (!isEmbeddedFile(uri)) {
       logger.debug("Creating page view for URI " + uri);
-      ApiService.createPageView(ip, ipListString, uri, credentialId, sessionId, partnerId, isPaidContent, meterStatus);
+      ApiService.createPageView(ip, ipListString, uri, credentialId, sessionId, partnerId, isPaidContent, meterStatus, token);
     }
   }
 
@@ -409,6 +423,7 @@ public class Proxy extends HttpServlet {
    * @param remoteIp the user's IP address
    * @param credentialId the user's party id if logged in
    * @param secretKey the user's secret key for authentication
+   * @param token the JSON web token generated by the API
    * @throws IOException when there is a URI problem
    * @throws UnsupportedHttpMethodException when the requested method is not
    *           GET, PUT, POST, DELETE, OPTIONS
@@ -421,7 +436,8 @@ public class Proxy extends HttpServlet {
                                  String fullRequestUri, String remoteIp,
                                  String credentialId, String secretKey, 
                                  StringBuilder userIdentifier, String ipListString,
-                                 String sessionId, String isPaidContent, String auth)
+                                 String sessionId, String isPaidContent, String auth,
+                                 String token)
       throws IOException, UnsupportedHttpMethodException, ServletException {
 
     // Determine whether to proxy the request.
@@ -435,7 +451,8 @@ public class Proxy extends HttpServlet {
                               ipListString,
                               sessionId,
                               isPaidContent,
-                              auth)) {
+                              auth,
+                              token)) {
       // Authorized by the API, so proceed.
 
       ProxyRequest proxyRequest =
@@ -533,6 +550,7 @@ public class Proxy extends HttpServlet {
    *          partner's server is denied.
    * @param userIdentifier the by-reference object that will contain the output
    *          user identifier for the credentialed user
+   * @param token the JSON web token generated by the API
    * @return Boolean indicates if client has access to partner' server.
    */
   private Boolean authorizeProxyRequest(String secretKey, String partnerId,
@@ -540,7 +558,8 @@ public class Proxy extends HttpServlet {
                                         HttpHost sourceHost, String remoteIp,
                                         HttpServletResponse servletResponse,
                                         String ipListString, String sessionId, 
-                                        String isPaidContent, String auth)
+                                        String isPaidContent, String auth,
+                                        String token)
       throws IOException {
 
     if (isEmbeddedFile(fullUri)) {
@@ -607,12 +626,12 @@ public class Proxy extends HttpServlet {
                   + " at partner " + partnerId);
       try {
         String meter =
-          ApiService.checkMeteringLimit(remoteIp, partnerId, fullUri);
+          ApiService.checkMeteringLimit(remoteIp, partnerId, fullUri, token);
 
         if (meter.equals(OK_CODE)) {
           logger.info("Allowed free access to content by metering");
           authorized = true;
-          ApiService.incrementMeteringCount(remoteIp, partnerId);
+          ApiService.incrementMeteringCount(remoteIp, partnerId, token);
 
         } else if (meter.equals(METER_WARNING_CODE)) {
           logger.info("Warned to subscribe by meter limit");
@@ -623,7 +642,7 @@ public class Proxy extends HttpServlet {
           builder.append(redirectQueryString);
           redirectUri = builder.toString();
           meterStatus = METER_WARNING_STATUS_CODE;
-          ApiService.incrementMeteringCount(remoteIp, partnerId);
+          ApiService.incrementMeteringCount(remoteIp, partnerId, token);
         } else if (meter.equals(METER_BLACK_LIST_BLOCK_CODE)) {
           // PW-287
           logger.info("Blocked from no-metered-access content");
@@ -668,7 +687,7 @@ public class Proxy extends HttpServlet {
                   + redirectUri);
       servletResponse.sendRedirect(redirectUri + "&remoteIp=" +remoteIp);
     }
-    logRequest(fullUri, remoteIp, ipListString, credentialId, sessionId, partnerId, isPaidContent, meterStatus);
+    logRequest(fullUri, remoteIp, ipListString, credentialId, sessionId, partnerId, isPaidContent, meterStatus, token);
 
     return authorized;
   }
@@ -1045,7 +1064,7 @@ public class Proxy extends HttpServlet {
   }
 
   /**
-   * Create credentialId and secretKey cookies and add them to the response, and
+   * Create token cookies and add them to the response, and
    * set the headers for access control
    *
    * @param servletRequest the HTTP request
@@ -1073,10 +1092,20 @@ public class Proxy extends HttpServlet {
     servletResponse.addCookie(secretKeyCookie);
     // PW-165, add ".arabidopsis.org" domain cookie
     addCookie(servletResponse, secretKeyCookie, partnerId, null);
+    
+    Cookie tokenCookie =
+    	      new Cookie(JWT_TOKEN_COOKIE,
+    	                 servletRequest.getParameter(JWT_TOKEN_COOKIE));
+    		tokenCookie.setPath("/");
+    	    // use default domain (current host)
+    	    servletResponse.addCookie(tokenCookie);
+    	    // PW-165, add ".arabidopsis.org" domain cookie
+    	    addCookie(servletResponse, tokenCookie, partnerId, null);
 
     logger.debug("Setting cookies: credentialId = "
                  + credentialIdCookie.getValue() + "; secretKey = "
-                 + secretKeyCookie.getValue());
+                 + secretKeyCookie.getValue() + "; token = "
+                 + tokenCookie.getValue());
     // TAIR-2734
     String origin = servletRequest.getHeader("Origin");
     if (origins.contains(origin)) {
@@ -1351,10 +1380,17 @@ public class Proxy extends HttpServlet {
         clientResponse.addCookie(secretKeyCookie);
         // PW-165, add ".arabidopsis.org" domain cookie
         addCookie(clientResponse, secretKeyCookie, partnerId, 0);
+        
+        Cookie tokenCookie = new Cookie(JWT_TOKEN_COOKIE, null);
+        tokenCookie.setPath("/");
+        tokenCookie.setMaxAge(0);
+        clientResponse.addCookie(tokenCookie);
+        // PW-165, add ".arabidopsis.org" domain cookie
+        addCookie(clientResponse, tokenCookie, partnerId, 0);
 
         // Close the proxy server session to clear all state.
         session.invalidate();
-      } else if (name.equals(PASSWORD_UPDATE_HEADER)) {
+      } else if (name.equals(SECRETKEY_UPDATE_HEADER)) {
         // Check for the password change signal from the partner (the value of
         // the
         // special header carries the new secret key).
@@ -1366,6 +1402,17 @@ public class Proxy extends HttpServlet {
         clientResponse.addCookie(secretKeyCookie);
         // PW-165
         addCookie(clientResponse, secretKeyCookie, partnerId, null);
+      } else if (name.equals(PASSWORD_UPDATE_HEADER)) {
+          // Check for the password change signal from the partner (the value of
+          // the
+          // special header carries the new token).
+        logger.debug("Request to reset token: " + header.getValue());
+        Cookie tokenCookie =
+	        new Cookie(JWT_TOKEN_COOKIE, header.getValue());
+	      tokenCookie.setPath("/");
+	      clientResponse.addCookie(tokenCookie);
+	      // PW-165
+	      addCookie(clientResponse, tokenCookie, partnerId, null);
       }
     }
   }
