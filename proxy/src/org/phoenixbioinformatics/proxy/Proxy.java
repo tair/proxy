@@ -568,6 +568,11 @@ public class Proxy extends HttpServlet {
       uiUri = builder.toString();
       logger.debug("Using source host as UI URI: " + sourceHost);
     }
+    // BIOCYC-569 this is specifically for biocyc's brg-files.ai.sri.com
+    // Generally we load uiUri from properties file
+    if (sourceHost.getHostName().equals("brg-files.ai.sri.com")) {
+        uiUri = "http://brg-files.ai.sri.com";
+    }
     String loginUri = partner.getLoginUri();
     String meterWarningUri =
       partner.getUiMeterUri() + "?exceed=abouttoexceed&partnerId=" + partnerId;
