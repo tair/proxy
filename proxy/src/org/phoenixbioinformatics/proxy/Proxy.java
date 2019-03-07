@@ -324,6 +324,7 @@ public class Proxy extends HttpServlet {
                 null); // fragment
               targetRedirectUri = targetUri.toString();
             }
+            logger.debug("Redirect uri updated from " + fullRequestUri + " to " + targetRedirectUri);
           } catch (URISyntaxException e) {
             logger.warn("cannot parse redirectUri: " + redirectUri + ". ", e);
           }
