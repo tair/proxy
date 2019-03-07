@@ -311,18 +311,18 @@ public class Proxy extends HttpServlet {
         // replace original request path if hits metering/blacklist/login request
         String targetRedirectUri = fullRequestUri;
         if (!servletRequest.getMethod().equals(METHOD_GET) && redirectUri != null && !redirectUri.isEmpty()) {
-          URI uri = new URI(redirectUri);
-          if (uri.isAbsolute()) {
+          URI targetUri = new URI(redirectUri);
+          if (targetUri.isAbsolute()) {
             targetRedirectUri = redirectUri;
           } else {
             try {
               // this should replace the buildFullUri method
-              uri = new URI(sourceHost.getSchemeName(),
+              targetUri = new URI(sourceHost.getSchemeName(),
                 sourceHost.getHostName(),
                 redirectUri,
                 null,  // query
                 null); // fragment
-              targetRedirectUri = uri.toString();
+              targetRedirectUri = targetUri.toString();
             } catch (URISyntaxException e) {
               logger.warn("cannot parse redirectUri: " + redirectUri + ". ", e);
             }
@@ -569,7 +569,7 @@ public class Proxy extends HttpServlet {
                                         HttpHost sourceHost, String remoteIp,
                                         HttpServletResponse servletResponse,
                                         String ipListString, String sessionId, 
-                                        String isPaidContent, String auth, String uiUri, String targetRedirectUri)
+                                        String isPaidContent, String auth, String targetRedirectUri)
       throws IOException {
 
     if (isEmbeddedFile(fullUri)) {
@@ -584,6 +584,7 @@ public class Proxy extends HttpServlet {
     partner.setPartnerId(partnerId);
     // Get attributes from partner
     String uiUri = partner.getUiUri();
+
     if (uiUri == null) {
       // null database field, use the source host (scheme and authority of the
       // incoming full URI)
@@ -633,6 +634,8 @@ public class Proxy extends HttpServlet {
       logger.info("Party " + credentialId
                   + " needs to subscribe to see paid content " + fullUri
                   + " at partner " + partnerId);
+      StringBuilder uriBuilder = new StringBuilder(uiUri);
+
       try {
         String meter =
           ApiService.checkMeteringLimit(remoteIp, partnerId, fullUri);
@@ -645,31 +648,28 @@ public class Proxy extends HttpServlet {
         } else if (meter.equals(METER_WARNING_CODE)) {
           logger.info("Warned to subscribe by meter limit");
           authorized = false;
-          builder = new StringBuilder(uiUri);
-          builder.append(meterWarningUri);
-          builder.append(PARAM_PREFIX);
-          builder.append(redirectQueryString);
-          redirectUri = builder.toString();
+          uriBuilder.append(meterWarningUri);
+          uriBuilder.append(PARAM_PREFIX);
+          uriBuilder.append(redirectQueryString);
+          redirectUri = uriBuilder.toString();
           meterStatus = METER_WARNING_STATUS_CODE;
           ApiService.incrementMeteringCount(remoteIp, partnerId);
         } else if (meter.equals(METER_BLACK_LIST_BLOCK_CODE)) {
           // PW-287
           logger.info("Blocked from no-metered-access content");
           authorized = false;
-          builder = new StringBuilder(uiUri);
-          builder.append(meterBlacklistUri);
-          builder.append(PARAM_PREFIX);
-          builder.append(redirectQueryString);
-          redirectUri = builder.toString();
+          uriBuilder.append(meterBlacklistUri);
+          uriBuilder.append(PARAM_PREFIX);
+          uriBuilder.append(redirectQueryString);
+          redirectUri = uriBuilder.toString();
           meterStatus = METER_BLACK_LIST_STATUS_CODE;
         } else if (meter.equals(METER_BLOCK_CODE)) {
           logger.info("Blocked from paid content by meter limit");
           authorized = false;
-          builder = new StringBuilder(uiUri);
-          builder.append(meterBlockingUri);
-          builder.append(PARAM_PREFIX);
-          builder.append(redirectQueryString);
-          redirectUri = builder.toString();
+          uriBuilder.append(meterBlockingUri);
+          uriBuilder.append(PARAM_PREFIX);
+          uriBuilder.append(redirectQueryString);
+          redirectUri = uriBuilder.toString();
           meterStatus = METER_BLOCK_STATUS_CODE;
         } else {
           // PWL-646: Bypass and allow free access for unexpected status such as 404
