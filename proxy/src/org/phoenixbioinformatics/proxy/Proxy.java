@@ -311,11 +311,11 @@ public class Proxy extends HttpServlet {
         // replace original request path if hits metering/blacklist/login request
         String targetRedirectUri = fullRequestUri;
         if (!servletRequest.getMethod().equals(METHOD_GET) && redirectUri != null && !redirectUri.isEmpty()) {
-          URI targetUri = new URI(redirectUri);
-          if (targetUri.isAbsolute()) {
-            targetRedirectUri = redirectUri;
-          } else {
-            try {
+          try {
+            URI targetUri = new URI(redirectUri);
+            if (targetUri.isAbsolute()) {
+              targetRedirectUri = redirectUri;
+            } else {
               // this should replace the buildFullUri method
               targetUri = new URI(sourceHost.getSchemeName(),
                 sourceHost.getHostName(),
@@ -323,9 +323,9 @@ public class Proxy extends HttpServlet {
                 null,  // query
                 null); // fragment
               targetRedirectUri = targetUri.toString();
-            } catch (URISyntaxException e) {
-              logger.warn("cannot parse redirectUri: " + redirectUri + ". ", e);
             }
+          } catch (URISyntaxException e) {
+            logger.warn("cannot parse redirectUri: " + redirectUri + ". ", e);
           }
         }
 
