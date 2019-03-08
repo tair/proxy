@@ -586,7 +586,7 @@ public class Proxy extends HttpServlet {
     // Get attributes from partner
     String uiUri = partner.getUiUri();
 
-    if (uiUri == null) {
+    if (uiUri == null || uiUri.isEmpty()) {
       // null database field, use the source host (scheme and authority of the
       // incoming full URI)
       StringBuilder builder = new StringBuilder(sourceHost.getSchemeName());
@@ -740,27 +740,26 @@ public class Proxy extends HttpServlet {
    */
   public String getRedirectQueryString(String redirectUri, String uiUri) {
 
-    String transformedUri = null;
-
     logger.debug("Full URI to use for redirect: " + redirectUri);
 
+    String transformedUri = redirectUri;
+
+    if (uiUri.toLowerCase().contains("https://")
+        && redirectUri.toLowerCase().contains("http://")) {
+      transformedUri = transformedUri.replaceFirst("http", "https");
+      logger.debug("Transformed URI to which to redirect:"
+                 + transformedUri);
+    }
+
     try {
-      transformedUri = URLEncoder.encode(redirectUri, UTF_8);
+      transformedUri = URLEncoder.encode(transformedUri, UTF_8);
 
-      logger.debug("Encoded URI for redirect: " + transformedUri);
-
-      if (uiUri.toLowerCase().contains("https://")
-          && redirectUri.toLowerCase().contains("http://")) {
-        transformedUri = transformedUri.replaceFirst("http", "https");
-      }
+      logger.debug("Transformed and encoded URI for redirect: " + transformedUri);
 
     } catch (UnsupportedEncodingException e) {
       // Log and ignore, use un-encoded redirect URI
       logger.warn(ENCODING_FAIURE_ERROR + transformedUri, e);
     }
-
-    logger.debug("Encoded and transformed URI to which to redirect:"
-                 + transformedUri);
     
     StringBuilder builder = new StringBuilder(REDIRECT_PARAM);
     builder.append(transformedUri);
