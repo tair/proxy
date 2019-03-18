@@ -71,6 +71,7 @@ public class ApiService extends AbstractApiService {
     public String userIdentifier;
     public String ip;
     public String isPaidContent;
+    public String redirectUri;
   }
 
   /**
