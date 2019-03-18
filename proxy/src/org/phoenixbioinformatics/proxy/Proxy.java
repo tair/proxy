@@ -169,6 +169,9 @@ public class Proxy extends HttpServlet {
   private static final int CONTENT_REQUEST_THRESHOLD = 5;
   private static final String LOG_MARKER = "@@@@@@@@";
 
+  private static final String METHOD_OPTIONS = "OPTIONS";
+  private static final String METHOD_GET = "GET";
+
   @Override
   protected void service(HttpServletRequest servletRequest,
                          HttpServletResponse servletResponse)
@@ -212,7 +215,7 @@ public class Proxy extends HttpServlet {
     List<String> origins =
       ACCESS_CONTROL_ALLOW_ORIGIN_LIST != null ? Arrays.asList(ACCESS_CONTROL_ALLOW_ORIGIN_LIST.trim().split(";"))
           : new ArrayList<String>(1);
-    if (servletRequest.getMethod().equals("OPTIONS")) {
+    if (servletRequest.getMethod().equals(METHOD_OPTIONS)) {
       logger.debug("Getting options...");
       handleOptionsRequest(servletRequest, servletResponse, origins);
     } else if (action != null && action.equals("setCookies")) {
@@ -281,6 +284,7 @@ public class Proxy extends HttpServlet {
         StringBuilder userIdentifier = new StringBuilder();
         	String auth = NOT_OK_CODE;
         	String isPaidContent = NOT_PAID_CONTENT;
+          String redirectUri = null;
 
         logger.info("checkAccess API parameters: " + fullRequestUri + ", " + partnerId
                     + ", " + secretKey + ", " + credentialId + ", " + remoteIp);
@@ -296,10 +300,34 @@ public class Proxy extends HttpServlet {
           remoteIp = accessOutput.ip;
           userIdentifier.append(accessOutput.userIdentifier);
           isPaidContent = accessOutput.isPaidContent;
+          redirectUri = accessOutput.redirectUri;
           logger.debug("userIdentifier: " + userIdentifier.toString());
         } catch (Exception e) {
           // Problem making the API call, continue with "Not OK" default status
           // Problem already logged
+        }
+
+        // PWL-716: for non-GET request whose metered pattern has redirectUri value, use redirectUri to 
+        // replace original request path if hits metering/blacklist/login request
+        String targetRedirectUri = fullRequestUri;
+        if (!servletRequest.getMethod().equals(METHOD_GET) && redirectUri != null && !redirectUri.isEmpty()) {
+          try {
+            URI targetUri = new URI(redirectUri);
+            if (targetUri.isAbsolute()) {
+              targetRedirectUri = redirectUri;
+            } else {
+              // this should replace the buildFullUri method
+              targetUri = new URI(sourceHost.getSchemeName(),
+                sourceHost.getHostName(),
+                redirectUri,
+                null,  // query
+                null); // fragment
+              targetRedirectUri = targetUri.toString();
+            }
+            logger.debug("Redirect uri updated from " + fullRequestUri + " to " + targetRedirectUri);
+          } catch (URISyntaxException e) {
+            logger.warn("cannot parse redirectUri: " + redirectUri + ". ", e);
+          }
         }
 
         // TODO use source or target host for HOST header based on partner
@@ -318,7 +346,8 @@ public class Proxy extends HttpServlet {
                           ipListString,
                           sessionId,
                           isPaidContent,
-                          auth);
+                          auth,
+                          targetRedirectUri);
       } catch (ServletException | UnsupportedHttpMethodException | IOException e) {
         // Log checked exceptions here, then ignore.
         logger.error(REQUEST_HANDLING_ERROR, e);
@@ -421,7 +450,7 @@ public class Proxy extends HttpServlet {
                                  String fullRequestUri, String remoteIp,
                                  String credentialId, String secretKey, 
                                  StringBuilder userIdentifier, String ipListString,
-                                 String sessionId, String isPaidContent, String auth)
+                                 String sessionId, String isPaidContent, String auth, String targetRedirectUri)
       throws IOException, UnsupportedHttpMethodException, ServletException {
 
     // Determine whether to proxy the request.
@@ -435,7 +464,8 @@ public class Proxy extends HttpServlet {
                               ipListString,
                               sessionId,
                               isPaidContent,
-                              auth)) {
+                              auth, 
+                              targetRedirectUri)) {
       // Authorized by the API, so proceed.
 
       ProxyRequest proxyRequest =
@@ -540,7 +570,7 @@ public class Proxy extends HttpServlet {
                                         HttpHost sourceHost, String remoteIp,
                                         HttpServletResponse servletResponse,
                                         String ipListString, String sessionId, 
-                                        String isPaidContent, String auth)
+                                        String isPaidContent, String auth, String targetRedirectUri)
       throws IOException {
 
     if (isEmbeddedFile(fullUri)) {
@@ -555,7 +585,8 @@ public class Proxy extends HttpServlet {
     partner.setPartnerId(partnerId);
     // Get attributes from partner
     String uiUri = partner.getUiUri();
-    if (uiUri == null) {
+
+    if (uiUri == null || uiUri.isEmpty()) {
       // null database field, use the source host (scheme and authority of the
       // incoming full URI)
       StringBuilder builder = new StringBuilder(sourceHost.getSchemeName());
@@ -590,13 +621,7 @@ public class Proxy extends HttpServlet {
 
     Boolean authorized = false;
     String redirectUri = ""; // complete URI to which to redirect here
-    String nestedRedirectUri = ""; // nested redirect param for next redirection
-
-    // Get the redirect string and build the query string
-    nestedRedirectUri = getRedirectUri(fullUri, uiUri);
-    StringBuilder builder = new StringBuilder(REDIRECT_PARAM);
-    builder.append(nestedRedirectUri);
-    String redirectQueryString = builder.toString();
+    String redirectQueryString = getRedirectQueryString(targetRedirectUri, uiUri);   
 
     // Handle the various status codes.
     String meterStatus = METER_NOT_METERED_STATUS_CODE;
@@ -610,6 +635,8 @@ public class Proxy extends HttpServlet {
       logger.info("Party " + credentialId
                   + " needs to subscribe to see paid content " + fullUri
                   + " at partner " + partnerId);
+      StringBuilder uriBuilder = new StringBuilder(uiUri);
+
       try {
         String meter =
           ApiService.checkMeteringLimit(remoteIp, partnerId, fullUri);
@@ -622,31 +649,28 @@ public class Proxy extends HttpServlet {
         } else if (meter.equals(METER_WARNING_CODE)) {
           logger.info("Warned to subscribe by meter limit");
           authorized = false;
-          builder = new StringBuilder(uiUri);
-          builder.append(meterWarningUri);
-          builder.append(PARAM_PREFIX);
-          builder.append(redirectQueryString);
-          redirectUri = builder.toString();
+          uriBuilder.append(meterWarningUri);
+          uriBuilder.append(PARAM_PREFIX);
+          uriBuilder.append(redirectQueryString);
+          redirectUri = uriBuilder.toString();
           meterStatus = METER_WARNING_STATUS_CODE;
           ApiService.incrementMeteringCount(remoteIp, partnerId);
         } else if (meter.equals(METER_BLACK_LIST_BLOCK_CODE)) {
           // PW-287
           logger.info("Blocked from no-metered-access content");
           authorized = false;
-          builder = new StringBuilder(uiUri);
-          builder.append(meterBlacklistUri);
-          builder.append(PARAM_PREFIX);
-          builder.append(redirectQueryString);
-          redirectUri = builder.toString();
+          uriBuilder.append(meterBlacklistUri);
+          uriBuilder.append(PARAM_PREFIX);
+          uriBuilder.append(redirectQueryString);
+          redirectUri = uriBuilder.toString();
           meterStatus = METER_BLACK_LIST_STATUS_CODE;
         } else if (meter.equals(METER_BLOCK_CODE)) {
           logger.info("Blocked from paid content by meter limit");
           authorized = false;
-          builder = new StringBuilder(uiUri);
-          builder.append(meterBlockingUri);
-          builder.append(PARAM_PREFIX);
-          builder.append(redirectQueryString);
-          redirectUri = builder.toString();
+          uriBuilder.append(meterBlockingUri);
+          uriBuilder.append(PARAM_PREFIX);
+          uriBuilder.append(redirectQueryString);
+          redirectUri = uriBuilder.toString();
           meterStatus = METER_BLOCK_STATUS_CODE;
         } else {
           // PWL-646: Bypass and allow free access for unexpected status such as 404
@@ -710,34 +734,38 @@ public class Proxy extends HttpServlet {
    * performs any transformations required by the redirect, such as converting
    * an http scheme to https when the main URI contains https.
    *
-   * @param fullUri the full URI to which to redirect
+   * @param redirectUri the full URI to which to redirect
    * @param uiUri the URI containing the UI scheme and host
    * @return the transformed URI to which to redirect
    */
-  public String getRedirectUri(String fullUri, String uiUri) {
-    String redirectUri = null;
+  public String getRedirectQueryString(String redirectUri, String uiUri) {
 
-    logger.debug("Full URI to use for redirect: " + fullUri);
+    logger.debug("Full URI to use for redirect: " + redirectUri);
+
+    String transformedUri = redirectUri;
+
+    if (uiUri.toLowerCase().contains("https://")
+        && redirectUri.toLowerCase().contains("http://")) {
+      transformedUri = transformedUri.replaceFirst("http", "https");
+      logger.debug("Transformed URI to which to redirect:"
+                 + transformedUri);
+    }
 
     try {
-      redirectUri = URLEncoder.encode(fullUri, UTF_8);
+      transformedUri = URLEncoder.encode(transformedUri, UTF_8);
 
-      logger.debug("Encoded URI for redirect: " + redirectUri);
-
-      if (uiUri.toLowerCase().contains("https://")
-          && fullUri.toLowerCase().contains("http://")) {
-        redirectUri = redirectUri.replaceFirst("http", "https");
-      }
+      logger.debug("Transformed and encoded URI for redirect: " + transformedUri);
 
     } catch (UnsupportedEncodingException e) {
       // Log and ignore, use un-encoded redirect URI
-      logger.warn(ENCODING_FAIURE_ERROR + redirectUri, e);
+      logger.warn(ENCODING_FAIURE_ERROR + transformedUri, e);
     }
-
-    logger.debug("Encoded and transformed URI to which to redirect:"
-                 + redirectUri);
-
-    return redirectUri;
+    
+    StringBuilder builder = new StringBuilder(REDIRECT_PARAM);
+    builder.append(transformedUri);
+    String redirectQueryString = builder.toString();
+    
+    return redirectQueryString;
   }
 
   /**
