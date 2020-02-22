@@ -1173,13 +1173,11 @@ public class Proxy extends HttpServlet {
         // MBANK-20: Set PHP session ID for MorphoBank
         String value = header.getValue();
         if (value != null) {
-          int startIndex = value.indexOf(PHP_SESSION_COOKIE + "="); // get name start index
+          int startIndex = value.indexOf(PHP_SESSION_COOKIE + "=");
           if (startIndex != -1) {
-              startIndex += PHP_SESSION_COOKIE.length + 1; // get value start index
               int endIndex = value.indexOf(";", startIndex);
               if (endIndex != -1) {
-                String sessionId = value.substring(startIndex, endIndex);
-                response.addHeader(PHP_SESSION_COOKIE, sessionId);
+                response.addHeader(header.getName(), value.substring(startIndex, endIndex));
               }
           }
         }
