@@ -105,6 +105,8 @@ public class Proxy extends HttpServlet {
   private static final String PTOOLS_SESSION_COOKIE = "PTools-session";
   /** name of the tomcat session cookie */
   private static final String TOMCAT_SESSION_COOKIE = "JSESSIONID";
+  /** name of PHP session cookie, for MorphoBank integration */
+  private static final String PHP_SESSION_COOKIE = "PHPSESSID";
   /** name of the Phoenix party id cookie */
   private static final String CREDENTIAL_ID_COOKIE = "credentialId";
   /** name of the Phoenix secret key cookie */
@@ -1165,8 +1167,22 @@ public class Proxy extends HttpServlet {
   private void copyResponseHeaders(HttpResponse proxyResponse,
                                    HttpServletResponse response) {
     for (Header header : proxyResponse.getAllHeaders()) {
-      if (ProxyRequest.hopByHopHeaders.containsHeader(header.getName())
-          || header.getName().equals("Set-Cookie")) {
+      if (ProxyRequest.hopByHopHeaders.containsHeader(header.getName())) {
+        continue;
+      } else if (header.getName().equals("Set-Cookie")) {
+        // MBANK-20: Set PHP session ID for MorphoBank
+        String value = header.getValue();
+        if (value != null) {
+          int startIndex = value.indexOf(PHP_SESSION_COOKIE + "="); // get name start index
+          if (startIndex != -1) {
+              startIndex += PHP_SESSION_COOKIE.length + 1; // get value start index
+              int endIndex = value.indexOf(";", startIndex);
+              if (endIndex != -1) {
+                String sessionId = value.substring(startIndex, endIndex);
+                response.addHeader(PHP_SESSION_COOKIE, sessionId);
+              }
+          }
+        }
         continue;
       }
       response.addHeader(header.getName(), header.getValue());
