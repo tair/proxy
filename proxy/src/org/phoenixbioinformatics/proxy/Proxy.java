@@ -1167,23 +1167,21 @@ public class Proxy extends HttpServlet {
   private void copyResponseHeaders(HttpResponse proxyResponse,
                                    HttpServletResponse response) {
     for (Header header : proxyResponse.getAllHeaders()) {
-      if (ProxyRequest.hopByHopHeaders.containsHeader(header.getName())) {
+      String name = header.getName();
+      String value = header.getValue();
+      if (ProxyRequest.hopByHopHeaders.containsHeader(name)) {
         continue;
-      } else if (header.getName().equals("Set-Cookie")) {
+      } else if (name.equals("Set-Cookie")) {
         // MBANK-20: Set PHP session ID for MorphoBank
-        String value = header.getValue();
         if (value != null) {
-          int startIndex = value.indexOf(PHP_SESSION_COOKIE + "=");
+          int startIndex = value.indexOf(PHP_SESSION_COOKIE);
           if (startIndex != -1) {
-              int endIndex = value.indexOf(";", startIndex);
-              if (endIndex != -1) {
-                response.addHeader(header.getName(), value.substring(startIndex, endIndex));
-              }
+            response.addHeader(name, value);
           }
         }
         continue;
       }
-      response.addHeader(header.getName(), header.getValue());
+      response.addHeader(name, value);
     }
   }
 
