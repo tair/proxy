@@ -163,6 +163,8 @@ public class Proxy extends HttpServlet {
     "Error closing data source in proxy server: ";
   private static final String REDIRECT_ERROR =
     "Redirect status code but no location header in response";
+  private static final String HTTP_CODE_ERROR =
+    "Error getting http status code from request";
 
   // PWL-625
   private static final int PROXY_REQUEST_THRESHOLD = 5;
@@ -452,8 +454,11 @@ public class Proxy extends HttpServlet {
                                  StringBuilder userIdentifier, String ipListString,
                                  String sessionId, String isPaidContent, String auth, String targetRedirectUri)
       throws IOException, UnsupportedHttpMethodException, ServletException {
-
-    String statusCode = Integer(servletRequest.getStatusLine().getStatusCode()).toString();
+    try{
+      String statusCode = Integer(servletRequest.getStatusLine().getStatusCode()).toString();
+    }catch(NullPointerException e) {
+      logger.error(HTTP_CODE_ERROR, e);
+    }
     // Determine whether to proxy the request.
     if (authorizeProxyRequest(secretKey,
                               partnerId,
