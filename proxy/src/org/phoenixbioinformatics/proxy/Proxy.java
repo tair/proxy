@@ -163,6 +163,8 @@ public class Proxy extends HttpServlet {
     "Error closing data source in proxy server: ";
   private static final String REDIRECT_ERROR =
     "Redirect status code but no location header in response";
+  private static final String HTTP_CODE_ERROR =
+    "Error getting http status code from request";
 
   // PWL-625
   private static final int PROXY_REQUEST_THRESHOLD = 5;
@@ -417,11 +419,11 @@ public class Proxy extends HttpServlet {
    * @param sessionId the session ID of the partner session, if any
    */
   private void logRequest(String uri, String ip, String ipListString, String credentialId,
-                          String sessionId, String partnerId, String isPaidContent, String meterStatus) {
+                          String sessionId, String partnerId, String isPaidContent, String meterStatus, String statusCode) {
     // Log a page view for "real" URIs, exclude embedded images, js, etc.
     if (!isEmbeddedFile(uri)) {
       logger.debug("Creating page view for URI " + uri);
-      ApiService.createPageView(ip, ipListString, uri, credentialId, sessionId, partnerId, isPaidContent, meterStatus);
+      ApiService.createPageView(ip, ipListString, uri, credentialId, sessionId, partnerId, isPaidContent, meterStatus, statusCode);
     }
   }
 
@@ -452,7 +454,11 @@ public class Proxy extends HttpServlet {
                                  StringBuilder userIdentifier, String ipListString,
                                  String sessionId, String isPaidContent, String auth, String targetRedirectUri)
       throws IOException, UnsupportedHttpMethodException, ServletException {
-
+    try{
+      String statusCode = Integer(servletRequest.getStatusLine().getStatusCode()).toString();
+    }catch(NullPointerException e) {
+      logger.error(HTTP_CODE_ERROR, e);
+    }
     // Determine whether to proxy the request.
     if (authorizeProxyRequest(secretKey,
                               partnerId,
@@ -465,7 +471,8 @@ public class Proxy extends HttpServlet {
                               sessionId,
                               isPaidContent,
                               auth, 
-                              targetRedirectUri)) {
+                              targetRedirectUri,
+                              statusCode)) {
       // Authorized by the API, so proceed.
 
       ProxyRequest proxyRequest =
@@ -570,7 +577,7 @@ public class Proxy extends HttpServlet {
                                         HttpHost sourceHost, String remoteIp,
                                         HttpServletResponse servletResponse,
                                         String ipListString, String sessionId, 
-                                        String isPaidContent, String auth, String targetRedirectUri)
+                                        String isPaidContent, String auth, String targetRedirectUri, String statusCode)
       throws IOException {
 
     if (isEmbeddedFile(fullUri)) {
@@ -697,7 +704,7 @@ public class Proxy extends HttpServlet {
                   + redirectUri);
       servletResponse.sendRedirect(redirectUri + "&remoteIp=" +remoteIp);
     }
-    logRequest(fullUri, remoteIp, ipListString, credentialId, sessionId, partnerId, isPaidContent, meterStatus);
+    logRequest(fullUri, remoteIp, ipListString, credentialId, sessionId, partnerId, isPaidContent, meterStatus, statusCode);
 
     return authorized;
   }
