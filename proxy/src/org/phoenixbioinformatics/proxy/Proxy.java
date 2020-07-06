@@ -450,7 +450,7 @@ public class Proxy extends HttpServlet {
       logger.debug("Creating sqs page view for URI " + uri);
       CloseableHttpResponse response = null;
       HttpUriRequest request = null;
-      request = new HttpPost(SQS_URL);
+      request = new HttpPost(SQS_URL);//TODO: change to API_GATEWAY_URL
 
       // set params
       Date curDate = new Date();
@@ -460,7 +460,6 @@ public class Proxy extends HttpServlet {
       if (uri.length() >2000) {
         uri = uri.substring(0, 1950) + "__truncated_for_uri_longer_than_2000";
       }
-
       List<NameValuePair> params = new ArrayList<NameValuePair>(2);
       params.add(new BasicNameValuePair("pageViewDate", pageViewDate));
       params.add(new BasicNameValuePair("uri", uri));
@@ -475,6 +474,7 @@ public class Proxy extends HttpServlet {
       ((HttpPost)request).setEntity(new UrlEncodedFormEntity(params, "UTF-8"));
 
       CloseableHttpClient client = HttpClientBuilder.create().build();
+      request.setHeader("Content-Type", "application/json");
       response = client.execute(request);
 
       int status = response.getStatusLine().getStatusCode();
