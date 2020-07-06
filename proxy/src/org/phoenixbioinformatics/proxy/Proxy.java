@@ -465,7 +465,7 @@ public class Proxy extends HttpServlet {
       params.add(new BasicNameValuePair("pageViewDate", pageViewDate));
       params.add(new BasicNameValuePair("uri", uri));
       params.add(new BasicNameValuePair("sessionId", sessionId));
-      params.add(new BasicNameValuePair("partyId", partyId));
+      params.add(new BasicNameValuePair("partyId", credentialId));
       params.add(new BasicNameValuePair("ip", ip));
       params.add(new BasicNameValuePair("ipList", ipListString));
       params.add(new BasicNameValuePair("partnerId", partnerId));
