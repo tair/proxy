@@ -444,7 +444,7 @@ public class Proxy extends HttpServlet {
    *
    */
   private void sqsLogRequest(String uri, String ip, String ipListString, String credentialId,
-                          String sessionId, String partnerId, String isPaidContent, String meterStatus, String statusCode) {
+                          String sessionId, String partnerId, String isPaidContent, String meterStatus, String statusCode) throws IOException{
     // Log a page view for "real" URIs, exclude embedded images, js, etc.
     if (!isEmbeddedFile(uri)) {
       logger.debug("Creating sqs page view for URI " + uri);
