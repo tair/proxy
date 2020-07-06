@@ -557,7 +557,11 @@ public class Proxy extends HttpServlet {
             sourceHost,
             partnerId,
             userIdentifier.toString());
-      sqsLogRequest(fullRequestUri, remoteIp, ipListString, credentialId, sessionId, partnerId, isPaidContent, "N", String.valueOf(servletResponse.getStatus()));
+      try {
+        sqsLogRequest(fullRequestUri, remoteIp, ipListString, credentialId, sessionId, partnerId, isPaidContent, "N", String.valueOf(servletResponse.getStatus()));
+      }catch(Exception e){
+        logger.debug("sqs logging error");
+      }
       logRequest(fullRequestUri, remoteIp, ipListString, credentialId, sessionId, partnerId, isPaidContent, "N");
       logger.debug("userIdentifier after proxy(): " + userIdentifier.toString());
     }
@@ -759,7 +763,11 @@ public class Proxy extends HttpServlet {
       logger.info("Party " + credentialId + " not authorized for " + fullUri
                   + " at partner " + partnerId + ", redirecting to "
                   + redirectUri);
-      sqsLogRequest(fullUri, remoteIp, ipListString, credentialId, sessionId, partnerId, isPaidContent, meterStatus, String.valueOf(servletResponse.getStatus()));
+      try {
+        sqsLogRequest(fullUri, remoteIp, ipListString, credentialId, sessionId, partnerId, isPaidContent, meterStatus, String.valueOf(servletResponse.getStatus()));
+      }catch(Exception e){
+        logger.debug("sqs logging error");
+      }
       logRequest(fullUri, remoteIp, ipListString, credentialId, sessionId, partnerId, isPaidContent, meterStatus);
       servletResponse.sendRedirect(redirectUri + "&remoteIp=" +remoteIp);
     }
