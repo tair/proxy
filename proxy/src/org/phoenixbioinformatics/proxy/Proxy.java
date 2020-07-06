@@ -174,6 +174,10 @@ public class Proxy extends HttpServlet {
   private static final String METHOD_OPTIONS = "OPTIONS";
   private static final String METHOD_GET = "GET";
 
+  //sqs api url
+  private static final String SQS_URL =
+    ProxyProperties.getProperty("sqs.uri");
+
   @Override
   protected void service(HttpServletRequest servletRequest,
                          HttpServletResponse servletResponse)
@@ -419,13 +423,62 @@ public class Proxy extends HttpServlet {
    * @param sessionId the session ID of the partner session, if any
    */
   private void logRequest(String uri, String ip, String ipListString, String credentialId,
-                          String sessionId, String partnerId, String isPaidContent, String meterStatus, String statusCode) {
+                          String sessionId, String partnerId, String isPaidContent, String meterStatus) {
     // Log a page view for "real" URIs, exclude embedded images, js, etc.
     if (!isEmbeddedFile(uri)) {
       logger.debug("Creating page view for URI " + uri);
-      ApiService.createPageView(ip, ipListString, uri, credentialId, sessionId, partnerId, isPaidContent, meterStatus, statusCode);
+      ApiService.createPageView(ip, ipListString, uri, credentialId, sessionId, partnerId, isPaidContent, meterStatus);
     }
   }
+
+  /**
+   * Log a request through aws sqs service
+   *
+   */
+  private void sqsLogRequest(String uri, String ip, String ipListString, String credentialId,
+                          String sessionId, String partnerId, String isPaidContent, String meterStatus, String statusCode) {
+    // Log a page view for "real" URIs, exclude embedded images, js, etc.
+    if (!isEmbeddedFile(uri)) {
+      logger.debug("Creating sqs page view for URI " + uri);
+      CloseableHttpResponse response = null;
+      HttpUriRequest request = null;
+      request = new HttpPost(SQS_URL);
+
+      // set params
+      Date curDate = new Date();
+      SimpleDateFormat format = new SimpleDateFormat();
+      format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ssZ");
+      String pageViewDate = format.format(curDate);
+      if (uri.length() >2000) {
+        uri = uri.substring(0, 1950) + "__truncated_for_uri_longer_than_2000";
+      }
+
+      List<NameValuePair> params = new ArrayList<NameValuePair>(2);
+      params.add(new BasicNameValuePair("pageViewDate", pageViewDate));
+      params.add(new BasicNameValuePair("uri", uri));
+      params.add(new BasicNameValuePair("sessionId", sessionId));
+      params.add(new BasicNameValuePair("partyId", partyId));
+      params.add(new BasicNameValuePair("ip", ip));
+      params.add(new BasicNameValuePair("ipList", ipListString));
+      params.add(new BasicNameValuePair("partnerId", partnerId));
+      params.add(new BasicNameValuePair("isPaidContent", isPaidContent));
+      params.add(new BasicNameValuePair("meterStatus", meterStatus));
+      params.add(new BasicNameValuePair("statusCode", statusCode));
+      (HttpPost)request.setEntity(new UrlEncodedFormEntity(params, "UTF-8"));
+
+      CloseableHttpClient client = HttpClientBuilder.create().build();
+      response = client.execute(request);
+
+      int status = response.getStatusLine().getStatusCode();
+      if (status != HttpStatus.SC_OK && status != HttpStatus.SC_CREATED) {
+        logger.debug("Status creating sqs page view is not OK: " + status);
+        throw new IOException("Bad status code: " + String.valueOf(status));
+      } else {
+        logger.debug("Status creating sqs page view is OK: " + status);
+      }
+    }
+  }
+
 
   /**
    * Authorize the request, and if authorized, proxy it.
@@ -496,7 +549,8 @@ public class Proxy extends HttpServlet {
             sourceHost,
             partnerId,
             userIdentifier.toString());
-      logRequest(fullRequestUri, remoteIp, ipListString, credentialId, sessionId, partnerId, isPaidContent, "N", String.valueOf(servletResponse.getStatus()));
+      sqsLogRequest(fullRequestUri, remoteIp, ipListString, credentialId, sessionId, partnerId, isPaidContent, "N", String.valueOf(servletResponse.getStatus()));
+      logRequest(fullRequestUri, remoteIp, ipListString, credentialId, sessionId, partnerId, isPaidContent, "N");
       logger.debug("userIdentifier after proxy(): " + userIdentifier.toString());
     }
   }
@@ -697,7 +751,8 @@ public class Proxy extends HttpServlet {
       logger.info("Party " + credentialId + " not authorized for " + fullUri
                   + " at partner " + partnerId + ", redirecting to "
                   + redirectUri);
-      logRequest(fullUri, remoteIp, ipListString, credentialId, sessionId, partnerId, isPaidContent, meterStatus, String.valueOf(servletResponse.getStatus()));
+      sqsLogRequest(fullUri, remoteIp, ipListString, credentialId, sessionId, partnerId, isPaidContent, meterStatus, String.valueOf(servletResponse.getStatus()));
+      logRequest(fullUri, remoteIp, ipListString, credentialId, sessionId, partnerId, isPaidContent, meterStatus);
       servletResponse.sendRedirect(redirectUri + "&remoteIp=" +remoteIp);
     }
 
