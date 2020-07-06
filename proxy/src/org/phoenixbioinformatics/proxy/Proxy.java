@@ -471,10 +471,20 @@ public class Proxy extends HttpServlet {
       params.add(new BasicNameValuePair("isPaidContent", isPaidContent));
       params.add(new BasicNameValuePair("meterStatus", meterStatus));
       params.add(new BasicNameValuePair("statusCode", statusCode));
-      ((HttpPost)request).setEntity(new UrlEncodedFormEntity(params, "UTF-8"));
+//      request.setEntity(new UrlEncodedFormEntity(params, "UTF-8"));
+      String jsonString = new JSONObject()
+              .put("pageViewDate", pageViewDate)
+              .put("uri", uri)
+              .put("sessionId", sessionId)
+              .toString();
+      StringEntity requestEntity = new StringEntity(
+              jsonString,
+              ContentType.APPLICATION_JSON);
+      request.setEntity(requestEntity);
+
+//      request.setHeader("Content-Type", "application/json");
 
       CloseableHttpClient client = HttpClientBuilder.create().build();
-      request.setHeader("Content-Type", "application/json");
       response = client.execute(request);
 
       int status = response.getStatusLine().getStatusCode();
