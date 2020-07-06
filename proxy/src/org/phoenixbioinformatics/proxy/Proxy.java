@@ -464,7 +464,7 @@ public class Proxy extends HttpServlet {
       params.add(new BasicNameValuePair("isPaidContent", isPaidContent));
       params.add(new BasicNameValuePair("meterStatus", meterStatus));
       params.add(new BasicNameValuePair("statusCode", statusCode));
-      (HttpPost)request.setEntity(new UrlEncodedFormEntity(params, "UTF-8"));
+      ((HttpPost)request).setEntity(new UrlEncodedFormEntity(params, "UTF-8"));
 
       CloseableHttpClient client = HttpClientBuilder.create().build();
       response = client.execute(request);
