@@ -13,9 +13,11 @@ import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Date;
 import java.util.Enumeration;
 import java.util.List;
 
@@ -33,15 +35,23 @@ import org.apache.http.Header;
 import org.apache.http.HttpHeaders;
 import org.apache.http.HttpHost;
 import org.apache.http.HttpResponse;
+import org.apache.http.HttpStatus;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.CookieStore;
 import org.apache.http.client.ResponseHandler;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpUriRequest;
+import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.protocol.HttpClientContext;
 import org.apache.http.impl.client.BasicCookieStore;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.util.EntityUtils;
+import org.apache.http.NameValuePair;
+import org.apache.http.message.BasicNameValuePair;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.entity.ContentType;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.phoenixbioinformatics.api.ApiService;
@@ -52,6 +62,7 @@ import org.phoenixbioinformatics.http.HttpPropertyImpl;
 import org.phoenixbioinformatics.http.RequestFactory;
 import org.phoenixbioinformatics.http.UnsupportedHttpMethodException;
 import org.phoenixbioinformatics.properties.ProxyProperties;
+import org.json.JSONObject;
 
 
 /**
@@ -163,6 +174,8 @@ public class Proxy extends HttpServlet {
     "Error closing data source in proxy server: ";
   private static final String REDIRECT_ERROR =
     "Redirect status code but no location header in response";
+  private static final String HTTP_CODE_ERROR =
+    "Error getting http status code from request";
 
   // PWL-625
   private static final int PROXY_REQUEST_THRESHOLD = 5;
@@ -171,6 +184,10 @@ public class Proxy extends HttpServlet {
 
   private static final String METHOD_OPTIONS = "OPTIONS";
   private static final String METHOD_GET = "GET";
+
+  //sqs api url
+  private static final String API_GATEWAY_SQS_LOGGING_URL =
+    ProxyProperties.getProperty("sqs.uri");
 
   @Override
   protected void service(HttpServletRequest servletRequest,
@@ -426,6 +443,59 @@ public class Proxy extends HttpServlet {
   }
 
   /**
+   * Log a request through aws sqs service
+   *
+   */
+  private void sqsLogRequest(String uri, String ip, String ipListString, String credentialId,
+                          String sessionId, String partnerId, String isPaidContent, String meterStatus, String statusCode) throws IOException{
+    // Log a page view for "real" URIs, exclude embedded images, js, etc.
+    if (!isEmbeddedFile(uri)) {
+      logger.debug("Creating sqs page view for URI " + uri);
+      CloseableHttpResponse response = null;
+      HttpPost request = null;
+      request = new HttpPost(API_GATEWAY_SQS_LOGGING_URL);
+
+      // set params
+      Date curDate = new Date();
+      SimpleDateFormat format = new SimpleDateFormat();
+      format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ssZ");
+      String pageViewDate = format.format(curDate);
+      if (uri.length() >2000) {
+        uri = uri.substring(0, 1950) + "__truncated_for_uri_longer_than_2000";
+      }
+
+      String jsonString = new JSONObject()
+              .put("pageViewDate", pageViewDate)
+              .put("uri", uri)
+              .put("sessionId", sessionId)
+              .put("partyId", credentialId)
+              .put("ip", ip)
+              .put("ipList", ipListString)
+              .put("partnerId", partnerId)
+              .put("isPaidContent", isPaidContent)
+              .put("meterStatus", meterStatus)
+              .put("statusCode", statusCode)
+              .toString();
+      StringEntity requestEntity = new StringEntity(
+              jsonString,
+              ContentType.APPLICATION_JSON);
+      request.setEntity(requestEntity);
+
+      CloseableHttpClient client = HttpClientBuilder.create().build();
+      response = client.execute(request);
+
+      int status = response.getStatusLine().getStatusCode();
+      if (status != HttpStatus.SC_OK && status != HttpStatus.SC_CREATED) {
+        logger.debug("Status creating sqs page view is not OK: " + status);
+        throw new IOException("Bad status code: " + String.valueOf(status));
+      } else {
+        logger.debug("Status creating sqs page view is OK: " + status);
+      }
+    }
+  }
+
+
+  /**
    * Authorize the request, and if authorized, proxy it.
    *
    * @param servletRequest the HTTP servlet request to proxy
@@ -452,7 +522,6 @@ public class Proxy extends HttpServlet {
                                  StringBuilder userIdentifier, String ipListString,
                                  String sessionId, String isPaidContent, String auth, String targetRedirectUri)
       throws IOException, UnsupportedHttpMethodException, ServletException {
-
     // Determine whether to proxy the request.
     if (authorizeProxyRequest(secretKey,
                               partnerId,
@@ -495,6 +564,12 @@ public class Proxy extends HttpServlet {
             sourceHost,
             partnerId,
             userIdentifier.toString());
+      try {
+        sqsLogRequest(fullRequestUri, remoteIp, ipListString, credentialId, sessionId, partnerId, isPaidContent, "N", String.valueOf(servletResponse.getStatus()));
+      }catch(Exception e){
+        logger.debug("sqs logging error");
+      }
+      logRequest(fullRequestUri, remoteIp, ipListString, credentialId, sessionId, partnerId, isPaidContent, "N");
       logger.debug("userIdentifier after proxy(): " + userIdentifier.toString());
     }
   }
@@ -695,9 +770,14 @@ public class Proxy extends HttpServlet {
       logger.info("Party " + credentialId + " not authorized for " + fullUri
                   + " at partner " + partnerId + ", redirecting to "
                   + redirectUri);
+      try {
+        sqsLogRequest(fullUri, remoteIp, ipListString, credentialId, sessionId, partnerId, isPaidContent, meterStatus, String.valueOf(servletResponse.getStatus()));
+      }catch(Exception e){
+        logger.debug("sqs logging error");
+      }
+      logRequest(fullUri, remoteIp, ipListString, credentialId, sessionId, partnerId, isPaidContent, meterStatus);
       servletResponse.sendRedirect(redirectUri + "&remoteIp=" +remoteIp);
     }
-    logRequest(fullUri, remoteIp, ipListString, credentialId, sessionId, partnerId, isPaidContent, meterStatus);
 
     return authorized;
   }

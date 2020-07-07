@@ -254,7 +254,7 @@ public class ApiService extends AbstractApiService {
     params.add(new BasicNameValuePair("partnerId", partnerId));
     params.add(new BasicNameValuePair("isPaidContent", isPaidContent));
     params.add(new BasicNameValuePair("meterStatus", meterStatus));
-    
+
     String content = null;
     try {
     	  content = callApi(urn, RequestFactory.HttpMethod.POST, "", params);
