@@ -234,7 +234,7 @@ public class ApiService extends AbstractApiService {
    * Creates a page view log entry
    */
   public static void createPageView(String ip, String ipListString, String uri, String partyId,
-                                    String sessionId, String partnerId, String isPaidContent, String meterStatus, String statusCode) {
+                                    String sessionId, String partnerId, String isPaidContent, String meterStatus) {
     String urn = PAGE_VIEWS_URN + "/";
     Date curDate = new Date();
     SimpleDateFormat format = new SimpleDateFormat();
@@ -254,8 +254,7 @@ public class ApiService extends AbstractApiService {
     params.add(new BasicNameValuePair("partnerId", partnerId));
     params.add(new BasicNameValuePair("isPaidContent", isPaidContent));
     params.add(new BasicNameValuePair("meterStatus", meterStatus));
-    params.add(new BasicNameValuePair("statusCode", statusCode));
-    
+
     String content = null;
     try {
     	  content = callApi(urn, RequestFactory.HttpMethod.POST, "", params);
