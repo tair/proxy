@@ -62,7 +62,7 @@ import org.phoenixbioinformatics.http.HttpPropertyImpl;
 import org.phoenixbioinformatics.http.RequestFactory;
 import org.phoenixbioinformatics.http.UnsupportedHttpMethodException;
 import org.phoenixbioinformatics.properties.ProxyProperties;
-import org.json.simple.JSONObject;
+import org.json.JSONObject;
 
 
 /**
@@ -186,7 +186,7 @@ public class Proxy extends HttpServlet {
   private static final String METHOD_GET = "GET";
 
   //sqs api url
-  private static final String SQS_URL =
+  private static final String API_GATEWAY_SQS_LOGGING_URL =
     ProxyProperties.getProperty("sqs.uri");
 
   @Override
@@ -452,8 +452,8 @@ public class Proxy extends HttpServlet {
     if (!isEmbeddedFile(uri)) {
       logger.debug("Creating sqs page view for URI " + uri);
       CloseableHttpResponse response = null;
-      HttpUriRequest request = null;
-      request = new HttpPost(SQS_URL);//TODO: change to API_GATEWAY_URL
+      HttpPost request = null;
+      request = new HttpPost(API_GATEWAY_SQS_LOGGING_URL);
 
       // set params
       Date curDate = new Date();
@@ -463,29 +463,23 @@ public class Proxy extends HttpServlet {
       if (uri.length() >2000) {
         uri = uri.substring(0, 1950) + "__truncated_for_uri_longer_than_2000";
       }
-      List<NameValuePair> params = new ArrayList<NameValuePair>(2);
-      params.add(new BasicNameValuePair("pageViewDate", pageViewDate));
-      params.add(new BasicNameValuePair("uri", uri));
-      params.add(new BasicNameValuePair("sessionId", sessionId));
-      params.add(new BasicNameValuePair("partyId", credentialId));
-      params.add(new BasicNameValuePair("ip", ip));
-      params.add(new BasicNameValuePair("ipList", ipListString));
-      params.add(new BasicNameValuePair("partnerId", partnerId));
-      params.add(new BasicNameValuePair("isPaidContent", isPaidContent));
-      params.add(new BasicNameValuePair("meterStatus", meterStatus));
-      params.add(new BasicNameValuePair("statusCode", statusCode));
-//      request.setEntity(new UrlEncodedFormEntity(params, "UTF-8"));
+
       String jsonString = new JSONObject()
               .put("pageViewDate", pageViewDate)
               .put("uri", uri)
               .put("sessionId", sessionId)
+              .put("partyId", credentialId)
+              .put("ip", ip)
+              .put("ipList", ipListString)
+              .put("partnerId", partnerId)
+              .put("isPaidContent", isPaidContent)
+              .put("meterStatus", meterStatus)
+              .put("statusCode", statusCode)
               .toString();
       StringEntity requestEntity = new StringEntity(
               jsonString,
               ContentType.APPLICATION_JSON);
       request.setEntity(requestEntity);
-
-//      request.setHeader("Content-Type", "application/json");
 
       CloseableHttpClient client = HttpClientBuilder.create().build();
       response = client.execute(request);

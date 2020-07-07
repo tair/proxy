@@ -21,4 +21,4 @@ proxy.access.control.allow.origin.list=https\://ui.arabidopsis.org;https\://ui-a
 partner.map={"www.arabidopsis.org":{"partnerId":"tair","targetUri":"http://back-prod.arabidopsis.org"}, "gbrowse.arabidopsis.org":{"partnerId":"tair","targetUri":"http://back-gbrowse-prod.arabidopsis.org"}, "seqviewer.arabidopsis.org":{"partnerId":"tair","targetUri":"http://back-seqviewer-prod.arabidopsis.org"}}
 default.uri=http://back-prod.arabidopsis.org
 partner.id=tair
-sqs.url=https://0tabvzpmea.execute-api.us-west-2.amazonaws.com/beta/v1/enqueue/
+sqs.uri=https://0tabvzpmea.execute-api.us-west-2.amazonaws.com/beta/v1/enqueue/?MessageGroupId=MessageGroupId&MessageDeduplicationId=MessageDeduplicationId
