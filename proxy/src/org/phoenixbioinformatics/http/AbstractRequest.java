@@ -212,7 +212,8 @@ public abstract class AbstractRequest implements IRequest {
     // Content length and Transfer encoding indicate request has a body.
     if (hasEntity(servletRequest)) {
       // Content type is either form or non-form
-      if (servletRequest.getContentType().contains("application/x-www-form-urlencoded")) {
+      String contentType = servletRequest.getContentType();
+      if (contentType != null && contentType.contains("application/x-www-form-urlencoded")) {
         entity = encodeFormEntity(servletRequest);
       } else {
         logger.debug("Creating entity by copying");
