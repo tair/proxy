@@ -571,7 +571,7 @@ public class Proxy extends HttpServlet {
       }catch(Exception e){
         logger.debug("sqs logging error");
       }
-      logRequest(fullRequestUri, remoteIp, ipListString, credentialId, sessionId, partnerId, isPaidContent, "N");
+      //logRequest(fullRequestUri, remoteIp, ipListString, credentialId, sessionId, partnerId, isPaidContent, "N");
       logger.debug("userIdentifier after proxy(): " + userIdentifier.toString());
     }
   }
@@ -777,7 +777,7 @@ public class Proxy extends HttpServlet {
       }catch(Exception e){
         logger.debug("sqs logging error");
       }
-      logRequest(fullUri, remoteIp, ipListString, credentialId, sessionId, partnerId, isPaidContent, meterStatus);
+      //logRequest(fullUri, remoteIp, ipListString, credentialId, sessionId, partnerId, isPaidContent, meterStatus);
       servletResponse.sendRedirect(redirectUri + "&remoteIp=" +remoteIp);
     }
 
