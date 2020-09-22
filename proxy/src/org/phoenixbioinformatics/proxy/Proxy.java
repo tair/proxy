@@ -678,8 +678,10 @@ public class Proxy extends HttpServlet {
     }
     // BIOCYC-569 this is specifically for biocyc's brg-files.ai.sri.com
     // Generally we load uiUri from properties file
-    if (sourceHost.getHostName().equals("brg-files.ai.sri.com")) {
-        uiUri = "http://brg-files.ai.sri.com";
+    // BIOCYC-581: Need to handle staging server as well
+    String hostName = sourceHost.getHostName();
+    if (hostName != null && (hostName.equals("brg-files.ai.sri.com") || hostName.equals("brg-files-staging.ai.sri.com"))) {
+        uiUri = "http://" + hostName;
     }
     String loginUri = partner.getLoginUri();
     String meterWarningUri =
