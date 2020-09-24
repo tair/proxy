@@ -1351,7 +1351,11 @@ public class Proxy extends HttpServlet {
    */
   static Boolean validateIp(String headerValue) {
 		if (InetAddressValidator.getInstance().isValid(headerValue)) {
-			InetAddress address = InetAddress.getByName(headerValue);
+			try {
+				InetAddress address = InetAddress.getByName(headerValue);
+			} catch (UnknownHostException e) {
+				return false;
+			}
 			return !address.isSiteLocalAddress();
 		}
 	  return false;
