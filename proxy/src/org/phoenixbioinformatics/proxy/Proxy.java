@@ -13,6 +13,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
+import java.net.InetAddress;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -1350,7 +1351,8 @@ public class Proxy extends HttpServlet {
    */
   static Boolean validateIp(String headerValue) {
 		if (InetAddressValidator.getInstance().isValid(headerValue)) {
-			return true;
+			InetAddress address = InetAddress.getByName(headerValue);
+			return !address.isSiteLocalAddress();
 		}
 	  return false;
   }
