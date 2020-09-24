@@ -14,6 +14,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -1353,10 +1354,10 @@ public class Proxy extends HttpServlet {
 		if (InetAddressValidator.getInstance().isValid(headerValue)) {
 			try {
 				InetAddress address = InetAddress.getByName(headerValue);
+				return !address.isSiteLocalAddress();
 			} catch (UnknownHostException e) {
 				return false;
 			}
-			return !address.isSiteLocalAddress();
 		}
 	  return false;
   }
