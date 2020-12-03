@@ -349,7 +349,6 @@ public class Proxy extends HttpServlet {
           }
         }
 
-        String responseHeaders = getAllServletResponseHeaders(servletResponse);
         // TODO use source or target host for HOST header based on partner
         // option
         authorizeAndProxy(servletRequest,
@@ -367,8 +366,7 @@ public class Proxy extends HttpServlet {
                           sessionId,
                           isPaidContent,
                           auth,
-                          targetRedirectUri,
-                          responseHeaders);
+                          targetRedirectUri);
       } catch (ServletException | UnsupportedHttpMethodException | IOException e) {
         // Log checked exceptions here, then ignore.
         logger.error(REQUEST_HANDLING_ERROR, e);
@@ -527,8 +525,7 @@ public class Proxy extends HttpServlet {
                                  String fullRequestUri, String remoteIp,
                                  String credentialId, String secretKey, 
                                  StringBuilder userIdentifier, String ipListString,
-                                 String sessionId, String isPaidContent, String auth, String targetRedirectUri,
-                                 String responseHeaders)
+                                 String sessionId, String isPaidContent, String auth, String targetRedirectUri)
       throws IOException, UnsupportedHttpMethodException, ServletException {
     // Determine whether to proxy the request.
     if (authorizeProxyRequest(secretKey,
@@ -542,8 +539,7 @@ public class Proxy extends HttpServlet {
                               sessionId,
                               isPaidContent,
                               auth, 
-                              targetRedirectUri,
-                              responseHeaders)) {
+                              targetRedirectUri)) {
       // Authorized by the API, so proceed.
 
       ProxyRequest proxyRequest =
@@ -574,7 +570,7 @@ public class Proxy extends HttpServlet {
             partnerId,
             userIdentifier.toString());
       try {
-        sqsLogRequest(fullRequestUri, remoteIp, ipListString, credentialId, sessionId, partnerId, isPaidContent, "N", String.valueOf(servletResponse.getStatus()), responseHeaders, servletResponse.getContentType());
+        sqsLogRequest(fullRequestUri, remoteIp, ipListString, credentialId, sessionId, partnerId, isPaidContent, "N", String.valueOf(servletResponse.getStatus()), getAllServletResponseHeaders(servletResponse), servletResponse.getContentType());
       }catch(Exception e){
         logger.debug("sqs logging error");
       }
@@ -654,8 +650,7 @@ public class Proxy extends HttpServlet {
                                         HttpHost sourceHost, String remoteIp,
                                         HttpServletResponse servletResponse,
                                         String ipListString, String sessionId, 
-                                        String isPaidContent, String auth, String targetRedirectUri,
-                                        String responseHeaders)
+                                        String isPaidContent, String auth, String targetRedirectUri)
       throws IOException {
 
     if (isEmbeddedFile(fullUri)) {
@@ -781,7 +776,7 @@ public class Proxy extends HttpServlet {
                   + " at partner " + partnerId + ", redirecting to "
                   + redirectUri);
       try {
-        sqsLogRequest(fullUri, remoteIp, ipListString, credentialId, sessionId, partnerId, isPaidContent, meterStatus, String.valueOf(servletResponse.getStatus()),responseHeaders, servletResponse.getContentType());
+        sqsLogRequest(fullUri, remoteIp, ipListString, credentialId, sessionId, partnerId, isPaidContent, meterStatus, String.valueOf(servletResponse.getStatus()),getAllServletResponseHeaders(servletResponse), servletResponse.getContentType());
       }catch(Exception e){
         logger.debug("sqs logging error");
       }
