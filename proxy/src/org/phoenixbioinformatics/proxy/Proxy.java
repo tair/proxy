@@ -349,6 +349,7 @@ public class Proxy extends HttpServlet {
           }
         }
 
+        String responseHeaders = getAllServletResponseHeaders(servletResponse);
         // TODO use source or target host for HOST header based on partner
         // option
         authorizeAndProxy(servletRequest,
@@ -366,7 +367,8 @@ public class Proxy extends HttpServlet {
                           sessionId,
                           isPaidContent,
                           auth,
-                          targetRedirectUri);
+                          targetRedirectUri,
+                          responseHeaders);
       } catch (ServletException | UnsupportedHttpMethodException | IOException e) {
         // Log checked exceptions here, then ignore.
         logger.error(REQUEST_HANDLING_ERROR, e);
@@ -449,7 +451,8 @@ public class Proxy extends HttpServlet {
    *
    */
   private void sqsLogRequest(String uri, String ip, String ipListString, String credentialId,
-                          String sessionId, String partnerId, String isPaidContent, String meterStatus, String statusCode) throws IOException{
+                          String sessionId, String partnerId, String isPaidContent, String meterStatus, String statusCode,
+                          String responseHeaders, String contentType) throws IOException{
     // Log a page view for "real" URIs, exclude embedded images, js, etc.
     if (!isEmbeddedFile(uri)) {
       logger.debug("Creating sqs page view for URI " + uri);
@@ -477,6 +480,8 @@ public class Proxy extends HttpServlet {
               .put("isPaidContent", isPaidContent)
               .put("meterStatus", meterStatus)
               .put("statusCode", statusCode)
+              .put("responseHeaders", responseHeaders)
+              .put("contentType", contentType)
               .toString();
       StringEntity requestEntity = new StringEntity(
               jsonString,
@@ -522,7 +527,8 @@ public class Proxy extends HttpServlet {
                                  String fullRequestUri, String remoteIp,
                                  String credentialId, String secretKey, 
                                  StringBuilder userIdentifier, String ipListString,
-                                 String sessionId, String isPaidContent, String auth, String targetRedirectUri)
+                                 String sessionId, String isPaidContent, String auth, String targetRedirectUri,
+                                 String responseHeaders)
       throws IOException, UnsupportedHttpMethodException, ServletException {
     // Determine whether to proxy the request.
     if (authorizeProxyRequest(secretKey,
@@ -536,7 +542,8 @@ public class Proxy extends HttpServlet {
                               sessionId,
                               isPaidContent,
                               auth, 
-                              targetRedirectUri)) {
+                              targetRedirectUri,
+                              responseHeaders)) {
       // Authorized by the API, so proceed.
 
       ProxyRequest proxyRequest =
@@ -567,7 +574,7 @@ public class Proxy extends HttpServlet {
             partnerId,
             userIdentifier.toString());
       try {
-        sqsLogRequest(fullRequestUri, remoteIp, ipListString, credentialId, sessionId, partnerId, isPaidContent, "N", String.valueOf(servletResponse.getStatus()));
+        sqsLogRequest(fullRequestUri, remoteIp, ipListString, credentialId, sessionId, partnerId, isPaidContent, "N", String.valueOf(servletResponse.getStatus()), responseHeaders, servletResponse.getContentType());
       }catch(Exception e){
         logger.debug("sqs logging error");
       }
@@ -647,7 +654,8 @@ public class Proxy extends HttpServlet {
                                         HttpHost sourceHost, String remoteIp,
                                         HttpServletResponse servletResponse,
                                         String ipListString, String sessionId, 
-                                        String isPaidContent, String auth, String targetRedirectUri)
+                                        String isPaidContent, String auth, String targetRedirectUri,
+                                        String responseHeaders)
       throws IOException {
 
     if (isEmbeddedFile(fullUri)) {
@@ -773,7 +781,7 @@ public class Proxy extends HttpServlet {
                   + " at partner " + partnerId + ", redirecting to "
                   + redirectUri);
       try {
-        sqsLogRequest(fullUri, remoteIp, ipListString, credentialId, sessionId, partnerId, isPaidContent, meterStatus, String.valueOf(servletResponse.getStatus()));
+        sqsLogRequest(fullUri, remoteIp, ipListString, credentialId, sessionId, partnerId, isPaidContent, meterStatus, String.valueOf(servletResponse.getStatus()),responseHeaders, servletResponse.getContentType());
       }catch(Exception e){
         logger.debug("sqs logging error");
       }
@@ -1435,6 +1443,22 @@ public class Proxy extends HttpServlet {
       }
     }
     logger.debug("--------------------------------------------------------------");
+  }
+
+  /**
+   * Get all the servlet response headers
+   *
+   * @param response the HTTP servlet response whose header is to obtain
+   */
+  private static string getAllServletResponseHeaders(HttpServletResponse response) {
+    JSONObject headers;
+    Collection<String> names = response.getHeaderNames();
+    for (String headerName : names) {
+      for (String header : response.getHeaders(headerName)) {
+        headers.put(headerName,header);
+      }
+    }
+    return headers.toString();
   }
 
   /**
