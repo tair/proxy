@@ -1449,8 +1449,10 @@ public class Proxy extends HttpServlet {
     JSONObject headers = new JSONObject();
     Collection<String> names = response.getHeaderNames();
     for (String headerName : names) {
-      for (String header : response.getHeaders(headerName)) {
-        headers.put(headerName,header);
+      if (response.getHeaders(headerName).size()>1){
+        headers.put(headerName,response.getHeaders(headerName));
+      }else if (response.getHeaders(headerName).size() == 1){
+        headers.put(headerName,response.getHeaders(headerName).iterator().next());
       }
     }
     return headers.toString();
