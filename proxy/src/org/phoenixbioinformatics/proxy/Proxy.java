@@ -1450,7 +1450,7 @@ public class Proxy extends HttpServlet {
    *
    * @param response the HTTP servlet response whose header is to obtain
    */
-  private static string getAllServletResponseHeaders(HttpServletResponse response) {
+  private static String getAllServletResponseHeaders(HttpServletResponse response) {
     JSONObject headers;
     Collection<String> names = response.getHeaderNames();
     for (String headerName : names) {
