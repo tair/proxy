@@ -449,7 +449,8 @@ public class Proxy extends HttpServlet {
    *
    */
   private void sqsLogRequest(String uri, String ip, String ipListString, String credentialId,
-                          String sessionId, String partnerId, String isPaidContent, String meterStatus, String statusCode) throws IOException{
+                          String sessionId, String partnerId, String isPaidContent, String meterStatus, String statusCode,
+                          String responseHeaders, String contentType) throws IOException{
     // Log a page view for "real" URIs, exclude embedded images, js, etc.
     if (!isEmbeddedFile(uri)) {
       logger.debug("Creating sqs page view for URI " + uri);
@@ -477,6 +478,8 @@ public class Proxy extends HttpServlet {
               .put("isPaidContent", isPaidContent)
               .put("meterStatus", meterStatus)
               .put("statusCode", statusCode)
+              .put("responseHeaders", responseHeaders)
+              .put("contentType", contentType)
               .toString();
       StringEntity requestEntity = new StringEntity(
               jsonString,
@@ -567,7 +570,7 @@ public class Proxy extends HttpServlet {
             partnerId,
             userIdentifier.toString());
       try {
-        sqsLogRequest(fullRequestUri, remoteIp, ipListString, credentialId, sessionId, partnerId, isPaidContent, "N", String.valueOf(servletResponse.getStatus()));
+        sqsLogRequest(fullRequestUri, remoteIp, ipListString, credentialId, sessionId, partnerId, isPaidContent, "N", String.valueOf(servletResponse.getStatus()), getAllServletResponseHeaders(servletResponse), servletResponse.getContentType());
       }catch(Exception e){
         logger.debug("sqs logging error");
       }
@@ -773,7 +776,7 @@ public class Proxy extends HttpServlet {
                   + " at partner " + partnerId + ", redirecting to "
                   + redirectUri);
       try {
-        sqsLogRequest(fullUri, remoteIp, ipListString, credentialId, sessionId, partnerId, isPaidContent, meterStatus, String.valueOf(servletResponse.getStatus()));
+        sqsLogRequest(fullUri, remoteIp, ipListString, credentialId, sessionId, partnerId, isPaidContent, meterStatus, String.valueOf(servletResponse.getStatus()),getAllServletResponseHeaders(servletResponse), servletResponse.getContentType());
       }catch(Exception e){
         logger.debug("sqs logging error");
       }
@@ -1435,6 +1438,24 @@ public class Proxy extends HttpServlet {
       }
     }
     logger.debug("--------------------------------------------------------------");
+  }
+
+  /**
+   * Get all the servlet response headers
+   *
+   * @param response the HTTP servlet response whose header is to obtain
+   */
+  private static String getAllServletResponseHeaders(HttpServletResponse response) {
+    JSONObject headers = new JSONObject();
+    Collection<String> names = response.getHeaderNames();
+    for (String headerName : names) {
+      if (response.getHeaders(headerName).size()>1){
+        headers.put(headerName,response.getHeaders(headerName));
+      }else if (response.getHeaders(headerName).size() == 1){
+        headers.put(headerName,response.getHeaders(headerName).iterator().next());
+      }
+    }
+    return headers.toString();
   }
 
   /**
