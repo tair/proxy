@@ -299,6 +299,7 @@ public class Proxy extends HttpServlet {
         logger.debug("Ip Address Detected: " + ipListString);
         
         String remoteIp = remoteIpList.get(0);
+        String orgId = null;
         String partnerId = hostFactory.getPartnerId();
         StringBuilder userIdentifier = new StringBuilder();
         	String auth = NOT_OK_CODE;
@@ -317,6 +318,7 @@ public class Proxy extends HttpServlet {
                                    ipListString);
           auth = accessOutput.status;
           remoteIp = accessOutput.ip;
+          orgId = accessOutput.orgId;
           userIdentifier.append(accessOutput.userIdentifier);
           isPaidContent = accessOutput.isPaidContent;
           redirectUri = accessOutput.redirectUri;
@@ -359,6 +361,7 @@ public class Proxy extends HttpServlet {
                           sourceHost, // hard-coded to source for now
                           fullRequestUri,
                           remoteIp,
+                          orgId,
                           credentialId,
                           secretKey,
                           userIdentifier,
@@ -448,7 +451,7 @@ public class Proxy extends HttpServlet {
    * Log a request through aws sqs service
    *
    */
-  private void sqsLogRequest(String uri, String ip, String ipListString, String credentialId,
+  private void sqsLogRequest(String uri, String ip, String orgId, String ipListString, String credentialId,
                           String sessionId, String partnerId, String isPaidContent, String meterStatus, String statusCode,
                           String responseHeaders, String contentType) throws IOException{
     // Log a page view for "real" URIs, exclude embedded images, js, etc.
@@ -473,6 +476,7 @@ public class Proxy extends HttpServlet {
               .put("sessionId", sessionId)
               .put("partyId", credentialId)
               .put("ip", ip)
+              .put("orgId", orgId)
               .put("ipList", ipListString)
               .put("partnerId", partnerId)
               .put("isPaidContent", isPaidContent)
@@ -511,6 +515,7 @@ public class Proxy extends HttpServlet {
    * @param sourceHost the host being proxied
    * @param fullRequestUri the transformed URI for the proxy request
    * @param remoteIp the user's IP address
+   * @param orgId the organization party id corresponding to the user's IP address
    * @param credentialId the user's party id if logged in
    * @param secretKey the user's secret key for authentication
    * @throws IOException when there is a URI problem
@@ -522,7 +527,7 @@ public class Proxy extends HttpServlet {
                                  HttpServletResponse servletResponse,
                                  String uri, String partnerId,
                                  HttpHost targetHost, HttpHost sourceHost,
-                                 String fullRequestUri, String remoteIp,
+                                 String fullRequestUri, String remoteIp, String orgId,
                                  String credentialId, String secretKey, 
                                  StringBuilder userIdentifier, String ipListString,
                                  String sessionId, String isPaidContent, String auth, String targetRedirectUri)
@@ -534,6 +539,7 @@ public class Proxy extends HttpServlet {
                               fullRequestUri,
                               sourceHost,
                               remoteIp,
+                              orgId,
                               servletResponse,
                               ipListString,
                               sessionId,
@@ -570,7 +576,7 @@ public class Proxy extends HttpServlet {
             partnerId,
             userIdentifier.toString());
       try {
-        sqsLogRequest(fullRequestUri, remoteIp, ipListString, credentialId, sessionId, partnerId, isPaidContent, "N", String.valueOf(servletResponse.getStatus()), getAllServletResponseHeaders(servletResponse), servletResponse.getContentType());
+        sqsLogRequest(fullRequestUri, remoteIp, orgId, ipListString, credentialId, sessionId, partnerId, isPaidContent, "N", String.valueOf(servletResponse.getStatus()), getAllServletResponseHeaders(servletResponse), servletResponse.getContentType());
       }catch(Exception e){
         logger.debug("sqs logging error");
       }
@@ -639,6 +645,7 @@ public class Proxy extends HttpServlet {
    * @param sourceHost client's source authority. example:
    *          https://test.arabidopsis.org
    * @param remoteIp client's IP address
+   * @param orgId organization party id corresponding to the client's IP address
    * @param servletResponse client's response to be modified if ther request to
    *          partner's server is denied.
    * @param userIdentifier the by-reference object that will contain the output
@@ -647,7 +654,7 @@ public class Proxy extends HttpServlet {
    */
   private Boolean authorizeProxyRequest(String secretKey, String partnerId,
                                         String credentialId, String fullUri,
-                                        HttpHost sourceHost, String remoteIp,
+                                        HttpHost sourceHost, String remoteIp, String orgId,
                                         HttpServletResponse servletResponse,
                                         String ipListString, String sessionId, 
                                         String isPaidContent, String auth, String targetRedirectUri)
@@ -776,7 +783,7 @@ public class Proxy extends HttpServlet {
                   + " at partner " + partnerId + ", redirecting to "
                   + redirectUri);
       try {
-        sqsLogRequest(fullUri, remoteIp, ipListString, credentialId, sessionId, partnerId, isPaidContent, meterStatus, String.valueOf(servletResponse.getStatus()),getAllServletResponseHeaders(servletResponse), servletResponse.getContentType());
+        sqsLogRequest(fullUri, remoteIp, orgId, ipListString, credentialId, sessionId, partnerId, isPaidContent, meterStatus, String.valueOf(servletResponse.getStatus()),getAllServletResponseHeaders(servletResponse), servletResponse.getContentType());
       }catch(Exception e){
         logger.debug("sqs logging error");
       }
