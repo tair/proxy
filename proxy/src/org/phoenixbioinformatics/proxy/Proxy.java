@@ -13,6 +13,8 @@ import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -688,8 +690,10 @@ public class Proxy extends HttpServlet {
     }
     // BIOCYC-569 this is specifically for biocyc's brg-files.ai.sri.com
     // Generally we load uiUri from properties file
-    if (sourceHost.getHostName().equals("brg-files.ai.sri.com")) {
-        uiUri = "http://brg-files.ai.sri.com";
+    // BIOCYC-581: Need to handle staging server as well
+    String hostName = sourceHost.getHostName();
+    if (hostName != null && (hostName.equals("brg-files.ai.sri.com") || hostName.equals("brg-files-staging.ai.sri.com"))) {
+        uiUri = "http://" + hostName;
     }
     String loginUri = partner.getLoginUri();
     String meterWarningUri =
@@ -1358,7 +1362,12 @@ public class Proxy extends HttpServlet {
    */
   static Boolean validateIp(String headerValue) {
 		if (InetAddressValidator.getInstance().isValid(headerValue)) {
-			return true;
+			try {
+				InetAddress address = InetAddress.getByName(headerValue);
+				return !address.isSiteLocalAddress();
+			} catch (UnknownHostException e) {
+				return false;
+			}
 		}
 	  return false;
   }
