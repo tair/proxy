@@ -693,7 +693,7 @@ public class Proxy extends HttpServlet {
     // BIOCYC-581: Need to handle staging server as well
     String hostName = sourceHost.getHostName();
     if (hostName != null && (hostName.equals("brg-files.ai.sri.com") || hostName.equals("brg-files-staging.ai.sri.com"))) {
-        uiUri = "http://" + hostName;
+        uiUri = "https://" + hostName;
     }
     String loginUri = partner.getLoginUri();
     String meterWarningUri =
