@@ -710,7 +710,9 @@ public class Proxy extends HttpServlet {
     // logger.debug("meter blacklist blocking URI set to: " +
     // meterBlacklistUri);
 
-    Boolean authorized = false;
+    // PWL-556: Set default authorized value to true to handle case when API server is down.
+    // Otherwise it will run into infinite redirect
+    Boolean authorized = true;
     String redirectUri = ""; // complete URI to which to redirect here
     String redirectQueryString = getRedirectQueryString(targetRedirectUri, uiUri);   
 
