@@ -79,6 +79,7 @@ import org.json.JSONObject;
 
 @WebServlet(urlPatterns = { "/proxy/*" })
 public class Proxy extends HttpServlet {
+  private static final String NULL_VALUE = null;
   private static final String QUERY_PREFIX = "?";
 
   private static final String PARAM_PREFIX = "&";
@@ -328,6 +329,8 @@ public class Proxy extends HttpServlet {
         } catch (Exception e) {
           // Problem making the API call, continue with "Not OK" default status
           // Problem already logged
+          // PWL-556: userIdentifier has to be assigned to null for bypassing API check
+          userIdentifier.append(NULL_VALUE);
         }
 
         // PWL-716: for non-GET request whose metered pattern has redirectUri value, use redirectUri to 
