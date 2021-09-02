@@ -330,6 +330,7 @@ public class Proxy extends HttpServlet {
           // Problem making the API call, continue with "Not OK" default status
           // Problem already logged
           // PWL-556: userIdentifier has to be assigned to null for bypassing API check
+          logger.info("Check access failed. Bypassing proxy/paywall - allowing free access to content. Set userIdentifier to null.");
           userIdentifier.append(NULL_VALUE);
         }
 
@@ -770,12 +771,12 @@ public class Proxy extends HttpServlet {
           meterStatus = METER_BLOCK_STATUS_CODE;
         } else {
           // PWL-646: Bypass and allow free access for unexpected status such as 404
-          logger.info("Check meter limit returned with unexpected code: " + meter + ". Bypassing proxy/paywall - Allowed free access to content.");
+          logger.info("Check meter limit returned with unexpected code: " + meter + ". Bypassing proxy/paywall - allowing free access to content.");
           authorized = true;
         }
       } catch (Exception e) {
         // PWL-556: Bypass and allow free access
-        logger.info("Check meter limit failed. Bypassing proxy/paywall - Allowed free access to content.");
+        logger.info("Check meter limit failed. Bypassing proxy/paywall - allowing free access to content.");
         authorized = true;
       }
     } else if (auth.equals(NEED_LOGIN_CODE)) {
