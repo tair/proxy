@@ -79,6 +79,7 @@ import org.json.JSONObject;
 
 @WebServlet(urlPatterns = { "/proxy/*" })
 public class Proxy extends HttpServlet {
+  private static final String NULL_VALUE = null;
   private static final String QUERY_PREFIX = "?";
 
   private static final String PARAM_PREFIX = "&";
@@ -328,6 +329,9 @@ public class Proxy extends HttpServlet {
         } catch (Exception e) {
           // Problem making the API call, continue with "Not OK" default status
           // Problem already logged
+          // PWL-556: userIdentifier has to be assigned to null for bypassing API check
+          logger.info("Check access failed. Bypassing proxy/paywall - allowing free access to content. Set userIdentifier to null.");
+          userIdentifier.append(NULL_VALUE);
         }
 
         // PWL-716: for non-GET request whose metered pattern has redirectUri value, use redirectUri to 
@@ -710,7 +714,9 @@ public class Proxy extends HttpServlet {
     // logger.debug("meter blacklist blocking URI set to: " +
     // meterBlacklistUri);
 
-    Boolean authorized = false;
+    // PWL-556: Set default authorized value to true to handle case when API server is down.
+    // Otherwise it will run into infinite redirect
+    Boolean authorized = true;
     String redirectUri = ""; // complete URI to which to redirect here
     String redirectQueryString = getRedirectQueryString(targetRedirectUri, uiUri);   
 
@@ -765,12 +771,12 @@ public class Proxy extends HttpServlet {
           meterStatus = METER_BLOCK_STATUS_CODE;
         } else {
           // PWL-646: Bypass and allow free access for unexpected status such as 404
-          logger.info("Check meter limit returned with unexpected code: " + meter + ". Bypassing proxy/paywall - Allowed free access to content.");
+          logger.info("Check meter limit returned with unexpected code: " + meter + ". Bypassing proxy/paywall - allowing free access to content.");
           authorized = true;
         }
       } catch (Exception e) {
         // PWL-556: Bypass and allow free access
-        logger.info("Check meter limit failed. Bypassing proxy/paywall - Allowed free access to content.");
+        logger.info("Check meter limit failed. Bypassing proxy/paywall - allowing free access to content.");
         authorized = true;
       }
     } else if (auth.equals(NEED_LOGIN_CODE)) {
