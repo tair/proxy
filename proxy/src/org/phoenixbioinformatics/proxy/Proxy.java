@@ -301,7 +301,11 @@ public class Proxy extends HttpServlet {
         //log all the ips that are detected for testing
         logger.debug("Ip Address Detected: " + ipListString);
         
-        String remoteIp = remoteIpList.get(0);
+
+        String remoteIp = null;
+        if (remoteIpList.size() > 0) {
+          remoteIp = remoteIpList.get(0);
+        }
         String orgId = null;
         String partnerId = hostFactory.getPartnerId();
         StringBuilder userIdentifier = new StringBuilder();
