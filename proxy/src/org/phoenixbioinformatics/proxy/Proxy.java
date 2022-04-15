@@ -134,6 +134,8 @@ public class Proxy extends HttpServlet {
   private static final String LOCALHOST_V6 = "0:0:0:0:0:0:0:1";
   /** code for UTF8 */
   private static final String UTF_8 = "UTF-8";
+  /** placeholder for private ip */
+  private static final String ELB_HEALTH_CHECKER_IP = "172.16.0.0";
 
   // API codes
   private static final String NEED_LOGIN_CODE = "NeedLogin";
@@ -301,6 +303,7 @@ public class Proxy extends HttpServlet {
         //log all the ips that are detected for testing
         logger.debug("Ip Address Detected: " + ipListString);
         
+
         String remoteIp = remoteIpList.get(0);
         String orgId = null;
         String partnerId = hostFactory.getPartnerId();
@@ -1401,6 +1404,10 @@ public class Proxy extends HttpServlet {
         	}
         }
       }
+    }
+    // PWL-868: Add private IP for ELB health checker
+    if (result.size() == 0) {
+      result.add(ELB_HEALTH_CHECKER_IP);
     }
 
     return result;
