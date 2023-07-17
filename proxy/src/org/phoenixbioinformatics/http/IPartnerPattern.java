@@ -24,4 +24,12 @@ public interface IPartnerPattern {
    * @return the target URI (scheme and authority)
    */
   String getTargetUri();
+
+  /**
+   * Get whether the partner's site allows redirect, which corresponds to the source URI 
+   * with which the partner implementation was created.
+   *
+   * @return the target URI (scheme and authority)
+   */
+  Boolean getAllowRedirect();
 }

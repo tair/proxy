@@ -132,6 +132,18 @@ public class HttpHostFactory {
     return id;
   }
 
+  /**
+   * Get whether the domain allows redirect when
+   * hit redirect criteria
+   */
+  public Boolean getAllowRedirect() {
+    Boolean allowRedirect = true;
+    if (partnerPattern != null) {
+      allowRedirect = partnerPattern.getAllowRedirect();
+    }
+    return allowRedirect;
+  }
+
   // Unit test getters
 
   /**

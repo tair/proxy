@@ -95,17 +95,20 @@ public class ApiService extends AbstractApiService {
     public String partnerId;
     public String sourceUri;
     public String targetUri;
+    public Boolean allowRedirect;
 
-    private PartnerOutput(String pId, String sUri, String tUri) {
+    private PartnerOutput(String pId, String sUri, String tUri, Boolean allowRedirect) {
       this.partnerId = pId;
       this.sourceUri = sUri;
       this.targetUri = tUri;
+      this.allowRedirect = allowRedirect;
     }
 
     public static PartnerOutput createInstance(String sourceUri) {
       // set as default values
       String partnerId = DEFAULT_PARTNER_ID;
       String targetUri = ProxyProperties.getProperty("default.uri");
+      Boolean allowRedirect = true;
       String mapContent = ProxyProperties.getProperty("partner.map");
       if (mapContent != null) {
         try {
@@ -116,6 +119,10 @@ public class ApiService extends AbstractApiService {
           if (partnerInfo != null) {
             partnerId = partnerInfo.get("partnerId");
             targetUri = partnerInfo.get("targetUri");
+            if (partnerInfo.containsKey("allowRedirect")){
+              String allowRedirectStr = partnerInfo.get("allowRedirect");
+              allowRedirect = allowRedirectStr.equals("T") || allowRedirectStr.equals("true") || allowRedirectStr.equals("True");
+            }
           } else {
             logger.info("No partner mapping info for " + sourceUri + ". Use default partner info.");
           }
@@ -125,7 +132,7 @@ public class ApiService extends AbstractApiService {
       } else {
         logger.info("Partner info map is undefined. Use default partner info.");
       }
-      return new PartnerOutput(partnerId, sourceUri, targetUri);
+      return new PartnerOutput(partnerId, sourceUri, targetUri, allowRedirect);
     }
   }
   
