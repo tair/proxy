@@ -827,7 +827,7 @@ public class Proxy extends HttpServlet {
         JSONObject jsonResponse = new JSONObject();
         jsonResponse.put("statusCode", statusCode);
         jsonResponse.put("message", unauthorizedErrorMsg);
-        jsonResponse.put("redirectUri", unauthorizedRedirectUri);
+        jsonResponse.put("redirectUri", unauthorizedRedirectUri + "&remoteIp=" + remoteIp);
         jsonResponse.put("meterStatus", meterStatus);
 
         servletResponse.setContentType("application/json");
