@@ -239,6 +239,7 @@ public class Proxy extends HttpServlet {
     List<String> origins =
       ACCESS_CONTROL_ALLOW_ORIGIN_LIST != null ? Arrays.asList(ACCESS_CONTROL_ALLOW_ORIGIN_LIST.trim().split(";"))
           : new ArrayList<String>(1);
+    setCORSHeader(servletRequest, servletResponse, origins);
     if (servletRequest.getMethod().equals(METHOD_OPTIONS)) {
       logger.debug("Getting options...");
       handleOptionsRequest(servletRequest, servletResponse, origins);
@@ -1247,16 +1248,6 @@ public class Proxy extends HttpServlet {
     logger.debug("Setting cookies: credentialId = "
                  + credentialIdCookie.getValue() + "; secretKey = "
                  + secretKeyCookie.getValue());
-    // TAIR-2734
-    String origin = servletRequest.getHeader("Origin");
-    if (origins.contains(origin)) {
-      servletResponse.setHeader("Access-Control-Allow-Origin", origin);
-    } else {
-      logger.debug("Attempted access from non-allowed origin: {}", origin);
-      // Include an origin to provide a clear browser error
-      servletResponse.setHeader("Access-Control-Allow-Origin",
-                                origins.iterator().next());
-    }
     // servletResponse.setHeader("Access-Control-Allow-Origin", UI_URI);
     servletResponse.setHeader("Access-Control-Allow-Credentials", "true");
     logAllServletResponseHeaders(servletResponse);
@@ -1272,7 +1263,24 @@ public class Proxy extends HttpServlet {
   private void handleOptionsRequest(HttpServletRequest servletRequest,
                                     HttpServletResponse servletResponse,
                                     List<String> origins) {
-    // TAIR-2734
+    // servletResponse.setHeader("Access-Control-Allow-Origin", UI_URI);
+    servletResponse.setHeader("Access-Control-Allow-Credentials", "true");
+    servletResponse.setHeader("Access-Control-Allow-Headers",
+                              "x-requested-with, content-type, accept, origin, authorization, x-csrftoken");
+    servletResponse.setHeader("Access-Control-Allow-Methods",
+                              "GET, POST, PUT, DELETE");
+  }
+
+  /**
+   * Set the CORS header
+   *
+   * @param servletRequest the HTTP request
+   * @param servletResponse the HTTP response
+   * @param origins: a list of allowed origins for access control
+   */
+  private void setCORSHeader(HttpServletRequest servletRequest,
+                            HttpServletResponse servletResponse,
+                            List<String> origins) {
     String origin = servletRequest.getHeader("Origin");
     if (origins.contains(origin)) {
       servletResponse.setHeader("Access-Control-Allow-Origin", origin);
@@ -1282,12 +1290,6 @@ public class Proxy extends HttpServlet {
       servletResponse.setHeader("Access-Control-Allow-Origin",
                                 origins.iterator().next());
     }
-    // servletResponse.setHeader("Access-Control-Allow-Origin", UI_URI);
-    servletResponse.setHeader("Access-Control-Allow-Credentials", "true");
-    servletResponse.setHeader("Access-Control-Allow-Headers",
-                              "x-requested-with, content-type, accept, origin, authorization, x-csrftoken");
-    servletResponse.setHeader("Access-Control-Allow-Methods",
-                              "GET, POST, PUT, DELETE");
   }
 
   /**
