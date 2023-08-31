@@ -273,7 +273,11 @@ public class Proxy extends HttpServlet {
         String secretKey = null;
         String sessionId = null;
         Boolean allowRedirect = hostFactory.getAllowRedirect();
+        Boolean allowCredential = hostFactory.getAllowCredential();
         Cookie cookies[] = servletRequest.getCookies();
+        if (allowCredential) {
+          setAllowCredentialHeader(servletResponse);
+        }
         if (cookies != null) {
           for (Cookie c : Arrays.asList(cookies)) {
             String cookieName = c.getName();
@@ -1244,12 +1248,11 @@ public class Proxy extends HttpServlet {
     servletResponse.addCookie(secretKeyCookie);
     // PW-165, add ".arabidopsis.org" domain cookie
     addCookie(servletResponse, secretKeyCookie, partnerId, null);
+    setAllowCredentialHeader(servletResponse);
 
     logger.debug("Setting cookies: credentialId = "
                  + credentialIdCookie.getValue() + "; secretKey = "
                  + secretKeyCookie.getValue());
-    // servletResponse.setHeader("Access-Control-Allow-Origin", UI_URI);
-    servletResponse.setHeader("Access-Control-Allow-Credentials", "true");
     logAllServletResponseHeaders(servletResponse);
   }
 
@@ -1263,8 +1266,7 @@ public class Proxy extends HttpServlet {
   private void handleOptionsRequest(HttpServletRequest servletRequest,
                                     HttpServletResponse servletResponse,
                                     List<String> origins) {
-    // servletResponse.setHeader("Access-Control-Allow-Origin", UI_URI);
-    servletResponse.setHeader("Access-Control-Allow-Credentials", "true");
+    setAllowCredentialHeader(servletResponse);
     servletResponse.setHeader("Access-Control-Allow-Headers",
                               "x-requested-with, content-type, accept, origin, authorization, x-csrftoken");
     servletResponse.setHeader("Access-Control-Allow-Methods",
@@ -1292,6 +1294,10 @@ public class Proxy extends HttpServlet {
     }
   }
 
+  private void setAllowCredentialHeader(HttpServletResponse servletResponse) {
+    servletResponse.setHeader("Access-Control-Allow-Credentials", "true");
+  }
+
   /**
    * Copy proxied response headers back to the servlet client. Skip any
    * hop-by-hop headers or cookies. Stripping cookies ensures that no cookies
@@ -1317,6 +1323,11 @@ public class Proxy extends HttpServlet {
           }
         }
         continue;
+      } else if (name.equals("Access-Control-Allow-Origin")) {
+        // PWL-898: skip partner CORS header when the partner site allow all access
+        if (value.equals("*")) {
+          continue;
+        }
       }
       response.addHeader(name, value);
     }

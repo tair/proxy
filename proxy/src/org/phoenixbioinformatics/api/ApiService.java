@@ -96,12 +96,14 @@ public class ApiService extends AbstractApiService {
     public String sourceUri;
     public String targetUri;
     public Boolean allowRedirect;
+    public Boolean allowCredential;
 
-    private PartnerOutput(String pId, String sUri, String tUri, Boolean allowRedirect) {
+    private PartnerOutput(String pId, String sUri, String tUri, Boolean allowRedirect, Boolean allowCredential) {
       this.partnerId = pId;
       this.sourceUri = sUri;
       this.targetUri = tUri;
       this.allowRedirect = allowRedirect;
+      this.allowCredential = allowCredential;
     }
 
     public static PartnerOutput createInstance(String sourceUri) {
@@ -109,6 +111,7 @@ public class ApiService extends AbstractApiService {
       String partnerId = DEFAULT_PARTNER_ID;
       String targetUri = ProxyProperties.getProperty("default.uri");
       Boolean allowRedirect = true;
+      Boolean allowCredential = false;
       String mapContent = ProxyProperties.getProperty("partner.map");
       if (mapContent != null) {
         try {
@@ -123,6 +126,10 @@ public class ApiService extends AbstractApiService {
               String allowRedirectStr = partnerInfo.get("allowRedirect");
               allowRedirect = allowRedirectStr.equals("T") || allowRedirectStr.equals("true") || allowRedirectStr.equals("True");
             }
+            if (partnerInfo.containsKey("allowCredential")){
+              String allowCredentialStr = partnerInfo.get("allowCredential");
+              allowCredential = allowCredentialStr.equals("T") || allowCredentialStr.equals("true") || allowCredentialStr.equals("True");
+            }
           } else {
             logger.info("No partner mapping info for " + sourceUri + ". Use default partner info.");
           }
@@ -132,9 +139,11 @@ public class ApiService extends AbstractApiService {
       } else {
         logger.info("Partner info map is undefined. Use default partner info.");
       }
-      return new PartnerOutput(partnerId, sourceUri, targetUri, allowRedirect);
+      return new PartnerOutput(partnerId, sourceUri, targetUri, allowRedirect, allowCredential);
     }
   }
+
+
   
   /**
    * Data transfer object for partner detail API output data

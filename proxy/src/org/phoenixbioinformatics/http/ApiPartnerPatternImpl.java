@@ -92,4 +92,10 @@ public class ApiPartnerPatternImpl implements IPartnerPattern {
     getPartnerPattern();
     return partnerPattern.allowRedirect;
   }
+
+  @Override
+  public Boolean getAllowCredential() {
+    getPartnerPattern();
+    return partnerPattern.allowCredential;
+  }
 }
