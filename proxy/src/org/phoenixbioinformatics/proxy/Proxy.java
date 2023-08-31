@@ -1317,6 +1317,12 @@ public class Proxy extends HttpServlet {
           }
         }
         continue;
+      } else if (name.equals("Access-Control-Allow-Origin")) {
+        // PWL-898: Override CORS header when the partner site allow all access
+        if (value.equals("*")) {
+          response.setHeader(name, value);
+          continue;
+        }
       }
       response.addHeader(name, value);
     }
