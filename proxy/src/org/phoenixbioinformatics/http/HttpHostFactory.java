@@ -144,6 +144,18 @@ public class HttpHostFactory {
     return allowRedirect;
   }
 
+  /**
+   * Get whether the domain allows other request to set
+   * credential/cookie for it
+   */
+  public Boolean getAllowCredential() {
+    Boolean allowCredential = false;
+    if (partnerPattern != null) {
+      allowCredential = partnerPattern.getAllowCredential();
+    }
+    return allowCredential;
+  }
+
   // Unit test getters
 
   /**
