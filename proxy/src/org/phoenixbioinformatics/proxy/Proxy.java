@@ -239,6 +239,7 @@ public class Proxy extends HttpServlet {
     List<String> origins =
       ACCESS_CONTROL_ALLOW_ORIGIN_LIST != null ? Arrays.asList(ACCESS_CONTROL_ALLOW_ORIGIN_LIST.trim().split(";"))
           : new ArrayList<String>(1);
+    setCORSHeader(servletRequest, servletResponse, origins);
     if (servletRequest.getMethod().equals(METHOD_OPTIONS)) {
       logger.debug("Getting options...");
       handleOptionsRequest(servletRequest, servletResponse, origins);
@@ -271,7 +272,12 @@ public class Proxy extends HttpServlet {
         String credentialId = null;
         String secretKey = null;
         String sessionId = null;
+        Boolean allowRedirect = hostFactory.getAllowRedirect();
+        Boolean allowCredential = hostFactory.getAllowCredential();
         Cookie cookies[] = servletRequest.getCookies();
+        if (allowCredential) {
+          setAllowCredentialHeader(servletResponse);
+        }
         if (cookies != null) {
           for (Cookie c : Arrays.asList(cookies)) {
             String cookieName = c.getName();
@@ -378,7 +384,8 @@ public class Proxy extends HttpServlet {
                           sessionId,
                           isPaidContent,
                           auth,
-                          targetRedirectUri);
+                          targetRedirectUri,
+                          allowRedirect);
       } catch (ServletException | UnsupportedHttpMethodException | IOException e) {
         // Log checked exceptions here, then ignore.
         logger.error(REQUEST_HANDLING_ERROR, e);
@@ -539,7 +546,8 @@ public class Proxy extends HttpServlet {
                                  String fullRequestUri, String remoteIp, String orgId,
                                  String credentialId, String secretKey, 
                                  StringBuilder userIdentifier, String ipListString,
-                                 String sessionId, String isPaidContent, String auth, String targetRedirectUri)
+                                 String sessionId, String isPaidContent, String auth,
+                                 String targetRedirectUri, Boolean allowRedirect)
       throws IOException, UnsupportedHttpMethodException, ServletException {
     // Determine whether to proxy the request.
     if (authorizeProxyRequest(secretKey,
@@ -554,7 +562,8 @@ public class Proxy extends HttpServlet {
                               sessionId,
                               isPaidContent,
                               auth, 
-                              targetRedirectUri)) {
+                              targetRedirectUri,
+                              allowRedirect)) {
       // Authorized by the API, so proceed.
 
       ProxyRequest proxyRequest =
@@ -666,7 +675,8 @@ public class Proxy extends HttpServlet {
                                         HttpHost sourceHost, String remoteIp, String orgId,
                                         HttpServletResponse servletResponse,
                                         String ipListString, String sessionId, 
-                                        String isPaidContent, String auth, String targetRedirectUri)
+                                        String isPaidContent, String auth,
+                                        String targetRedirectUri, Boolean allowRedirect)
       throws IOException {
 
     if (isEmbeddedFile(fullUri)) {
@@ -722,6 +732,8 @@ public class Proxy extends HttpServlet {
     Boolean authorized = true;
     String redirectUri = ""; // complete URI to which to redirect here
     String redirectQueryString = getRedirectQueryString(targetRedirectUri, uiUri);   
+    String unauthorizedErrorMsg = "";
+    String unauthorizedRedirectUri = "";
 
     // Handle the various status codes.
     String meterStatus = METER_NOT_METERED_STATUS_CODE;
@@ -747,9 +759,11 @@ public class Proxy extends HttpServlet {
           ApiService.incrementMeteringCount(remoteIp, partnerId);
 
         } else if (meter.equals(METER_WARNING_CODE)) {
-          logger.info("Warned to subscribe by meter limit");
+          unauthorizedErrorMsg = "Warned to subscribe by meter limit";
+          logger.info(unauthorizedErrorMsg);
           authorized = false;
           uriBuilder.append(meterWarningUri);
+          unauthorizedRedirectUri = uriBuilder.toString();
           uriBuilder.append(PARAM_PREFIX);
           uriBuilder.append(redirectQueryString);
           redirectUri = uriBuilder.toString();
@@ -757,17 +771,21 @@ public class Proxy extends HttpServlet {
           ApiService.incrementMeteringCount(remoteIp, partnerId);
         } else if (meter.equals(METER_BLACK_LIST_BLOCK_CODE)) {
           // PW-287
-          logger.info("Blocked from no-metered-access content");
+          unauthorizedErrorMsg = "Blocked from no-metered-access content";
+          logger.info(unauthorizedErrorMsg);
           authorized = false;
           uriBuilder.append(meterBlacklistUri);
+          unauthorizedRedirectUri = uriBuilder.toString();
           uriBuilder.append(PARAM_PREFIX);
           uriBuilder.append(redirectQueryString);
           redirectUri = uriBuilder.toString();
           meterStatus = METER_BLACK_LIST_STATUS_CODE;
         } else if (meter.equals(METER_BLOCK_CODE)) {
-          logger.info("Blocked from paid content by meter limit");
+          unauthorizedErrorMsg = "Blocked from paid content by meter limit";
+          logger.info(unauthorizedErrorMsg);
           authorized = false;
           uriBuilder.append(meterBlockingUri);
+          unauthorizedRedirectUri = uriBuilder.toString();
           uriBuilder.append(PARAM_PREFIX);
           uriBuilder.append(redirectQueryString);
           redirectUri = uriBuilder.toString();
@@ -784,8 +802,11 @@ public class Proxy extends HttpServlet {
       }
     } else if (auth.equals(NEED_LOGIN_CODE)) {
       // force user to log in
+      unauthorizedErrorMsg = "User required to login";
+      logger.info(unauthorizedErrorMsg);
       authorized = false;
       redirectUri = getLoginRedirectUri(uiUri, loginUri, redirectQueryString);
+      unauthorizedRedirectUri = redirectUri;
       logger.info("Party " + credentialId + " needs to login to access "
                   + fullUri + " at partner " + partnerId);
     }
@@ -801,7 +822,23 @@ public class Proxy extends HttpServlet {
         logger.debug("sqs logging error");
       }
       //logRequest(fullUri, remoteIp, ipListString, credentialId, sessionId, partnerId, isPaidContent, meterStatus);
-      servletResponse.sendRedirect(redirectUri + "&remoteIp=" +remoteIp);
+      if (allowRedirect) {
+        servletResponse.sendRedirect(redirectUri + "&remoteIp=" +remoteIp);
+      } else {
+        // send Access denied response if the host does not allow redirect such as API host
+        // servletResponse.sendError(HttpServletResponse.SC_UNAUTHORIZED, unauthorizedRedirectUri + "?&remoteIp=" +remoteIp);
+        int statusCode = HttpServletResponse.SC_UNAUTHORIZED;
+
+        JSONObject jsonResponse = new JSONObject();
+        jsonResponse.put("statusCode", statusCode);
+        jsonResponse.put("message", unauthorizedErrorMsg);
+        jsonResponse.put("redirectUri", unauthorizedRedirectUri + "&remoteIp=" + remoteIp);
+        jsonResponse.put("meterStatus", meterStatus);
+
+        servletResponse.setContentType("application/json");
+        servletResponse.setStatus(statusCode);
+        servletResponse.getWriter().write(jsonResponse.toString());
+      }
     }
 
     return authorized;
@@ -1211,22 +1248,11 @@ public class Proxy extends HttpServlet {
     servletResponse.addCookie(secretKeyCookie);
     // PW-165, add ".arabidopsis.org" domain cookie
     addCookie(servletResponse, secretKeyCookie, partnerId, null);
+    setAllowCredentialHeader(servletResponse);
 
     logger.debug("Setting cookies: credentialId = "
                  + credentialIdCookie.getValue() + "; secretKey = "
                  + secretKeyCookie.getValue());
-    // TAIR-2734
-    String origin = servletRequest.getHeader("Origin");
-    if (origins.contains(origin)) {
-      servletResponse.setHeader("Access-Control-Allow-Origin", origin);
-    } else {
-      logger.debug("Attempted access from non-allowed origin: {}", origin);
-      // Include an origin to provide a clear browser error
-      servletResponse.setHeader("Access-Control-Allow-Origin",
-                                origins.iterator().next());
-    }
-    // servletResponse.setHeader("Access-Control-Allow-Origin", UI_URI);
-    servletResponse.setHeader("Access-Control-Allow-Credentials", "true");
     logAllServletResponseHeaders(servletResponse);
   }
 
@@ -1240,7 +1266,23 @@ public class Proxy extends HttpServlet {
   private void handleOptionsRequest(HttpServletRequest servletRequest,
                                     HttpServletResponse servletResponse,
                                     List<String> origins) {
-    // TAIR-2734
+    setAllowCredentialHeader(servletResponse);
+    servletResponse.setHeader("Access-Control-Allow-Headers",
+                              "x-requested-with, content-type, accept, origin, authorization, x-csrftoken");
+    servletResponse.setHeader("Access-Control-Allow-Methods",
+                              "GET, POST, PUT, DELETE");
+  }
+
+  /**
+   * Set the CORS header
+   *
+   * @param servletRequest the HTTP request
+   * @param servletResponse the HTTP response
+   * @param origins: a list of allowed origins for access control
+   */
+  private void setCORSHeader(HttpServletRequest servletRequest,
+                            HttpServletResponse servletResponse,
+                            List<String> origins) {
     String origin = servletRequest.getHeader("Origin");
     if (origins.contains(origin)) {
       servletResponse.setHeader("Access-Control-Allow-Origin", origin);
@@ -1250,12 +1292,10 @@ public class Proxy extends HttpServlet {
       servletResponse.setHeader("Access-Control-Allow-Origin",
                                 origins.iterator().next());
     }
-    // servletResponse.setHeader("Access-Control-Allow-Origin", UI_URI);
+  }
+
+  private void setAllowCredentialHeader(HttpServletResponse servletResponse) {
     servletResponse.setHeader("Access-Control-Allow-Credentials", "true");
-    servletResponse.setHeader("Access-Control-Allow-Headers",
-                              "x-requested-with, content-type, accept, origin, authorization, x-csrftoken");
-    servletResponse.setHeader("Access-Control-Allow-Methods",
-                              "GET, POST, PUT, DELETE");
   }
 
   /**
@@ -1283,6 +1323,11 @@ public class Proxy extends HttpServlet {
           }
         }
         continue;
+      } else if (name.equals("Access-Control-Allow-Origin")) {
+        // PWL-898: skip partner CORS header when the partner site allow all access
+        if (value.equals("*")) {
+          continue;
+        }
       }
       response.addHeader(name, value);
     }
