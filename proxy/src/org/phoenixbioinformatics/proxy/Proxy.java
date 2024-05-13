@@ -241,6 +241,7 @@ public class Proxy extends HttpServlet {
     List<String> origins =
       ACCESS_CONTROL_ALLOW_ORIGIN_LIST != null ? Arrays.asList(ACCESS_CONTROL_ALLOW_ORIGIN_LIST.trim().split(";"))
           : new ArrayList<String>(1);
+    HttpHostFactory hostFactory = getHostFactory(servletRequest);
     Boolean allowCredential = hostFactory.getAllowCredential();
     setCORSHeader(servletRequest, servletResponse, origins, allowCredential);
     if (servletRequest.getMethod().equals(METHOD_OPTIONS)) {
@@ -248,7 +249,6 @@ public class Proxy extends HttpServlet {
       handleOptionsRequest(servletRequest, servletResponse, origins);
     } else if (action != null && action.equals("setCookies")) {
       logger.debug("Setting cookies...");
-      HttpHostFactory hostFactory = getHostFactory(servletRequest);
       handleSetCookieRequest(servletRequest,
                              servletResponse,
                              origins,
@@ -260,7 +260,6 @@ public class Proxy extends HttpServlet {
       logger.debug("\n==========\nIncoming URI: " + uri + " with query string "
                    + queryString + "\n==========");
       try {
-        HttpHostFactory hostFactory = getHostFactory(servletRequest);
         HttpHost sourceHost = hostFactory.getSourceHost();
 
         HttpHost targetHost = hostFactory.getTargetHost();
