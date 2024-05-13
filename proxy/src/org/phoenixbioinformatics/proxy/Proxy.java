@@ -11,6 +11,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
+import java.net.URL;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.net.InetAddress;
@@ -22,6 +23,7 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.List;
+
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -239,7 +241,8 @@ public class Proxy extends HttpServlet {
     List<String> origins =
       ACCESS_CONTROL_ALLOW_ORIGIN_LIST != null ? Arrays.asList(ACCESS_CONTROL_ALLOW_ORIGIN_LIST.trim().split(";"))
           : new ArrayList<String>(1);
-    setCORSHeader(servletRequest, servletResponse, origins);
+    Boolean allowCredential = hostFactory.getAllowCredential();
+    setCORSHeader(servletRequest, servletResponse, origins, allowCredential);
     if (servletRequest.getMethod().equals(METHOD_OPTIONS)) {
       logger.debug("Getting options...");
       handleOptionsRequest(servletRequest, servletResponse, origins);
@@ -273,11 +276,8 @@ public class Proxy extends HttpServlet {
         String secretKey = null;
         String sessionId = null;
         Boolean allowRedirect = hostFactory.getAllowRedirect();
-        Boolean allowCredential = hostFactory.getAllowCredential();
         Cookie cookies[] = servletRequest.getCookies();
-        if (allowCredential) {
-          setAllowCredentialHeader(servletResponse);
-        }
+
         if (cookies != null) {
           for (Cookie c : Arrays.asList(cookies)) {
             String cookieName = c.getName();
@@ -1239,6 +1239,7 @@ public class Proxy extends HttpServlet {
     servletResponse.addCookie(credentialIdCookie);
     // PW-165, add ".arabidopsis.org" domain cookie
     addCookie(servletResponse, credentialIdCookie, partnerId, null);
+    setAllowCredentialHeader(servletResponse);
 
     Cookie secretKeyCookie =
       new Cookie(SECRET_KEY_COOKIE,
@@ -1248,7 +1249,6 @@ public class Proxy extends HttpServlet {
     servletResponse.addCookie(secretKeyCookie);
     // PW-165, add ".arabidopsis.org" domain cookie
     addCookie(servletResponse, secretKeyCookie, partnerId, null);
-    setAllowCredentialHeader(servletResponse);
 
     logger.debug("Setting cookies: credentialId = "
                  + credentialIdCookie.getValue() + "; secretKey = "
@@ -1282,20 +1282,67 @@ public class Proxy extends HttpServlet {
    */
   private void setCORSHeader(HttpServletRequest servletRequest,
                             HttpServletResponse servletResponse,
-                            List<String> origins) {
+                            List<String> origins,
+                            Boolean allowCredential) {
     String origin = servletRequest.getHeader("Origin");
+
     if (origins.contains(origin)) {
       servletResponse.setHeader("Access-Control-Allow-Origin", origin);
+      if (allowCredential) {
+        setAllowCredentialHeader(servletResponse);
+      }
     } else {
-      logger.debug("Attempted access from non-allowed origin: {}", origin);
-      // Include an origin to provide a clear browser error
-      servletResponse.setHeader("Access-Control-Allow-Origin",
-                                origins.iterator().next());
+      // TAIR3-374: Always allow CORS for API type request
+      if (allowCredential) {
+        if (isValidOrigin(origin)) {
+          logger.debug(LOG_MARKER + "Bypassing attempted API access from non-allowed origin: " + origin);
+          servletResponse.setHeader("Access-Control-Allow-Origin", origin);
+          setAllowCredentialHeader(servletResponse);
+        } else if (origin == null) {
+          // a common case for users accesing via their proxy
+          logger.debug("Attempted API access from non-allowed origin: null");
+          servletResponse.setHeader("Access-Control-Allow-Origin",
+                                  "*");
+          // not setting allow credential header since it conflicts with
+          // Access-Control-Allow-Origin == *
+          // assuming users from such origin is using institutional subscription
+        } else {
+          // for anything else, deny it
+          logger.debug("Attempted API access from non-allowed origin: " + origin);
+          servletResponse.setHeader("Access-Control-Allow-Origin",
+                                  origins.iterator().next());
+        }
+      } else {
+        logger.debug("Attempted access from non-allowed origin: {}", origin);
+        // Include an origin to provide a clear browser error
+        servletResponse.setHeader("Access-Control-Allow-Origin",
+                                  origins.iterator().next());
+      }
     }
   }
 
   private void setAllowCredentialHeader(HttpServletResponse servletResponse) {
     servletResponse.setHeader("Access-Control-Allow-Credentials", "true");
+  }
+
+  private boolean isValidOrigin(String urlString) {
+    try {
+        URL url = new URL(urlString);
+
+        // Check if the protocol is HTTP or HTTPS
+        if (!url.getProtocol().equals("http") && !url.getProtocol().equals("https")) {
+          return false;
+        }
+
+        // Check if the host is valid and not empty
+        if (url.getHost() == null || url.getHost().isEmpty()) {
+          return false;
+        }
+
+        return true;
+    } catch (Exception e) {
+        return false;
+    }
   }
 
   /**
