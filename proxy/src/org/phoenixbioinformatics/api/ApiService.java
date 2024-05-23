@@ -124,18 +124,25 @@ public class ApiService extends AbstractApiService {
             targetUri = partnerInfo.get("targetUri");
             String allowRedirectStr = "";
             String allowCredentialStr = "";
+            // start with "default value" of the current partner
+            if (partnerInfo.containsKey("allowRedirect")){
+              allowRedirectStr = partnerInfo.get("allowRedirect");
+            }
+            if (partnerInfo.containsKey("allowCredential")){
+              allowCredentialStr = partnerInfo.get("allowCredential");
+            }
             // match the uriPath with special pattern
-            if (partnerInfo.containsKey("sub")
-              && partnerInfo.get("sub").containsKey("path")
-              && uriPath.contains(partnerInfo.get("sub").get("path"))) {
-              allowRedirectStr = partnerInfo.get("sub").get("allowRedirect");
-              allowCredentialStr = partnerInfo.get("sub").get("allowCredential");
-            } else {
-              if (partnerInfo.containsKey("allowRedirect")){
-                allowRedirectStr = partnerInfo.get("allowRedirect");
-              }
-              if (partnerInfo.containsKey("allowCredential")){
-                allowCredentialStr = partnerInfo.get("allowCredential");
+            if (partnerInfo.containsKey("sub")) {
+              Type subMapType = new TypeToken<HashMap<String, String>(){}.getType();
+              HashMap<String, String> subMap = parser.fromJson(partnerInfo.get("sub"), subMapType);
+              if (subMap.containsKey("path")
+                && uriPath.contains(subMap.get("path"))) {
+                if (subMap.containsKey("allowRedirect")) {
+                  allowRedirectStr = subMap.get("allowRedirect");
+                }
+                if (subMap.containsKey("allowCredential")) {
+                  allowCredentialStr = subMap.get("allowCredential");
+                }
               }
             }
             allowRedirect = allowRedirectStr.equals("T") || allowRedirectStr.equals("true") || allowRedirectStr.equals("True");
