@@ -97,6 +97,13 @@ public class ApiService extends AbstractApiService {
     public String targetUri;
     public Boolean allowRedirect;
     public Boolean allowCredential;
+    SubMap sub;
+
+    private class SubMap {
+      String path;
+      Boolean allowRedirect;
+      Boolean allowCredential;
+    }
 
     private PartnerOutput(String pId, String sUri, String tUri, Boolean allowRedirect, Boolean allowCredential) {
       this.partnerId = pId;
@@ -116,37 +123,34 @@ public class ApiService extends AbstractApiService {
       if (mapContent != null) {
         try {
           Gson parser = new Gson();
-          Type type = new TypeToken<HashMap<String, HashMap<String, String>>>(){}.getType();
-          HashMap<String, HashMap<String, String>> map = parser.fromJson(mapContent, type);
-          HashMap<String, String> partnerInfo = map.get(sourceUri);
+          Type type = new TypeToken<HashMap<String, PartnerOutput>>(){}.getType();
+          HashMap<String, PartnerOutput> map = parser.fromJson(mapContent, type);
+          PartnerOutput partnerInfo = map.get(sourceUri);
           if (partnerInfo != null) {
-            partnerId = partnerInfo.get("partnerId");
-            targetUri = partnerInfo.get("targetUri");
-            String allowRedirectStr = "";
-            String allowCredentialStr = "";
+            partnerId = partnerInfo.partnerId;
+            targetUri = partnerInfo.targetUri;
             // start with "default value" of the current partner
-            if (partnerInfo.containsKey("allowRedirect")){
-              allowRedirectStr = partnerInfo.get("allowRedirect");
+            if (partnerInfo.allowRedirect != null){
+              allowRedirect = partnerInfo.allowRedirect;
             }
-            if (partnerInfo.containsKey("allowCredential")){
-              allowCredentialStr = partnerInfo.get("allowCredential");
+            if (partnerInfo.allowCredential != null){
+              allowCredential = partnerInfo.allowCredential;
             }
             // match the uriPath with special pattern
-            if (partnerInfo.containsKey("sub")) {
-              Type subMapType = new TypeToken<HashMap<String, String>>(){}.getType();
-              HashMap<String, String> subMap = parser.fromJson(partnerInfo.get("sub"), subMapType);
-              if (subMap.containsKey("path")
-                && uriPath.contains(subMap.get("path"))) {
-                if (subMap.containsKey("allowRedirect")) {
-                  allowRedirectStr = subMap.get("allowRedirect");
+            if (partnerInfo.sub != null) {
+              if (partnerInfo.sub.path != null
+                && uriPath.contains(partnerInfo.sub.path)) {
+                if (partnerInfo.sub.allowRedirect != null) {
+                  allowRedirect = partnerInfo.sub.allowRedirect;
                 }
-                if (subMap.containsKey("allowCredential")) {
-                  allowCredentialStr = subMap.get("allowCredential");
+                if (partnerInfo.sub.allowCredential != null) {
+                  allowCredential = partnerInfo.sub.allowCredential;
                 }
               }
             }
-            allowRedirect = allowRedirectStr.equals("T") || allowRedirectStr.equals("true") || allowRedirectStr.equals("True");
-            allowCredential = allowCredentialStr.equals("T") || allowCredentialStr.equals("true") || allowCredentialStr.equals("True");
+            // assume allowRedirect and allowCredential 
+            // allowRedirect = allowRedirectStr.equals("T") || allowRedirectStr.equals("true") || allowRedirectStr.equals("True");
+            // allowCredential = allowCredentialStr.equals("T") || allowCredentialStr.equals("true") || allowCredentialStr.equals("True");
           } else {
             logger.info("No partner mapping info for " + sourceUri + ". Use default partner info.");
           }
