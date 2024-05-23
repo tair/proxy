@@ -106,7 +106,7 @@ public class ApiService extends AbstractApiService {
       this.allowCredential = allowCredential;
     }
 
-    public static PartnerOutput createInstance(String sourceUri) {
+    public static PartnerOutput createInstance(String sourceUri, String uriPath) {
       // set as default values
       String partnerId = DEFAULT_PARTNER_ID;
       String targetUri = ProxyProperties.getProperty("default.uri");
@@ -122,14 +122,24 @@ public class ApiService extends AbstractApiService {
           if (partnerInfo != null) {
             partnerId = partnerInfo.get("partnerId");
             targetUri = partnerInfo.get("targetUri");
-            if (partnerInfo.containsKey("allowRedirect")){
-              String allowRedirectStr = partnerInfo.get("allowRedirect");
-              allowRedirect = allowRedirectStr.equals("T") || allowRedirectStr.equals("true") || allowRedirectStr.equals("True");
+            String allowRedirectStr = "";
+            String allowCredentialStr = "";
+            // match the uriPath with special pattern
+            if (partnerInfo.containsKey("sub")
+              && partnerInfo.get("sub").containsKey("path")
+              && uriPath.contains(partnerInfo.get("sub").get("path"))) {
+              allowRedirectStr = partnerInfo.get("sub").get("allowRedirect");
+              allowCredentialStr = partnerInfo.get("sub").get("allowCredential");
+            } else {
+              if (partnerInfo.containsKey("allowRedirect")){
+                allowRedirectStr = partnerInfo.get("allowRedirect");
+              }
+              if (partnerInfo.containsKey("allowCredential")){
+                allowCredentialStr = partnerInfo.get("allowCredential");
+              }
             }
-            if (partnerInfo.containsKey("allowCredential")){
-              String allowCredentialStr = partnerInfo.get("allowCredential");
-              allowCredential = allowCredentialStr.equals("T") || allowCredentialStr.equals("true") || allowCredentialStr.equals("True");
-            }
+            allowRedirect = allowRedirectStr.equals("T") || allowRedirectStr.equals("true") || allowRedirectStr.equals("True");
+            allowCredential = allowCredentialStr.equals("T") || allowCredentialStr.equals("true") || allowCredentialStr.equals("True");
           } else {
             logger.info("No partner mapping info for " + sourceUri + ". Use default partner info.");
           }
@@ -340,7 +350,7 @@ public class ApiService extends AbstractApiService {
    * @param uri URI of client's request
    * @return unique identifier for the partner corresponding to the request URI
    */
-  public static PartnerOutput getPartnerInfo(String uri) {
+  public static PartnerOutput getPartnerInfo(String sourceHost, String uriPath) {
     // PWL-551: hard code partner info
     /*
     String urn = PARTNERS_URN + PATTERNS_URI + "?sourceUri=" + uri;
@@ -368,7 +378,7 @@ public class ApiService extends AbstractApiService {
       return null;
     }
     */
-    return PartnerOutput.createInstance(uri);
+    return PartnerOutput.createInstance(sourceHost, uriPath);
   }
 
   /**
