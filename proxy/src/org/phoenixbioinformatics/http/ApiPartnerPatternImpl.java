@@ -19,6 +19,7 @@ public class ApiPartnerPatternImpl implements IPartnerPattern {
   private ApiService.PartnerOutput partnerPattern;
   /** the source URI for the partner lookup */
   private String sourceUri;
+  private String uriPath;
 
   private static final String API_ERROR =
     "Could not get partner information from API due to API error";
@@ -54,7 +55,7 @@ public class ApiPartnerPatternImpl implements IPartnerPattern {
     }
     if (partnerPattern == null) {
       try {
-        partnerPattern = ApiService.getPartnerInfo(sourceUri);
+        partnerPattern = ApiService.getPartnerInfo(sourceUri, uriPath);
       } catch (Exception e) {
         throw new RuntimeException(API_ERROR, e);
       }
@@ -73,6 +74,10 @@ public class ApiPartnerPatternImpl implements IPartnerPattern {
    */
   public void setSourceUri(String sourceUri) {
     this.sourceUri = sourceUri;
+  }
+
+  public void setUriPath(String uriPath) {
+    this.uriPath = uriPath;
   }
 
   @Override

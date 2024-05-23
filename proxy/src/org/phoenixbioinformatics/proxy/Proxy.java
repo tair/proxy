@@ -410,6 +410,7 @@ public class Proxy extends HttpServlet {
     HttpHost sourceHost = hostFactory.getSourceHost();
     // Set source string before using host factory further.
     partnerPattern.setSourceUri(sourceHost.toHostString());
+    partnerPattern.setUriPath(servletRequest.getRequestURI());
     return hostFactory;
   }
 
