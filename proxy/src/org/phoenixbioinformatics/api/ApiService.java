@@ -97,6 +97,13 @@ public class ApiService extends AbstractApiService {
     public String targetUri;
     public Boolean allowRedirect;
     public Boolean allowCredential;
+    SubMap sub;
+
+    private class SubMap {
+      String path;
+      Boolean allowRedirect;
+      Boolean allowCredential;
+    }
 
     private PartnerOutput(String pId, String sUri, String tUri, Boolean allowRedirect, Boolean allowCredential) {
       this.partnerId = pId;
@@ -106,7 +113,7 @@ public class ApiService extends AbstractApiService {
       this.allowCredential = allowCredential;
     }
 
-    public static PartnerOutput createInstance(String sourceUri) {
+    public static PartnerOutput createInstance(String sourceUri, String uriPath) {
       // set as default values
       String partnerId = DEFAULT_PARTNER_ID;
       String targetUri = ProxyProperties.getProperty("default.uri");
@@ -116,20 +123,34 @@ public class ApiService extends AbstractApiService {
       if (mapContent != null) {
         try {
           Gson parser = new Gson();
-          Type type = new TypeToken<HashMap<String, HashMap<String, String>>>(){}.getType();
-          HashMap<String, HashMap<String, String>> map = parser.fromJson(mapContent, type);
-          HashMap<String, String> partnerInfo = map.get(sourceUri);
+          Type type = new TypeToken<HashMap<String, PartnerOutput>>(){}.getType();
+          HashMap<String, PartnerOutput> map = parser.fromJson(mapContent, type);
+          PartnerOutput partnerInfo = map.get(sourceUri);
           if (partnerInfo != null) {
-            partnerId = partnerInfo.get("partnerId");
-            targetUri = partnerInfo.get("targetUri");
-            if (partnerInfo.containsKey("allowRedirect")){
-              String allowRedirectStr = partnerInfo.get("allowRedirect");
-              allowRedirect = allowRedirectStr.equals("T") || allowRedirectStr.equals("true") || allowRedirectStr.equals("True");
+            partnerId = partnerInfo.partnerId;
+            targetUri = partnerInfo.targetUri;
+            // start with "default value" of the current partner
+            if (partnerInfo.allowRedirect != null){
+              allowRedirect = partnerInfo.allowRedirect;
             }
-            if (partnerInfo.containsKey("allowCredential")){
-              String allowCredentialStr = partnerInfo.get("allowCredential");
-              allowCredential = allowCredentialStr.equals("T") || allowCredentialStr.equals("true") || allowCredentialStr.equals("True");
+            if (partnerInfo.allowCredential != null){
+              allowCredential = partnerInfo.allowCredential;
             }
+            // match the uriPath with special pattern
+            if (partnerInfo.sub != null) {
+              if (partnerInfo.sub.path != null
+                && uriPath.contains(partnerInfo.sub.path)) {
+                if (partnerInfo.sub.allowRedirect != null) {
+                  allowRedirect = partnerInfo.sub.allowRedirect;
+                }
+                if (partnerInfo.sub.allowCredential != null) {
+                  allowCredential = partnerInfo.sub.allowCredential;
+                }
+              }
+            }
+            // assume allowRedirect and allowCredential 
+            // allowRedirect = allowRedirectStr.equals("T") || allowRedirectStr.equals("true") || allowRedirectStr.equals("True");
+            // allowCredential = allowCredentialStr.equals("T") || allowCredentialStr.equals("true") || allowCredentialStr.equals("True");
           } else {
             logger.info("No partner mapping info for " + sourceUri + ". Use default partner info.");
           }
@@ -340,7 +361,7 @@ public class ApiService extends AbstractApiService {
    * @param uri URI of client's request
    * @return unique identifier for the partner corresponding to the request URI
    */
-  public static PartnerOutput getPartnerInfo(String uri) {
+  public static PartnerOutput getPartnerInfo(String sourceHost, String uriPath) {
     // PWL-551: hard code partner info
     /*
     String urn = PARTNERS_URN + PATTERNS_URI + "?sourceUri=" + uri;
@@ -368,7 +389,7 @@ public class ApiService extends AbstractApiService {
       return null;
     }
     */
-    return PartnerOutput.createInstance(uri);
+    return PartnerOutput.createInstance(sourceHost, uriPath);
   }
 
   /**
