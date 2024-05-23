@@ -133,7 +133,7 @@ public class ApiService extends AbstractApiService {
             }
             // match the uriPath with special pattern
             if (partnerInfo.containsKey("sub")) {
-              Type subMapType = new TypeToken<HashMap<String, String>(){}.getType();
+              Type subMapType = new TypeToken<HashMap<String, String>>(){}.getType();
               HashMap<String, String> subMap = parser.fromJson(partnerInfo.get("sub"), subMapType);
               if (subMap.containsKey("path")
                 && uriPath.contains(subMap.get("path"))) {
