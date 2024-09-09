@@ -245,10 +245,10 @@ public class Proxy extends HttpServlet {
     Boolean allowCredential = hostFactory.getAllowCredential();
     setCORSHeader(servletRequest, servletResponse, origins, allowCredential);
     if (servletRequest.getMethod().equals(METHOD_OPTIONS)) {
-      logger.debug("Getting options...");
+      // logger.debug("Getting options...");
       handleOptionsRequest(servletRequest, servletResponse, origins);
     } else if (action != null && action.equals("setCookies")) {
-      logger.debug("Setting cookies...");
+      // logger.debug("Setting cookies...");
       handleSetCookieRequest(servletRequest,
                              servletResponse,
                              origins,
@@ -333,7 +333,7 @@ public class Proxy extends HttpServlet {
           userIdentifier.append(accessOutput.userIdentifier);
           isPaidContent = accessOutput.isPaidContent;
           redirectUri = accessOutput.redirectUri;
-          logger.debug("userIdentifier: " + userIdentifier.toString());
+          // logger.debug("userIdentifier: " + userIdentifier.toString());
         } catch (Exception e) {
           // Problem making the API call, continue with "Not OK" default status
           // Problem already logged
@@ -359,7 +359,7 @@ public class Proxy extends HttpServlet {
                 null); // fragment
               targetRedirectUri = targetUri.toString();
             }
-            logger.debug("Redirect uri updated from " + fullRequestUri + " to " + targetRedirectUri);
+            // logger.debug("Redirect uri updated from " + fullRequestUri + " to " + targetRedirectUri);
           } catch (URISyntaxException e) {
             logger.warn("cannot parse redirectUri: " + redirectUri + ". ", e);
           }
@@ -458,7 +458,7 @@ public class Proxy extends HttpServlet {
                           String sessionId, String partnerId, String isPaidContent, String meterStatus) {
     // Log a page view for "real" URIs, exclude embedded images, js, etc.
     if (!isEmbeddedFile(uri)) {
-      logger.debug("Creating page view for URI " + uri);
+      // logger.debug("Creating page view for URI " + uri);
       ApiService.createPageView(ip, ipListString, uri, credentialId, sessionId, partnerId, isPaidContent, meterStatus);
     }
   }
@@ -472,7 +472,7 @@ public class Proxy extends HttpServlet {
                           String responseHeaders, String contentType) throws IOException{
     // Log a page view for "real" URIs, exclude embedded images, js, etc.
     if (!isEmbeddedFile(uri)) {
-      logger.debug("Creating sqs page view for URI " + uri);
+      // logger.debug("Creating sqs page view for URI " + uri);
       CloseableHttpResponse response = null;
       HttpPost request = null;
       request = new HttpPost(API_GATEWAY_SQS_LOGGING_URL);
@@ -514,7 +514,7 @@ public class Proxy extends HttpServlet {
         logger.debug("Status creating sqs page view is not OK: " + status);
         throw new IOException("Bad status code: " + String.valueOf(status));
       } else {
-        logger.debug("Status creating sqs page view is OK: " + status);
+        // logger.debug("Status creating sqs page view is OK: " + status);
       }
     }
   }
@@ -575,17 +575,17 @@ public class Proxy extends HttpServlet {
       HttpUriRequest uriRequest =
         RequestFactory.getUriRequest(servletRequest, targetUri);
 
-      logger.debug("Proxying request from " + proxyRequest.getIp() + "-->\""
-                   + uriRequest.getRequestLine().getUri() + "\"");
+      // logger.debug("Proxying request from " + proxyRequest.getIp() + "-->\""
+      //              + uriRequest.getRequestLine().getUri() + "\"");
 
-      logger.debug("userIdentifier before configureProxyRequest(): "
-                   + userIdentifier.toString());
+      // logger.debug("userIdentifier before configureProxyRequest(): "
+      //              + userIdentifier.toString());
       configureProxyRequest(servletRequest,
                             proxyRequest,
                             uriRequest,
                             userIdentifier.toString());
-      logger.debug("userIdentifier after configureProxyRequest(): "
-                   + userIdentifier.toString());
+      // logger.debug("userIdentifier after configureProxyRequest(): "
+      //              + userIdentifier.toString());
       // Proxy, using the sourceHost as the "original" host.
       proxy(servletRequest.getSession(),
             servletResponse,
@@ -599,7 +599,7 @@ public class Proxy extends HttpServlet {
         logger.debug("sqs logging error");
       }
       //logRequest(fullRequestUri, remoteIp, ipListString, credentialId, sessionId, partnerId, isPaidContent, "N");
-      logger.debug("userIdentifier after proxy(): " + userIdentifier.toString());
+      // logger.debug("userIdentifier after proxy(): " + userIdentifier.toString());
     }
   }
 
@@ -642,7 +642,7 @@ public class Proxy extends HttpServlet {
           || fullRequestUri.endsWith(".wsgi")
           || fullRequestUri.endsWith(".ico");
     if (embedded) {
-      logger.debug("URI " + fullRequestUri + " has embedded-file extension");
+      // logger.debug("URI " + fullRequestUri + " has embedded-file extension");
     }
     return embedded;
   }
@@ -703,7 +703,7 @@ public class Proxy extends HttpServlet {
         builder.append(sourceHost.getPort());
       }
       uiUri = builder.toString();
-      logger.debug("Using source host as UI URI: " + sourceHost);
+      // logger.debug("Using source host as UI URI: " + sourceHost);
     }
     // BIOCYC-569 this is specifically for biocyc's brg-files.ai.sri.com
     // Generally we load uiUri from properties file
@@ -721,7 +721,7 @@ public class Proxy extends HttpServlet {
       partner.getUiMeterUri() + "?exceed=blacklisted&partnerId=" + partnerId;
 
     // logger.debug("UI URI set to: " + uiUri);
-    logger.debug("login URI set to: " + loginUri);
+    // logger.debug("login URI set to: " + loginUri);
     // logger.debug("meter warning URI set to: " + meterWarningUri);
     // logger.debug("meter blocking URI set to: " + meterBlockingUri);
     // logger.debug("meter blacklist blocking URI set to: " +
@@ -882,21 +882,21 @@ public class Proxy extends HttpServlet {
    */
   public String getRedirectQueryString(String redirectUri, String uiUri) {
 
-    logger.debug("Full URI to use for redirect: " + redirectUri);
+    // logger.debug("Full URI to use for redirect: " + redirectUri);
 
     String transformedUri = redirectUri;
 
     if (uiUri.toLowerCase().contains("https://")
         && redirectUri.toLowerCase().contains("http://")) {
       transformedUri = transformedUri.replaceFirst("http", "https");
-      logger.debug("Transformed URI to which to redirect:"
-                 + transformedUri);
+      // logger.debug("Transformed URI to which to redirect:"
+      //            + transformedUri);
     }
 
     try {
       transformedUri = URLEncoder.encode(transformedUri, UTF_8);
 
-      logger.debug("Transformed and encoded URI for redirect: " + transformedUri);
+      // logger.debug("Transformed and encoded URI for redirect: " + transformedUri);
 
     } catch (UnsupportedEncodingException e) {
       // Log and ignore, use un-encoded redirect URI
@@ -960,7 +960,7 @@ public class Proxy extends HttpServlet {
     // Put the cookie store with any returned session cookie into the session.
     cookieStore = localContext.getCookieStore();
     try {
-      logger.debug("Cookie store after proxying: " + cookieStore.toString());
+      // logger.debug("Cookie store after proxying: " + cookieStore.toString());
       session.setAttribute(COOKIES_ATTRIBUTE, localContext.getCookieStore());
     } catch (IllegalStateException e) {
       // invalid session after logout, ignore
@@ -1060,8 +1060,8 @@ public class Proxy extends HttpServlet {
       public String handleResponse(final HttpResponse proxyResponse)
           throws ClientProtocolException, IOException {
         int statusCode = proxyResponse.getStatusLine().getStatusCode();
-        logger.debug("Proxy returned status " + statusCode + " for URI "
-                     + proxyRequest.getCurrentUri());
+        // logger.debug("Proxy returned status " + statusCode + " for URI "
+        //              + proxyRequest.getCurrentUri());
 
         handleResponseHeaders(servletResponse,
                               proxyResponse,
@@ -1250,9 +1250,9 @@ public class Proxy extends HttpServlet {
     // PW-165, add ".arabidopsis.org" domain cookie
     addCookie(servletResponse, secretKeyCookie, partnerId, null);
 
-    logger.debug("Setting cookies: credentialId = "
-                 + credentialIdCookie.getValue() + "; secretKey = "
-                 + secretKeyCookie.getValue());
+    // logger.debug("Setting cookies: credentialId = "
+    //              + credentialIdCookie.getValue() + "; secretKey = "
+    //              + secretKeyCookie.getValue());
     // logAllServletResponseHeaders(servletResponse);
   }
 
@@ -1300,7 +1300,7 @@ public class Proxy extends HttpServlet {
           setAllowCredentialHeader(servletResponse);
         } else if (origin == null) {
           // a common case for users accesing via their proxy
-          logger.debug("Attempted API access from non-allowed origin: null");
+          // logger.debug("Attempted API access from non-allowed origin: null");
           servletResponse.setHeader("Access-Control-Allow-Origin",
                                   "*");
           // not setting allow credential header since it conflicts with
@@ -1308,12 +1308,12 @@ public class Proxy extends HttpServlet {
           // assuming users from such origin is using institutional subscription
         } else {
           // for anything else, deny it
-          logger.debug("Attempted API access from non-allowed origin: " + origin);
+          // logger.debug("Attempted API access from non-allowed origin: " + origin);
           servletResponse.setHeader("Access-Control-Allow-Origin",
                                   origins.iterator().next());
         }
       } else {
-        logger.debug("Attempted access from non-allowed origin: {}", origin);
+        // logger.debug("Attempted access from non-allowed origin: {}", origin);
         // Include an origin to provide a clear browser error
         servletResponse.setHeader("Access-Control-Allow-Origin",
                                   origins.iterator().next());
@@ -1625,7 +1625,7 @@ public class Proxy extends HttpServlet {
         // Check for the password change signal from the partner (the value of
         // the
         // special header carries the new secret key).
-        logger.debug("Request to reset secret key: " + header.getValue());
+        // logger.debug("Request to reset secret key: " + header.getValue());
 
         Cookie secretKeyCookie =
           new Cookie(SECRET_KEY_COOKIE, header.getValue());
