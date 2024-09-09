@@ -203,7 +203,7 @@ public class Proxy extends HttpServlet {
                          HttpServletResponse servletResponse)
       throws ServletException, IOException {
     try {
-      logAllServletRequestHeaders(servletRequest);
+      // logAllServletRequestHeaders(servletRequest);
       // PWL-625: Add measure to method duration
       long startTime = System.currentTimeMillis();
       handleProxyRequest(servletRequest, servletResponse);
@@ -257,8 +257,8 @@ public class Proxy extends HttpServlet {
       // Get the complete URI including original domain and query string.
       String uri = servletRequest.getRequestURI().toString();
       String queryString = servletRequest.getQueryString();
-      logger.debug("\n==========\nIncoming URI: " + uri + " with query string "
-                   + queryString + "\n==========");
+      // logger.debug("\n==========\nIncoming URI: " + uri + " with query string "
+      //              + queryString + "\n==========");
       try {
         HttpHost sourceHost = hostFactory.getSourceHost();
 
@@ -280,10 +280,10 @@ public class Proxy extends HttpServlet {
         if (cookies != null) {
           for (Cookie c : Arrays.asList(cookies)) {
             String cookieName = c.getName();
-            logger.debug("Processing cookie " + cookieName + " with value "
-                         + c.getValue());
-            logger.debug("Processing cookie " + cookieName + " with value "
-                    + c.getValue());
+            // logger.debug("Processing cookie " + cookieName + " with value "
+            //              + c.getValue());
+            // logger.debug("Processing cookie " + cookieName + " with value "
+            //         + c.getValue());
             if (cookieName.equals(SECRET_KEY_COOKIE)) {
               secretKey = c.getValue();
             } else if (cookieName.equals(CREDENTIAL_ID_COOKIE)) {
@@ -442,7 +442,7 @@ public class Proxy extends HttpServlet {
     builder.append(targetHost.toString());
     builder.append(", partner id=");
     builder.append(partnerId);
-    logger.debug(builder.toString());
+    // logger.debug(builder.toString());
   }
 
   /**
@@ -990,7 +990,7 @@ public class Proxy extends HttpServlet {
     // Create a local HTTP context to contain the cookie store.
     HttpClientContext localContext = HttpClientContext.create();
 
-    logAllCookiesInStore(cookieStore);
+    // logAllCookiesInStore(cookieStore);
 
     // Bind custom cookie store to the local context
     localContext.setCookieStore(cookieStore);
