@@ -212,7 +212,7 @@ public class Proxy extends HttpServlet {
       if (elapsedTime >= PROXY_REQUEST_THRESHOLD * 1000) {
         logger.debug(LOG_MARKER + " Request to proxy server " + servletRequest.getRequestURI().toString() + " takes " + elapsedTime + " ms to response " + LOG_MARKER);
       }
-      logAllServletResponseHeaders(servletResponse);
+      // logAllServletResponseHeaders(servletResponse);
     } catch (RuntimeException e) {
       // Log unchecked exception here and don't propagate.
       logger.error(RUNTIME_EXCEPTION_ERROR, e);
@@ -946,7 +946,7 @@ public class Proxy extends HttpServlet {
     // Execute the request on the proxied server. Ignore returned string.
     // TODO: try adding host as first param, see if it does the right thing.
     // client.execute(host, request, responseHandler, localContext);
-    logAllUriRequestHeaders(request);
+    // logAllUriRequestHeaders(request);
 
     // PWL-625: Add measure to method duration
     long startTime = System.currentTimeMillis();
@@ -1253,7 +1253,7 @@ public class Proxy extends HttpServlet {
     logger.debug("Setting cookies: credentialId = "
                  + credentialIdCookie.getValue() + "; secretKey = "
                  + secretKeyCookie.getValue());
-    logAllServletResponseHeaders(servletResponse);
+    // logAllServletResponseHeaders(servletResponse);
   }
 
   /**
