@@ -328,6 +328,7 @@ public class Proxy extends HttpServlet {
                                    credentialId,
                                    ipListString);
           auth = accessOutput.status;
+          logger.debug("checkAccess " +auth);
           remoteIp = accessOutput.ip;
           orgId = accessOutput.orgId;
           userIdentifier.append(accessOutput.userIdentifier);
