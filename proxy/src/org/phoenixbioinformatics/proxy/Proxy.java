@@ -755,7 +755,7 @@ public class Proxy extends HttpServlet {
           ApiService.checkMeteringLimit(remoteIp, partnerId, fullUri);
 
         if (meter.equals(OK_CODE)) {
-          logger.info("Allowed free access to content by metering");
+          logger.info("Allowed free access to content by metering: " + fullUri);
           authorized = true;
           ApiService.incrementMeteringCount(remoteIp, partnerId);
 

@@ -83,7 +83,7 @@ public abstract class AbstractApiService {
     request.addHeader("Cookie", "apiKey=" + API_KEY + ";" + cookieString);
     CloseableHttpClient client = HttpClientBuilder.create().build();
     // debug statement. TODO: remove in final produce to reduce spam
-    logger.debug("Making " + methodString + " request: " + API_URL + urn);
+    // logger.debug("Making " + methodString + " request: " + API_URL + urn);
     response = client.execute(request);
 
     int status = response.getStatusLine().getStatusCode();
