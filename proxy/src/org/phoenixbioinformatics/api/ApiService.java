@@ -452,7 +452,7 @@ public class ApiService extends AbstractApiService {
       Gson gson = new Gson();
       CheckMeteringLimitOutput out =
         gson.fromJson(content, CheckMeteringLimitOutput.class);
-
+      logger.debug("checkRemainingUnits status " + out.status);
       return out.status;
     } catch (IOException e) {
       logAPIError(METERING_LIMIT_ERROR, e, urn, "GET", content);
@@ -527,7 +527,7 @@ public class ApiService extends AbstractApiService {
       IncrementMeteringCountOutput out =
         gson.fromJson(content, IncrementMeteringCountOutput.class);
       String message = out.message;
-
+      logger.debug("Decrement message " + message);
       return message;
     } catch (IOException e) {
       logAPIError(INCREMENT_METERING_COUNT_ERROR, e, urn, "POST", content);
