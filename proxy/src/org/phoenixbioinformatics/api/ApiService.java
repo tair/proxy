@@ -442,7 +442,7 @@ public class ApiService extends AbstractApiService {
    * @return String indicating client's metering status. (OK, Warn, Blocked)
    */
   public static String checkRemainingUnits(String credentialId, String partnerId) {
-    String urn = METERS_URN + "/subscriptions/limit/?party_id=" + credentialId;
+    String urn = "/subscriptions/limit/?party_id=" + credentialId;
     String content = null;
 
     try {
