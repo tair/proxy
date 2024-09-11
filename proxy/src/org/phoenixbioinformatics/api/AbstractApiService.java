@@ -89,6 +89,7 @@ public abstract class AbstractApiService {
     int status = response.getStatusLine().getStatusCode();
     if (status != HttpStatus.SC_OK && status != HttpStatus.SC_CREATED) {
       logger.debug("Status code is not OK: " + status);
+      logger.debug("API Url: " + API_URL);
       throw new IOException("Bad status code: " + String.valueOf(status));
     }
     String content = EntityUtils.toString(response.getEntity());
