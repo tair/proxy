@@ -518,8 +518,7 @@ public class ApiService extends AbstractApiService {
   }
 
   public static String decrementUnits(String credentialId, String partnerId) {
-    String urn =
-      METERS_URN + "/bucket/usage/decrement/?partnerId=" + partnerId + "&credentialId=" + credentialId;
+    String urn = "/subscriptions/decrement/?party_id=" + credentialId;
     String content = null;
 
     try {

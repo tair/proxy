@@ -143,7 +143,7 @@ public class Proxy extends HttpServlet {
   private static final String NEED_LOGIN_CODE = "NeedLogin";
   private static final String NEED_SUBSCRIPTION_CODE = "NeedSubscription";
   private static final String METER_WARNING_CODE = "Warning";
-  private static final String METER_BLOCK_CODE = "Block"; // PW-646
+  private static final String METER_BLOCK_CODE = "Blocked"; // PW-646
   private static final String METER_BLACK_LIST_BLOCK_CODE = "BlackListBlock"; // PW-287
   private static final String OK_CODE = "OK";
   private static final String NOT_OK_CODE = "NOT OK";
@@ -766,7 +766,7 @@ public class Proxy extends HttpServlet {
         } else {
           String meter = ApiService.checkRemainingUnits(credentialId, partnerId);
           if (meter.equals(OK_CODE)) {
-            logger.info("Allowed free access to content by metering: " + fullUri);
+            logger.info("Allowed access to content by using bucket: " + fullUri);
             authorized = true;
             // ApiService.incrementMeteringCount(remoteIp, partnerId);
             ApiService.decrementUnits(credentialId, partnerId);
