@@ -436,6 +436,29 @@ public class ApiService extends AbstractApiService {
   }
 
   /**
+   * Checks if client has PPV Units available based on his credentialId.
+   * 
+   * @param credentialId client's Party ID.
+   * @return String indicating client's metering status. (OK, Warn, Blocked)
+   */
+  public static String checkRemainingUnits(String credentialId, String partnerId) {
+    String urn = METERS_URN + "/subscriptions/limit/?party_id=" + credentialId;
+    String content = null;
+
+    try {
+      content = callApi(urn, RequestFactory.HttpMethod.GET);
+      Gson gson = new Gson();
+      CheckMeteringLimitOutput out =
+        gson.fromJson(content, CheckMeteringLimitOutput.class);
+
+      return out.status;
+    } catch (IOException e) {
+      logAPIError(METERING_LIMIT_ERROR, e, urn, "GET", content);
+      return e.getMessage();
+    }
+  }
+
+  /**
    * Retrieves the metering of the client based on the client's IP address.
    * 
    * @param ip client's IP address.
@@ -476,6 +499,25 @@ public class ApiService extends AbstractApiService {
   public static String incrementMeteringCount(String ip, String partnerId) {
     String urn =
       METERS_URN + "/ip/" + ip + "/increment/?partnerId=" + partnerId;
+    String content = null;
+
+    try {
+      content = callApi(urn, RequestFactory.HttpMethod.POST);
+      Gson gson = new Gson();
+      IncrementMeteringCountOutput out =
+        gson.fromJson(content, IncrementMeteringCountOutput.class);
+      String message = out.message;
+
+      return message;
+    } catch (IOException e) {
+      logAPIError(INCREMENT_METERING_COUNT_ERROR, e, urn, "POST", content);
+      return e.getMessage();
+    }
+  }
+
+  public static String decrementUnits(String credentialId, String partnerId) {
+    String urn =
+      METERS_URN + "/bucket/usage/decrement/?partnerId=" + partnerId + "&credentialId=" + credentialId;
     String content = null;
 
     try {

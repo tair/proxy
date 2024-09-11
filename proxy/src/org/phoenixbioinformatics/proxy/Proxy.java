@@ -751,38 +751,10 @@ public class Proxy extends HttpServlet {
       StringBuilder uriBuilder = new StringBuilder(uiUri);
 
       try {
-        String meter =
-          ApiService.checkMeteringLimit(remoteIp, partnerId, fullUri);
-
-        if (meter.equals(OK_CODE)) {
-          logger.info("Allowed free access to content by metering: " + fullUri);
-          authorized = true;
-          ApiService.incrementMeteringCount(remoteIp, partnerId);
-
-        } else if (meter.equals(METER_WARNING_CODE)) {
-          unauthorizedErrorMsg = "Warned to subscribe by meter limit";
-          logger.info(unauthorizedErrorMsg);
-          authorized = false;
-          uriBuilder.append(meterWarningUri);
-          unauthorizedRedirectUri = uriBuilder.toString();
-          uriBuilder.append(PARAM_PREFIX);
-          uriBuilder.append(redirectQueryString);
-          redirectUri = uriBuilder.toString();
-          meterStatus = METER_WARNING_STATUS_CODE;
-          ApiService.incrementMeteringCount(remoteIp, partnerId);
-        } else if (meter.equals(METER_BLACK_LIST_BLOCK_CODE)) {
-          // PW-287
-          unauthorizedErrorMsg = "Blocked from no-metered-access content";
-          logger.info(unauthorizedErrorMsg);
-          authorized = false;
-          uriBuilder.append(meterBlacklistUri);
-          unauthorizedRedirectUri = uriBuilder.toString();
-          uriBuilder.append(PARAM_PREFIX);
-          uriBuilder.append(redirectQueryString);
-          redirectUri = uriBuilder.toString();
-          meterStatus = METER_BLACK_LIST_STATUS_CODE;
-        } else if (meter.equals(METER_BLOCK_CODE)) {
-          unauthorizedErrorMsg = "Blocked from paid content by meter limit";
+        // String meter =
+        //   ApiService.checkMeteringLimit(remoteIp, partnerId, fullUri);
+        if(credentialId == null) {
+          unauthorizedErrorMsg = "Blocked from paid content due to no login";
           logger.info(unauthorizedErrorMsg);
           authorized = false;
           uriBuilder.append(meterBlockingUri);
@@ -792,10 +764,52 @@ public class Proxy extends HttpServlet {
           redirectUri = uriBuilder.toString();
           meterStatus = METER_BLOCK_STATUS_CODE;
         } else {
-          // PWL-646: Bypass and allow free access for unexpected status such as 404
-          logger.info("Check meter limit returned with unexpected code: " + meter + ". Bypassing proxy/paywall - allowing free access to content.");
-          authorized = true;
-        }
+          String meter = ApiService.checkRemainingUnits(credentialId, partnerId);
+          if (meter.equals(OK_CODE)) {
+            logger.info("Allowed free access to content by metering: " + fullUri);
+            authorized = true;
+            // ApiService.incrementMeteringCount(remoteIp, partnerId);
+            ApiService.decrementUnits(credentialId, partnerId);
+
+          } else if (meter.equals(METER_WARNING_CODE)) {
+            unauthorizedErrorMsg = "Warned to subscribe by meter limit";
+            logger.info(unauthorizedErrorMsg);
+            authorized = false;
+            uriBuilder.append(meterWarningUri);
+            unauthorizedRedirectUri = uriBuilder.toString();
+            uriBuilder.append(PARAM_PREFIX);
+            uriBuilder.append(redirectQueryString);
+            redirectUri = uriBuilder.toString();
+            meterStatus = METER_WARNING_STATUS_CODE;
+            // ApiService.incrementMeteringCount(remoteIp, partnerId);
+            ApiService.decrementUnits(credentialId, partnerId);
+          } else if (meter.equals(METER_BLACK_LIST_BLOCK_CODE)) {
+            // PW-287
+            unauthorizedErrorMsg = "Blocked from no-metered-access content";
+            logger.info(unauthorizedErrorMsg);
+            authorized = false;
+            uriBuilder.append(meterBlacklistUri);
+            unauthorizedRedirectUri = uriBuilder.toString();
+            uriBuilder.append(PARAM_PREFIX);
+            uriBuilder.append(redirectQueryString);
+            redirectUri = uriBuilder.toString();
+            meterStatus = METER_BLACK_LIST_STATUS_CODE;
+          } else if (meter.equals(METER_BLOCK_CODE)) {
+            unauthorizedErrorMsg = "Blocked from paid content by meter limit";
+            logger.info(unauthorizedErrorMsg);
+            authorized = false;
+            uriBuilder.append(meterBlockingUri);
+            unauthorizedRedirectUri = uriBuilder.toString();
+            uriBuilder.append(PARAM_PREFIX);
+            uriBuilder.append(redirectQueryString);
+            redirectUri = uriBuilder.toString();
+            meterStatus = METER_BLOCK_STATUS_CODE;
+          } else {
+            // PWL-646: Bypass and allow free access for unexpected status such as 404
+            logger.info("Check meter limit returned with unexpected code: " + meter + ". Bypassing proxy/paywall - allowing free access to content.");
+            authorized = true;
+          }
+          }
       } catch (Exception e) {
         // PWL-556: Bypass and allow free access
         logger.info("Check meter limit failed. Bypassing proxy/paywall - allowing free access to content.");
@@ -1046,12 +1060,12 @@ public class Proxy extends HttpServlet {
                      final ProxyRequest proxyRequest, final HttpHost host,
                      final String partnerId, final String userIdentifier)
       throws ServletException {
-    logger.info("Proxying " + proxyRequest.getMethod()
-                + " URI from IP address " + proxyRequest.getIp() + ": "
-                + proxyRequest.getCurrentUri() + "-->"
-                + proxyRequest.getRequestToProxy().getRequestLine().getUri()
-                + " with host " + host.toString() + " and user identifier "
-                + userIdentifier);
+    // logger.info("Proxying " + proxyRequest.getMethod()
+    //             + " URI from IP address " + proxyRequest.getIp() + ": "
+    //             + proxyRequest.getCurrentUri() + "-->"
+    //             + proxyRequest.getRequestToProxy().getRequestLine().getUri()
+    //             + " with host " + host.toString() + " and user identifier "
+    //             + userIdentifier);
 
     // Create a custom response handler to ensure all resources get freed.
     // Note: ignore the returned response, it is always null.

@@ -118,7 +118,7 @@ public class ProxyRequest implements Serializable {
       if (hopByHopHeaders.containsHeader(headerName))
         continue;
       if (headerName.equalsIgnoreCase("cookie")) {
-        logger.log(Level.TRACE, "\tIncoming cookie header " + headerName);
+        // logger.log(Level.TRACE, "\tIncoming cookie header " + headerName);
         // Handle cookie separately, adding user identifier
         if (addExtendedCookieHeader(request, headerName, userIdentifier)) {
           // Added cookie header, go to the next header
@@ -130,8 +130,8 @@ public class ProxyRequest implements Serializable {
       while (headers.hasMoreElements()) {
         String headerValue = headers.nextElement();
         requestToProxy.addHeader(headerName, headerValue);
-        logger.log(Level.TRACE, "\tAdded header " + headerName
-                                + " to proxy request: " + headerValue);
+        // logger.log(Level.TRACE, "\tAdded header " + headerName
+        //                         + " to proxy request: " + headerValue);
       }
     }
   }
@@ -162,8 +162,8 @@ public class ProxyRequest implements Serializable {
         }
         requestToProxy.addHeader(headerName, headerValue);
         added = true;
-        logger.debug("\tAdded header " + headerName + " to proxy request: "
-                     + headerValue);
+        // logger.debug("\tAdded header " + headerName + " to proxy request: "
+        //              + headerValue);
       }
     }
     return added;
