@@ -418,6 +418,7 @@ public class ApiService extends AbstractApiService {
     String urn =
       AUTHORIZATION_URN + "/access/?partnerId=" + partnerId + "&url=" + url
           + "&ipList=" + remoteIpList;
+    logger.debug("check access " + urn);
     String content = null;
     try {
       content =
@@ -446,6 +447,7 @@ public class ApiService extends AbstractApiService {
     String content = null;
 
     try {
+      logger.debug("checking remaining units for user: " + credentialId);
       content = callApi(urn, RequestFactory.HttpMethod.GET);
       Gson gson = new Gson();
       CheckMeteringLimitOutput out =
