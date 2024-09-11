@@ -142,7 +142,7 @@ public class Proxy extends HttpServlet {
   // API codes
   private static final String NEED_LOGIN_CODE = "NeedLogin";
   private static final String NEED_SUBSCRIPTION_CODE = "NeedSubscription";
-  private static final String METER_WARNING_CODE = "Warning";
+  private static final String METER_WARNING_CODE = "Warn";
   private static final String METER_BLOCK_CODE = "Blocked"; // PW-646
   private static final String METER_BLACK_LIST_BLOCK_CODE = "BlackListBlock"; // PW-287
   private static final String OK_CODE = "OK";
