@@ -766,7 +766,6 @@ public class Proxy extends HttpServlet {
         if (meter.equals(OK_CODE)) {
           logger.info("Allowed access to content by using bucket: " + fullUri);
           authorized = true;
-          // ApiService.incrementMeteringCount(remoteIp, partnerId);
           ApiService.decrementUnits(credentialId, partnerId);
 
         } else if (meter.equals(METER_WARNING_CODE)) {
@@ -779,7 +778,6 @@ public class Proxy extends HttpServlet {
           uriBuilder.append(redirectQueryString);
           redirectUri = uriBuilder.toString();
           meterStatus = METER_WARNING_STATUS_CODE;
-          // ApiService.incrementMeteringCount(remoteIp, partnerId);
           ApiService.decrementUnits(credentialId, partnerId);
         } else if (meter.equals(METER_BLACK_LIST_BLOCK_CODE)) {
           // PW-287
