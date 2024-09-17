@@ -749,12 +749,51 @@ public class Proxy extends HttpServlet {
                   + " needs to subscribe to see paid content " + fullUri
                   + " at partner " + partnerId);
       StringBuilder uriBuilder = new StringBuilder(uiUri);
+      
+      //// New code for bucket
+      if(credentialId == null) {
+        unauthorizedErrorMsg = "Blocked from paid content due to no login";
+        logger.info(unauthorizedErrorMsg);
+        authorized = false;
+        uriBuilder.append(meterBlockingUri);
+        unauthorizedRedirectUri = uriBuilder.toString();
+        uriBuilder.append(PARAM_PREFIX);
+        uriBuilder.append(redirectQueryString);
+        redirectUri = uriBuilder.toString();
+        meterStatus = METER_BLOCK_STATUS_CODE;
+      } else {
+        String meter = ApiService.checkRemainingUnits(credentialId, partnerId);
+        if (meter.equals(OK_CODE)) {
+          logger.info("Allowed access to content by using bucket: " + fullUri);
+          authorized = true;
+          // ApiService.incrementMeteringCount(remoteIp, partnerId);
+          ApiService.decrementUnits(credentialId, partnerId);
 
-      try {
-        // String meter =
-        //   ApiService.checkMeteringLimit(remoteIp, partnerId, fullUri);
-        if(credentialId == null) {
-          unauthorizedErrorMsg = "Blocked from paid content due to no login";
+        } else if (meter.equals(METER_WARNING_CODE)) {
+          unauthorizedErrorMsg = "Warned to subscribe by meter limit";
+          logger.info(unauthorizedErrorMsg);
+          authorized = false;
+          uriBuilder.append(meterWarningUri);
+          unauthorizedRedirectUri = uriBuilder.toString();
+          uriBuilder.append(PARAM_PREFIX);
+          uriBuilder.append(redirectQueryString);
+          redirectUri = uriBuilder.toString();
+          meterStatus = METER_WARNING_STATUS_CODE;
+          // ApiService.incrementMeteringCount(remoteIp, partnerId);
+          ApiService.decrementUnits(credentialId, partnerId);
+        } else if (meter.equals(METER_BLACK_LIST_BLOCK_CODE)) {
+          // PW-287
+          unauthorizedErrorMsg = "Blocked from no-metered-access content";
+          logger.info(unauthorizedErrorMsg);
+          authorized = false;
+          uriBuilder.append(meterBlacklistUri);
+          unauthorizedRedirectUri = uriBuilder.toString();
+          uriBuilder.append(PARAM_PREFIX);
+          uriBuilder.append(redirectQueryString);
+          redirectUri = uriBuilder.toString();
+          meterStatus = METER_BLACK_LIST_STATUS_CODE;
+        } else if (meter.equals(METER_BLOCK_CODE)) {
+          unauthorizedErrorMsg = "Blocked from paid content by meter limit";
           logger.info(unauthorizedErrorMsg);
           authorized = false;
           uriBuilder.append(meterBlockingUri);
@@ -764,57 +803,61 @@ public class Proxy extends HttpServlet {
           redirectUri = uriBuilder.toString();
           meterStatus = METER_BLOCK_STATUS_CODE;
         } else {
-          String meter = ApiService.checkRemainingUnits(credentialId, partnerId);
-          if (meter.equals(OK_CODE)) {
-            logger.info("Allowed access to content by using bucket: " + fullUri);
-            authorized = true;
-            // ApiService.incrementMeteringCount(remoteIp, partnerId);
-            ApiService.decrementUnits(credentialId, partnerId);
+          // PWL-646: Bypass and allow free access for unexpected status such as 404
+          logger.info("Check meter limit returned with unexpected code: " + meter + ". Bypassing proxy/paywall - allowing free access to content.");
+          authorized = true;
+        }
+      }
+      ////
+      
+      //// Old code for metering
+      try {
+        String meter = ApiService.checkMeteringLimit(remoteIp, partnerId, fullUri);
+        if (meter.equals(OK_CODE)) {
+          logger.info("Allowed free access to content by metering");
+          authorized = true;
+          ApiService.incrementMeteringCount(remoteIp, partnerId);
 
-          } else if (meter.equals(METER_WARNING_CODE)) {
-            unauthorizedErrorMsg = "Warned to subscribe by meter limit";
-            logger.info(unauthorizedErrorMsg);
-            authorized = false;
-            uriBuilder.append(meterWarningUri);
-            unauthorizedRedirectUri = uriBuilder.toString();
-            uriBuilder.append(PARAM_PREFIX);
-            uriBuilder.append(redirectQueryString);
-            redirectUri = uriBuilder.toString();
-            meterStatus = METER_WARNING_STATUS_CODE;
-            // ApiService.incrementMeteringCount(remoteIp, partnerId);
-            ApiService.decrementUnits(credentialId, partnerId);
-          } else if (meter.equals(METER_BLACK_LIST_BLOCK_CODE)) {
-            // PW-287
-            unauthorizedErrorMsg = "Blocked from no-metered-access content";
-            logger.info(unauthorizedErrorMsg);
-            authorized = false;
-            uriBuilder.append(meterBlacklistUri);
-            unauthorizedRedirectUri = uriBuilder.toString();
-            uriBuilder.append(PARAM_PREFIX);
-            uriBuilder.append(redirectQueryString);
-            redirectUri = uriBuilder.toString();
-            meterStatus = METER_BLACK_LIST_STATUS_CODE;
-          } else if (meter.equals(METER_BLOCK_CODE)) {
-            unauthorizedErrorMsg = "Blocked from paid content by meter limit";
-            logger.info(unauthorizedErrorMsg);
-            authorized = false;
-            uriBuilder.append(meterBlockingUri);
-            unauthorizedRedirectUri = uriBuilder.toString();
-            uriBuilder.append(PARAM_PREFIX);
-            uriBuilder.append(redirectQueryString);
-            redirectUri = uriBuilder.toString();
-            meterStatus = METER_BLOCK_STATUS_CODE;
-          } else {
-            // PWL-646: Bypass and allow free access for unexpected status such as 404
-            logger.info("Check meter limit returned with unexpected code: " + meter + ". Bypassing proxy/paywall - allowing free access to content.");
-            authorized = true;
-          }
-          }
+        } else if (meter.equals(METER_WARNING_CODE)) {
+          unauthorizedErrorMsg = "Warned to subscribe by meter limit";
+          logger.info(unauthorizedErrorMsg);
+          authorized = false;
+          uriBuilder.append(meterWarningUri);
+          unauthorizedRedirectUri = uriBuilder.toString();
+          uriBuilder.append(PARAM_PREFIX);
+          uriBuilder.append(redirectQueryString);
+          redirectUri = uriBuilder.toString();
+          meterStatus = METER_WARNING_STATUS_CODE;
+          ApiService.incrementMeteringCount(remoteIp, partnerId);
+        } else if (meter.equals(METER_BLACK_LIST_BLOCK_CODE)) {
+          // PW-287
+          unauthorizedErrorMsg = "Blocked from no-metered-access content";
+          logger.info(unauthorizedErrorMsg);
+          authorized = false;
+          uriBuilder.append(meterBlacklistUri);
+          unauthorizedRedirectUri = uriBuilder.toString();
+          uriBuilder.append(PARAM_PREFIX);
+          uriBuilder.append(redirectQueryString);
+          redirectUri = uriBuilder.toString();
+          meterStatus = METER_BLACK_LIST_STATUS_CODE;
+        } else if (meter.equals(METER_BLOCK_CODE)) {
+          unauthorizedErrorMsg = "Blocked from paid content by meter limit";
+          logger.info(unauthorizedErrorMsg);
+          authorized = false;
+          uriBuilder.append(meterBlockingUri);
+          redirectUri = uriBuilder.toString();
+          meterStatus = METER_BLOCK_STATUS_CODE;
+        } else {
+          // PWL-646: Bypass and allow free access for unexpected status such as 404
+          logger.info("Check meter limit returned with unexpected code: " + meter + ". Bypassing proxy/paywall - allowing free access to content.");
+          authorized = true;
+        }
       } catch (Exception e) {
         // PWL-556: Bypass and allow free access
         logger.info("Check meter limit failed. Bypassing proxy/paywall - allowing free access to content.");
         authorized = true;
       }
+      /// Old code
     } else if (auth.equals(NEED_LOGIN_CODE)) {
       // force user to log in
       unauthorizedErrorMsg = "User required to login";
