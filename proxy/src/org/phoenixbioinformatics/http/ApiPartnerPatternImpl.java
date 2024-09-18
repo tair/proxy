@@ -103,4 +103,10 @@ public class ApiPartnerPatternImpl implements IPartnerPattern {
     getPartnerPattern();
     return partnerPattern.allowCredential;
   }
+
+  @Override
+  public Boolean getAllowBucket() {
+    getPartnerPattern();
+    return partnerPattern.allowBucket;
+  }
 }

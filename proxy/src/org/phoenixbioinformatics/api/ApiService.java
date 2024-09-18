@@ -97,6 +97,7 @@ public class ApiService extends AbstractApiService {
     public String targetUri;
     public Boolean allowRedirect;
     public Boolean allowCredential;
+    public Boolean allowBucket;
     SubMap sub;
 
     private class SubMap {
@@ -105,12 +106,13 @@ public class ApiService extends AbstractApiService {
       Boolean allowCredential;
     }
 
-    private PartnerOutput(String pId, String sUri, String tUri, Boolean allowRedirect, Boolean allowCredential) {
+    private PartnerOutput(String pId, String sUri, String tUri, Boolean allowRedirect, Boolean allowCredential, Boolean allowBucket) {
       this.partnerId = pId;
       this.sourceUri = sUri;
       this.targetUri = tUri;
       this.allowRedirect = allowRedirect;
       this.allowCredential = allowCredential;
+      this.allowBucket = allowBucket;
     }
 
     public static PartnerOutput createInstance(String sourceUri, String uriPath) {
@@ -119,6 +121,7 @@ public class ApiService extends AbstractApiService {
       String targetUri = ProxyProperties.getProperty("default.uri");
       Boolean allowRedirect = true;
       Boolean allowCredential = false;
+      Boolean allowBucket = false;
       String mapContent = ProxyProperties.getProperty("partner.map");
       if (mapContent != null) {
         try {
@@ -135,6 +138,9 @@ public class ApiService extends AbstractApiService {
             }
             if (partnerInfo.allowCredential != null){
               allowCredential = partnerInfo.allowCredential;
+            }
+            if (partnerInfo.allowBucket != null){
+              allowBucket = partnerInfo.allowBucket;
             }
             // match the uriPath with special pattern
             if (partnerInfo.sub != null) {
@@ -160,7 +166,7 @@ public class ApiService extends AbstractApiService {
       } else {
         logger.info("Partner info map is undefined. Use default partner info.");
       }
-      return new PartnerOutput(partnerId, sourceUri, targetUri, allowRedirect, allowCredential);
+      return new PartnerOutput(partnerId, sourceUri, targetUri, allowRedirect, allowCredential, allowBucket);
     }
   }
 
