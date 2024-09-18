@@ -159,7 +159,7 @@ public class HttpHostFactory {
   public Boolean getAllowBucket() {
     Boolean allowBucket = false;
     if (partnerPattern != null) {
-      allowBucket = partnerPattern.getAllowCredential();
+      allowBucket = partnerPattern.getAllowBucket();
     }
     return allowBucket;
   }
