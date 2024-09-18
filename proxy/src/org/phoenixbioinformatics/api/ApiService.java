@@ -424,7 +424,7 @@ public class ApiService extends AbstractApiService {
     String urn =
       AUTHORIZATION_URN + "/access/?partnerId=" + partnerId + "&url=" + url
           + "&ipList=" + remoteIpList;
-    logger.debug("check access " + urn);
+    // logger.debug("check access " + urn);
     String content = null;
     try {
       content =

@@ -317,8 +317,8 @@ public class Proxy extends HttpServlet {
         	String isPaidContent = NOT_PAID_CONTENT;
           String redirectUri = null;
 
-        logger.info("checkAccess API parameters: " + fullRequestUri + ", " + partnerId
-                    + ", " + secretKey + ", " + credentialId + ", " + remoteIp);
+        // logger.info("checkAccess API parameters: " + fullRequestUri + ", " + partnerId
+        //             + ", " + secretKey + ", " + credentialId + ", " + remoteIp);
 
         try {
           ApiService.AccessOutput accessOutput =
@@ -754,6 +754,7 @@ public class Proxy extends HttpServlet {
       StringBuilder uriBuilder = new StringBuilder(uiUri);
       
       if(allowBucket) {
+        logger.info("Allowed Bucket System");
         //// New code for bucket
         if(credentialId == null) {
           unauthorizedErrorMsg = "Blocked from paid content due to no login";
@@ -817,6 +818,7 @@ public class Proxy extends HttpServlet {
           }
         }
       } else {
+        logger.info("Allowed IP-Metering System");
         try {
           String meter = ApiService.checkMeteringLimit(remoteIp, partnerId, fullUri);
           if (meter.equals(OK_CODE)) {
