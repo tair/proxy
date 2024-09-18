@@ -104,6 +104,7 @@ public class ApiService extends AbstractApiService {
       String path;
       Boolean allowRedirect;
       Boolean allowCredential;
+      Boolean allowBucket;
     }
 
     private PartnerOutput(String pId, String sUri, String tUri, Boolean allowRedirect, Boolean allowCredential, Boolean allowBucket) {
@@ -151,6 +152,9 @@ public class ApiService extends AbstractApiService {
                 }
                 if (partnerInfo.sub.allowCredential != null) {
                   allowCredential = partnerInfo.sub.allowCredential;
+                }
+                if (partnerInfo.sub.allowBucket != null) {
+                  allowBucket = partnerInfo.sub.allowBucket;
                 }
               }
             }
