@@ -598,7 +598,7 @@ public class Proxy extends HttpServlet {
             partnerId,
             userIdentifier.toString());
       try {
-        sqsLogRequest(fullRequestUri, remoteIp, orgId, ipListString, credentialId, sessionId, partnerId, isPaidContent, "N", String.valueOf(servletResponse.getStatus()), getAllServletResponseHeaders(servletResponse), servletResponse.getContentType());
+        sqsLogRequest(fullRequestUri, remoteIp, orgId, ipListString, credentialId, sessionId, partnerId, isPaidContent, METER_NOT_METERED_STATUS_CODE, String.valueOf(servletResponse.getStatus()), getAllServletResponseHeaders(servletResponse), servletResponse.getContentType());
       }catch(Exception e){
         logger.debug("sqs logging error");
       }
@@ -744,7 +744,7 @@ public class Proxy extends HttpServlet {
     if (auth.equals(OK_CODE)) {
       // grant access
       authorized = true;
-      logger.info("Party " + credentialId + " authorized for free content "
+      logger.info("Party " + credentialId + " authorized with OK status "
                   + fullUri + " at partner " + partnerId);
     } else if (auth.equals(NEED_SUBSCRIPTION_CODE)) {
       // check metering status and redirect or proxy as appropriate
