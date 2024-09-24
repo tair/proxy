@@ -784,7 +784,7 @@ public class Proxy extends HttpServlet {
               uriBuilder.append(redirectQueryString);
               redirectUri = uriBuilder.toString();
               meterStatus = METER_WARNING_STATUS_CODE;
-              ApiService.decrementUnits(credentialId, partnerId);
+              ApiService.decrementUnits(credentialId, partnerId, fullUri);
             } else if (meter.equals(METER_BLACK_LIST_BLOCK_CODE)) {
               // PW-287
               unauthorizedErrorMsg = "Blocked from premium usage content";
