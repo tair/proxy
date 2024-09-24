@@ -768,11 +768,11 @@ public class Proxy extends HttpServlet {
           meterStatus = METER_BLOCK_STATUS_CODE;
         } else {
           try {
-            String meter = ApiService.checkRemainingUnits(credentialId, partnerId);
+            String meter = ApiService.checkRemainingUnits(credentialId, partnerId, fullUri);
             if (meter.equals(OK_CODE)) {
               logger.info("Allowed access to content by using bucket: " + fullUri);
               authorized = true;
-              ApiService.decrementUnits(credentialId, partnerId);
+              ApiService.decrementUnits(credentialId, partnerId, fullUri);
 
             } else if (meter.equals(METER_WARNING_CODE)) {
               unauthorizedErrorMsg = "Warned to subscribe by meter limit";
@@ -787,7 +787,7 @@ public class Proxy extends HttpServlet {
               ApiService.decrementUnits(credentialId, partnerId);
             } else if (meter.equals(METER_BLACK_LIST_BLOCK_CODE)) {
               // PW-287
-              unauthorizedErrorMsg = "Blocked from no-metered-access content";
+              unauthorizedErrorMsg = "Blocked from premium usage content";
               logger.info(unauthorizedErrorMsg);
               authorized = false;
               uriBuilder.append(meterBlacklistUri);

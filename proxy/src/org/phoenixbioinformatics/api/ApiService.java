@@ -452,12 +452,12 @@ public class ApiService extends AbstractApiService {
    * @param credentialId client's Party ID.
    * @return String indicating client's metering status. (OK, Warn, Blocked)
    */
-  public static String checkRemainingUnits(String credentialId, String partnerId) {
-    String urn = "/subscriptions/limit/?party_id=" + credentialId;
+  public static String checkRemainingUnits(String credentialId, String partnerId, String fullUri) {
+    String urn = "/subscriptions/limit/?party_id=" + credentialId + "&partner_id=" + partnerId + "&uri=" + fullUri;
     String content = null;
 
     try {
-      logger.debug("checking remaining units for user: " + credentialId);
+      logger.debug("checking remaining units for user: " + credentialId + " with " + fullUri);
       content = callApi(urn, RequestFactory.HttpMethod.GET);
       Gson gson = new Gson();
       CheckMeteringLimitOutput out =
@@ -508,7 +508,7 @@ public class ApiService extends AbstractApiService {
    * @return String indicating the access status (OK, NeedSubscription,
    *         NeedLogin)
    */
-  public static String incrementMeteringCount(String ip, String partnerId) {
+  public static String incrementMeteringCount(String ip, String partnerId, String fullUri) {
     String urn =
       METERS_URN + "/ip/" + ip + "/increment/?partnerId=" + partnerId;
     String content = null;
@@ -527,8 +527,8 @@ public class ApiService extends AbstractApiService {
     }
   }
 
-  public static String decrementUnits(String credentialId, String partnerId) {
-    String urn = "/subscriptions/decrement/?party_id=" + credentialId;
+  public static String decrementUnits(String credentialId, String partnerId, String fullUri) {
+    String urn = "/subscriptions/decrement/?party_id=" + credentialId + "&partner_id=" + partnerId + "&uri=" + fullUri;
     String content = null;
 
     try {
