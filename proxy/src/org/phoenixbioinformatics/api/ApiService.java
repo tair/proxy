@@ -508,7 +508,7 @@ public class ApiService extends AbstractApiService {
    * @return String indicating the access status (OK, NeedSubscription,
    *         NeedLogin)
    */
-  public static String incrementMeteringCount(String ip, String partnerId, String fullUri) {
+  public static String incrementMeteringCount(String ip, String partnerId) {
     String urn =
       METERS_URN + "/ip/" + ip + "/increment/?partnerId=" + partnerId;
     String content = null;
