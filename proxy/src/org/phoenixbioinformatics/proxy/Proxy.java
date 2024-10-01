@@ -306,7 +306,7 @@ public class Proxy extends HttpServlet {
         ArrayList<String> remoteIpList = getIpAddressList(servletRequest);
         String ipListString = String.join(",", remoteIpList);
         //log all the ips that are detected for testing
-        logger.debug("Ip Address Detected: " + ipListString);
+        // logger.debug("Ip Address Detected: " + ipListString);
         
 
         String remoteIp = remoteIpList.get(0);
@@ -723,6 +723,12 @@ public class Proxy extends HttpServlet {
       partner.getUiMeterUri() + "?exceed=exceeded&partnerId=" + partnerId;
     String meterBlacklistUri =
       partner.getUiMeterUri() + "?exceed=blacklisted&partnerId=" + partnerId;
+    String bucketUnitsUrl =
+      partner.getUiMeterUri() + "?exceed=outofunits&partnerId=" + partnerId;
+    String bucketWarningUri =
+      partner.getUiMeterUri() + "?exceed=abouttorunout&partnerId=" + partnerId;
+    String bucketNoLoginUrl =
+      partner.getUiMeterUri() + "?exceed=nologin&partnerId=" + partnerId;
 
     // logger.debug("UI URI set to: " + uiUri);
     // logger.debug("login URI set to: " + loginUri);
@@ -744,23 +750,28 @@ public class Proxy extends HttpServlet {
     if (auth.equals(OK_CODE)) {
       // grant access
       authorized = true;
-      logger.info("Party " + credentialId + " authorized with OK status "
-                  + fullUri + " at partner " + partnerId);
+      logger.info("URL: " + fullUri + "\n" +
+            "Party: " + credentialId + "\n" +
+            "Status: OK\n" +
+            "Partner: " + partnerId);
+
     } else if (auth.equals(NEED_SUBSCRIPTION_CODE)) {
       // check metering status and redirect or proxy as appropriate
-      logger.info("Party " + credentialId
-                  + " needs to subscribe to see paid content " + fullUri
-                  + " at partner " + partnerId);
+      logger.info("URL: " + fullUri + "\n" +
+            "Party: " + credentialId + "\n" +
+            "Action: Bucket Needed\n" +
+            "Partner: " + partnerId);
+
       StringBuilder uriBuilder = new StringBuilder(uiUri);
       
       if(allowBucket) {
-        logger.info("Allowed Bucket System");
+        logger.debug("Inside Bucket System");
         //// New code for bucket
         if(credentialId == null) {
           unauthorizedErrorMsg = "Blocked from paid content due to no login";
           logger.info(unauthorizedErrorMsg);
           authorized = false;
-          uriBuilder.append(meterBlockingUri);
+          uriBuilder.append(bucketNoLoginUrl);
           unauthorizedRedirectUri = uriBuilder.toString();
           uriBuilder.append(PARAM_PREFIX);
           uriBuilder.append(redirectQueryString);
@@ -775,10 +786,10 @@ public class Proxy extends HttpServlet {
               ApiService.decrementUnits(credentialId, partnerId, fullUri);
 
             } else if (meter.equals(METER_WARNING_CODE)) {
-              unauthorizedErrorMsg = "Warned to subscribe by meter limit";
+              unauthorizedErrorMsg = "Warned that bucket is about to run out of units";
               logger.info(unauthorizedErrorMsg);
               authorized = false;
-              uriBuilder.append(meterWarningUri);
+              uriBuilder.append(bucketWarningUri);
               unauthorizedRedirectUri = uriBuilder.toString();
               uriBuilder.append(PARAM_PREFIX);
               uriBuilder.append(redirectQueryString);
@@ -787,20 +798,20 @@ public class Proxy extends HttpServlet {
               ApiService.decrementUnits(credentialId, partnerId, fullUri);
             } else if (meter.equals(METER_BLACK_LIST_BLOCK_CODE)) {
               // PW-287
-              unauthorizedErrorMsg = "Blocked from premium usage content";
+              unauthorizedErrorMsg = "Blocked from premium content (>1 usage units)";
               logger.info(unauthorizedErrorMsg);
               authorized = false;
-              uriBuilder.append(meterBlacklistUri);
+              uriBuilder.append(bucketUnitsUrl);
               unauthorizedRedirectUri = uriBuilder.toString();
               uriBuilder.append(PARAM_PREFIX);
               uriBuilder.append(redirectQueryString);
               redirectUri = uriBuilder.toString();
               meterStatus = METER_BLACK_LIST_STATUS_CODE;
             } else if (meter.equals(METER_BLOCK_CODE)) {
-              unauthorizedErrorMsg = "Blocked from paid content by meter limit";
+              unauthorizedErrorMsg = "Blocked from paid content by meter limit (1 usage units)";
               logger.info(unauthorizedErrorMsg);
               authorized = false;
-              uriBuilder.append(meterBlockingUri);
+              uriBuilder.append(bucketUnitsUrl);
               unauthorizedRedirectUri = uriBuilder.toString();
               uriBuilder.append(PARAM_PREFIX);
               uriBuilder.append(redirectQueryString);
@@ -879,9 +890,12 @@ public class Proxy extends HttpServlet {
 
     if (!authorized) {
       // One or another status requires a redirect.
-      logger.info("Party " + credentialId + " not authorized for " + fullUri
-                  + " at partner " + partnerId + ", redirecting to "
-                  + redirectUri);
+      logger.info("URL: " + fullUri + "\n" +
+            "Party: " + credentialId + "\n" +
+            "Action: Not authorized for " + fullUri + "\n" +
+            "Partner: " + partnerId + "\n" +
+            "Redirecting to: " + redirectUri);
+
       try {
         sqsLogRequest(fullUri, remoteIp, orgId, ipListString, credentialId, sessionId, partnerId, isPaidContent, meterStatus, String.valueOf(servletResponse.getStatus()),getAllServletResponseHeaders(servletResponse), servletResponse.getContentType());
       }catch(Exception e){
