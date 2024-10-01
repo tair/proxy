@@ -766,22 +766,24 @@ public class Proxy extends HttpServlet {
       
       if(allowBucket) {
         logger.debug("Inside Bucket System");
+        String homePageUri = uiUri;
+        logger.debug("homePageUri: " + homePageUri);
         //// New code for bucket
         if(credentialId == null) {
           unauthorizedErrorMsg = "Blocked from paid content due to no login";
-          logger.info(unauthorizedErrorMsg);
+          logger.debug(unauthorizedErrorMsg);
           authorized = false;
           uriBuilder.append(bucketNoLoginUrl);
           unauthorizedRedirectUri = uriBuilder.toString();
           uriBuilder.append(PARAM_PREFIX);
-          uriBuilder.append(redirectQueryString);
+          uriBuilder.append(homePageUri);
           redirectUri = uriBuilder.toString();
           meterStatus = METER_BLOCK_STATUS_CODE;
         } else {
           try {
             String meter = ApiService.checkRemainingUnits(credentialId, partnerId, fullUri);
             if (meter.equals(OK_CODE)) {
-              logger.info("Allowed access to content by using bucket: " + fullUri);
+              logger.debug("Allowed access to content by using bucket: " + fullUri);
               authorized = true;
               ApiService.decrementUnits(credentialId, partnerId, fullUri);
 
@@ -804,7 +806,7 @@ public class Proxy extends HttpServlet {
               uriBuilder.append(bucketUnitsUrl);
               unauthorizedRedirectUri = uriBuilder.toString();
               uriBuilder.append(PARAM_PREFIX);
-              uriBuilder.append(redirectQueryString);
+              uriBuilder.append(homePageUri);
               redirectUri = uriBuilder.toString();
               meterStatus = METER_BLACK_LIST_STATUS_CODE;
             } else if (meter.equals(METER_BLOCK_CODE)) {
@@ -814,7 +816,7 @@ public class Proxy extends HttpServlet {
               uriBuilder.append(bucketUnitsUrl);
               unauthorizedRedirectUri = uriBuilder.toString();
               uriBuilder.append(PARAM_PREFIX);
-              uriBuilder.append(redirectQueryString);
+              uriBuilder.append(homePageUri);
               redirectUri = uriBuilder.toString();
               meterStatus = METER_BLOCK_STATUS_CODE;
             } else {
