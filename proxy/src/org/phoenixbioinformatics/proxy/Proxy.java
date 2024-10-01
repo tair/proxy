@@ -758,16 +758,12 @@ public class Proxy extends HttpServlet {
     } else if (auth.equals(NEED_SUBSCRIPTION_CODE)) {
       // check metering status and redirect or proxy as appropriate
       logger.info("URL: " + fullUri + "\n" +
-            "Party: " + credentialId + "\n" +
-            "Action: Bucket Needed\n" +
-            "Partner: " + partnerId);
+            "Party: " + credentialId + ";Action: Bucket Needed; " + "Partner: " + partnerId);
 
       StringBuilder uriBuilder = new StringBuilder(uiUri);
       
       if(allowBucket) {
         logger.debug("Inside Bucket System");
-        String homePageUri = uiUri;
-        logger.debug("homePageUri: " + homePageUri);
         //// New code for bucket
         if(credentialId == null) {
           unauthorizedErrorMsg = "Blocked from paid content due to no login";
@@ -776,7 +772,7 @@ public class Proxy extends HttpServlet {
           uriBuilder.append(bucketNoLoginUrl);
           unauthorizedRedirectUri = uriBuilder.toString();
           uriBuilder.append(PARAM_PREFIX);
-          uriBuilder.append(homePageUri);
+          uriBuilder.append(redirectQueryString);
           redirectUri = uriBuilder.toString();
           meterStatus = METER_BLOCK_STATUS_CODE;
         } else {
@@ -802,11 +798,12 @@ public class Proxy extends HttpServlet {
               // PW-287
               unauthorizedErrorMsg = "Blocked from premium content (>1 usage units)";
               logger.info(unauthorizedErrorMsg);
+              logger.debug(redirectQueryString);
               authorized = false;
               uriBuilder.append(bucketUnitsUrl);
               unauthorizedRedirectUri = uriBuilder.toString();
               uriBuilder.append(PARAM_PREFIX);
-              uriBuilder.append(homePageUri);
+              uriBuilder.append(redirectQueryString);
               redirectUri = uriBuilder.toString();
               meterStatus = METER_BLACK_LIST_STATUS_CODE;
             } else if (meter.equals(METER_BLOCK_CODE)) {
@@ -816,7 +813,7 @@ public class Proxy extends HttpServlet {
               uriBuilder.append(bucketUnitsUrl);
               unauthorizedRedirectUri = uriBuilder.toString();
               uriBuilder.append(PARAM_PREFIX);
-              uriBuilder.append(homePageUri);
+              uriBuilder.append(redirectQueryString);
               redirectUri = uriBuilder.toString();
               meterStatus = METER_BLOCK_STATUS_CODE;
             } else {
