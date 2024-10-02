@@ -153,6 +153,7 @@ public class Proxy extends HttpServlet {
   private static final String METER_BLACK_LIST_STATUS_CODE = "M";
   private static final String METER_BLOCK_STATUS_CODE = "B";
   private static final String METER_NOT_METERED_STATUS_CODE = "N";
+  private static final String METER_NEED_LOGIN_STATUS_CODE = "L";
   
   // Paid content codes
   private static final String IS_PAID_CONTENT = "T";
@@ -774,7 +775,7 @@ public class Proxy extends HttpServlet {
           uriBuilder.append(PARAM_PREFIX);
           uriBuilder.append(redirectQueryString);
           redirectUri = uriBuilder.toString();
-          meterStatus = METER_BLOCK_STATUS_CODE;
+          meterStatus = METER_NEED_LOGIN_STATUS_CODE;
         } else {
           try {
             String meter = ApiService.checkRemainingUnits(credentialId, partnerId, fullUri);
