@@ -556,7 +556,7 @@ public class Proxy extends HttpServlet {
 
         HttpHostFactory hostFactory = getHostFactory(servletRequest);
         Boolean allowBucket = hostFactory.getAllowBucket();
-        logger.info("authorizeAndProxy: "+ allowBucket);
+        // logger.info("authorizeAndProxy: "+ allowBucket);
     // Determine whether to proxy the request.
     if (authorizeProxyRequest(secretKey,
                               partnerId,
