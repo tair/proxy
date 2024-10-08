@@ -329,7 +329,9 @@ public class Proxy extends HttpServlet {
                                    credentialId,
                                    ipListString);
           auth = accessOutput.status;
-          logger.debug("checkAccess for url: " + fullRequestUri + "\nstatus:" + auth + ", isPaid:" + accessOutput.isPaidContent);
+          if(accessOutput.isPaidContent == "T") {
+            logger.debug("checkAccess for url: " + fullRequestUri + "; status:" + auth + ", isPaid:" + accessOutput.isPaidContent);
+          }
           remoteIp = accessOutput.ip;
           orgId = accessOutput.orgId;
           userIdentifier.append(accessOutput.userIdentifier);
@@ -752,9 +754,7 @@ public class Proxy extends HttpServlet {
     if (auth.equals(OK_CODE)) {
       // grant access
       authorized = true;
-      logger.info("OK_CODE\nURL: " + fullUri + "\n" +
-            "Party: " + credentialId +",Status: OK" +",Partner: " + partnerId);
-
+      logger.info("OK_CODE URL: " + fullUri);
     } else if (auth.equals(NEED_SUBSCRIPTION_CODE)) {
       // check metering status and redirect or proxy as appropriate
       logger.info("NEED_SUBSCRIPTION_CODE\nURL: " + fullUri + "\n" +
@@ -889,11 +889,9 @@ public class Proxy extends HttpServlet {
 
     if (!authorized) {
       // One or another status requires a redirect.
-      logger.info("URL: " + fullUri + "\n" +
-            "Party: " + credentialId + "\n" +
-            "Action: Not authorized for " + fullUri + "\n" +
-            "Partner: " + partnerId + "\n" +
-            "Redirecting to: " + redirectUri);
+      logger.info("URL: " + fullUri +
+            "\nParty: " + credentialId  + ", Action: Not authorized, Partner: " + partnerId +
+            "\nRedirecting to: " + redirectUri);
 
       try {
         sqsLogRequest(fullUri, remoteIp, orgId, ipListString, credentialId, sessionId, partnerId, isPaidContent, meterStatus, String.valueOf(servletResponse.getStatus()),getAllServletResponseHeaders(servletResponse), servletResponse.getContentType());
