@@ -329,7 +329,7 @@ public class Proxy extends HttpServlet {
                                    credentialId,
                                    ipListString);
           auth = accessOutput.status;
-          // logger.debug("checkAccess " +auth);
+          logger.debug("checkAccess for url: " + fullRequestUri + "\nstatus:" + auth + ", isPaid:" + accessOutput.isPaidContent);
           remoteIp = accessOutput.ip;
           orgId = accessOutput.orgId;
           userIdentifier.append(accessOutput.userIdentifier);
@@ -554,6 +554,7 @@ public class Proxy extends HttpServlet {
 
         HttpHostFactory hostFactory = getHostFactory(servletRequest);
         Boolean allowBucket = hostFactory.getAllowBucket();
+        logger.info("authorizeAndProxy: "+ allowBucket);
     // Determine whether to proxy the request.
     if (authorizeProxyRequest(secretKey,
                               partnerId,
@@ -751,15 +752,13 @@ public class Proxy extends HttpServlet {
     if (auth.equals(OK_CODE)) {
       // grant access
       authorized = true;
-      logger.info("URL: " + fullUri + "\n" +
-            "Party: " + credentialId + "\n" +
-            "Status: OK\n" +
-            "Partner: " + partnerId);
+      logger.info("OK_CODE\nURL: " + fullUri + "\n" +
+            "Party: " + credentialId +",Status: OK" +",Partner: " + partnerId);
 
     } else if (auth.equals(NEED_SUBSCRIPTION_CODE)) {
       // check metering status and redirect or proxy as appropriate
-      logger.info("URL: " + fullUri + "\n" +
-            "Party: " + credentialId + ";Action: Bucket Needed; " + "Partner: " + partnerId);
+      logger.info("NEED_SUBSCRIPTION_CODE\nURL: " + fullUri + "\n" +
+            "Party: " + credentialId +",Action: Bucket Needed" +",Partner: " + partnerId);
 
       StringBuilder uriBuilder = new StringBuilder(uiUri);
       
@@ -829,7 +828,7 @@ public class Proxy extends HttpServlet {
           }
         }
       } else {
-        logger.info("Allowed IP-Metering System");
+        logger.info("Inside IP-Metering System");
         try {
           String meter = ApiService.checkMeteringLimit(remoteIp, partnerId, fullUri);
           if (meter.equals(OK_CODE)) {
@@ -1034,7 +1033,7 @@ public class Proxy extends HttpServlet {
     long stopTime = System.currentTimeMillis();
     long elapsedTime = stopTime - startTime;
     if (elapsedTime >= CONTENT_REQUEST_THRESHOLD * 1000) {
-      logger.debug(LOG_MARKER + "Request to content server " + request.getRequestLine().getUri() + " takes " + elapsedTime + " ms to response " + LOG_MARKER);
+      // logger.debug(LOG_MARKER + "Request to content server " + request.getRequestLine().getUri() + " takes " + elapsedTime + " ms to response " + LOG_MARKER);
     }
 
     // Put the cookie store with any returned session cookie into the session.
