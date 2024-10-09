@@ -97,20 +97,23 @@ public class ApiService extends AbstractApiService {
     public String targetUri;
     public Boolean allowRedirect;
     public Boolean allowCredential;
+    public Boolean allowBucket;
     SubMap sub;
 
     private class SubMap {
       String path;
       Boolean allowRedirect;
       Boolean allowCredential;
+      Boolean allowBucket;
     }
 
-    private PartnerOutput(String pId, String sUri, String tUri, Boolean allowRedirect, Boolean allowCredential) {
+    private PartnerOutput(String pId, String sUri, String tUri, Boolean allowRedirect, Boolean allowCredential, Boolean allowBucket) {
       this.partnerId = pId;
       this.sourceUri = sUri;
       this.targetUri = tUri;
       this.allowRedirect = allowRedirect;
       this.allowCredential = allowCredential;
+      this.allowBucket = allowBucket;
     }
 
     public static PartnerOutput createInstance(String sourceUri, String uriPath) {
@@ -119,6 +122,7 @@ public class ApiService extends AbstractApiService {
       String targetUri = ProxyProperties.getProperty("default.uri");
       Boolean allowRedirect = true;
       Boolean allowCredential = false;
+      Boolean allowBucket = false;
       String mapContent = ProxyProperties.getProperty("partner.map");
       if (mapContent != null) {
         try {
@@ -136,6 +140,9 @@ public class ApiService extends AbstractApiService {
             if (partnerInfo.allowCredential != null){
               allowCredential = partnerInfo.allowCredential;
             }
+            if (partnerInfo.allowBucket != null){
+              allowBucket = partnerInfo.allowBucket;
+            }
             // match the uriPath with special pattern
             if (partnerInfo.sub != null) {
               if (partnerInfo.sub.path != null
@@ -145,6 +152,9 @@ public class ApiService extends AbstractApiService {
                 }
                 if (partnerInfo.sub.allowCredential != null) {
                   allowCredential = partnerInfo.sub.allowCredential;
+                }
+                if (partnerInfo.sub.allowBucket != null) {
+                  allowBucket = partnerInfo.sub.allowBucket;
                 }
               }
             }
@@ -160,7 +170,7 @@ public class ApiService extends AbstractApiService {
       } else {
         logger.info("Partner info map is undefined. Use default partner info.");
       }
-      return new PartnerOutput(partnerId, sourceUri, targetUri, allowRedirect, allowCredential);
+      return new PartnerOutput(partnerId, sourceUri, targetUri, allowRedirect, allowCredential, allowBucket);
     }
   }
 
@@ -418,6 +428,7 @@ public class ApiService extends AbstractApiService {
     String urn =
       AUTHORIZATION_URN + "/access/?partnerId=" + partnerId + "&url=" + url
           + "&ipList=" + remoteIpList;
+    // logger.debug("check access " + urn);
     String content = null;
     try {
       content =
@@ -432,6 +443,30 @@ public class ApiService extends AbstractApiService {
     } catch (Exception e) {
       logAPIError(UNEXPECTED_ERROR, e, urn, "GET", content);
       throw new RuntimeException("Unexpected error making API call: " + e.getMessage(), e);
+    }
+  }
+
+  /**
+   * Checks if client has PPV Units available based on his credentialId.
+   * 
+   * @param credentialId client's Party ID.
+   * @return String indicating client's metering status. (OK, Warn, Blocked)
+   */
+  public static String checkRemainingUnits(String credentialId, String partnerId, String fullUri) {
+    String urn = "/subscriptions/limit/?party_id=" + credentialId + "&partner_id=" + partnerId + "&uri=" + fullUri;
+    String content = null;
+
+    try {
+      logger.debug("checking remaining units for user: " + credentialId + " with " + fullUri);
+      content = callApi(urn, RequestFactory.HttpMethod.GET);
+      Gson gson = new Gson();
+      CheckMeteringLimitOutput out =
+        gson.fromJson(content, CheckMeteringLimitOutput.class);
+      logger.debug("checkRemainingUnits status " + out.status);
+      return out.status;
+    } catch (IOException e) {
+      logAPIError(METERING_LIMIT_ERROR, e, urn, "GET", content);
+      return e.getMessage();
     }
   }
 
@@ -485,6 +520,24 @@ public class ApiService extends AbstractApiService {
         gson.fromJson(content, IncrementMeteringCountOutput.class);
       String message = out.message;
 
+      return message;
+    } catch (IOException e) {
+      logAPIError(INCREMENT_METERING_COUNT_ERROR, e, urn, "POST", content);
+      return e.getMessage();
+    }
+  }
+
+  public static String decrementUnits(String credentialId, String partnerId, String fullUri) {
+    String urn = "/subscriptions/decrement/?party_id=" + credentialId + "&partner_id=" + partnerId + "&uri=" + fullUri;
+    String content = null;
+
+    try {
+      content = callApi(urn, RequestFactory.HttpMethod.POST);
+      Gson gson = new Gson();
+      IncrementMeteringCountOutput out =
+        gson.fromJson(content, IncrementMeteringCountOutput.class);
+      String message = out.message;
+      logger.debug("Decrement message " + message);
       return message;
     } catch (IOException e) {
       logAPIError(INCREMENT_METERING_COUNT_ERROR, e, urn, "POST", content);

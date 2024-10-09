@@ -156,6 +156,14 @@ public class HttpHostFactory {
     return allowCredential;
   }
 
+  public Boolean getAllowBucket() {
+    Boolean allowBucket = false;
+    if (partnerPattern != null) {
+      allowBucket = partnerPattern.getAllowBucket();
+    }
+    return allowBucket;
+  }
+
   // Unit test getters
 
   /**
