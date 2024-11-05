@@ -1295,7 +1295,7 @@ public class Proxy extends HttpServlet {
         closeable.close();
       } catch (IOException e) {
         // Don't propagate the exception.
-        logger.warn(CLOSE_DATA_SOURCE_ERROR + e.getMessage(), e);
+        // logger.warn(CLOSE_DATA_SOURCE_ERROR + e.getMessage(), e);
       }
     }
   }
