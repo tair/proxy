@@ -454,11 +454,10 @@ public class ApiService extends AbstractApiService {
    */
   public static String checkRemainingUnits(String credentialId, String partnerId, String fullUri) {
     String urn_trackpage = "/subscriptions/track_page/?party_id=" + credentialId + "&uri=" + fullUri;
-    String content = null;
 
     try {
-      content = callApi(urn_trackpage, RequestFactory.HttpMethod.POST);
-      logger.debug("checkTrackPage status " + content);
+      String trackPageStatus = callApi(urn_trackpage, RequestFactory.HttpMethod.POST);
+      logger.debug("checkTrackPage status " + trackPageStatus);
     } catch (IOException e) {
       logAPIError(INCREMENT_METERING_COUNT_ERROR, e, urn_trackpage, "POST", "");
       return e.getMessage();
