@@ -458,6 +458,9 @@ public class ApiService extends AbstractApiService {
     try {
       String trackPageStatus = callApi(urn_trackpage, RequestFactory.HttpMethod.POST);
       logger.debug("checkTrackPage status " + trackPageStatus);
+      if(trackPageStatus.equals("Cached")) {
+        return "Cached";
+      }
     } catch (IOException e) {
       logAPIError(INCREMENT_METERING_COUNT_ERROR, e, urn_trackpage, "POST", "");
       return e.getMessage();

@@ -145,6 +145,7 @@ public class Proxy extends HttpServlet {
   private static final String METER_WARNING_CODE = "Warning";
   private static final String METER_BLOCK_CODE = "Block"; // PW-646
   private static final String METER_BLACK_LIST_BLOCK_CODE = "BlackListBlock"; // PW-287
+  private static final String METER_CACHED_CODE = "Cached";
   private static final String OK_CODE = "OK";
   private static final String NOT_OK_CODE = "NOT OK";
   
@@ -816,6 +817,9 @@ public class Proxy extends HttpServlet {
               uriBuilder.append(redirectQueryString);
               redirectUri = uriBuilder.toString();
               meterStatus = METER_BLOCK_STATUS_CODE;
+            } else if (meter.equals(METER_CACHED_CODE)) {
+              logger.debug("Allowed access to cached content, units not decremented: " + fullUri);
+              authorized = true;
             } else {
               // PWL-646: Bypass and allow free access for unexpected status such as 404
               logger.info("Check meter limit returned with unexpected code: " + meter + ". Bypassing proxy/paywall - allowing free access to content.");
