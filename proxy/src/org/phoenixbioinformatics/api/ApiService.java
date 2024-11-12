@@ -453,6 +453,22 @@ public class ApiService extends AbstractApiService {
    * @return String indicating client's metering status. (OK, Warn, Blocked)
    */
   public static String checkRemainingUnits(String credentialId, String partnerId, String fullUri) {
+    String urn_trackpage = "/subscriptions/track_page/?party_id=" + credentialId + "&uri=" + fullUri;
+
+    try {
+      String trackPageStatus = callApi(urn_trackpage, RequestFactory.HttpMethod.POST);
+      Gson gson = new Gson();
+      CheckMeteringLimitOutput out =
+        gson.fromJson(trackPageStatus, CheckMeteringLimitOutput.class);
+      logger.debug("checkTrackPage status " + out.status);
+      if(out.status.equals("Cached")) {
+        return out.status;
+      }
+    } catch (IOException e) {
+      logAPIError(INCREMENT_METERING_COUNT_ERROR, e, urn_trackpage, "POST", "");
+      return e.getMessage();
+    }
+
     String urn = "/subscriptions/limit/?party_id=" + credentialId + "&partner_id=" + partnerId + "&uri=" + fullUri;
     String content = null;
 
