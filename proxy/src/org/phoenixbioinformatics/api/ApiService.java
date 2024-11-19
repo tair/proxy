@@ -456,7 +456,7 @@ public class ApiService extends AbstractApiService {
     String urn_trackpage = "/subscriptions/track_page/?party_id=" + credentialId + "&uri=" + fullUri;
 
     try {
-      String trackPageStatus = callApi(urn_trackpage, RequestFactory.HttpMethod.POST);
+      String trackPageStatus = callApi(urn_trackpage, RequestFactory.HttpMethod.GET);
       Gson gson = new Gson();
       CheckMeteringLimitOutput out =
         gson.fromJson(trackPageStatus, CheckMeteringLimitOutput.class);
@@ -465,7 +465,7 @@ public class ApiService extends AbstractApiService {
         return out.status;
       }
     } catch (IOException e) {
-      logAPIError(INCREMENT_METERING_COUNT_ERROR, e, urn_trackpage, "POST", "");
+      logAPIError(INCREMENT_METERING_COUNT_ERROR, e, urn_trackpage, "GET", "");
       return e.getMessage();
     }
 
@@ -479,6 +479,16 @@ public class ApiService extends AbstractApiService {
       CheckMeteringLimitOutput out =
         gson.fromJson(content, CheckMeteringLimitOutput.class);
       logger.debug("checkRemainingUnits status " + out.status);
+      if(!out.status.equals("Block")) {
+        String urn_cachepage = "/subscriptions/track_page/?party_id=" + credentialId + "&uri=" + fullUri;
+        try {
+          String cacheTrackPage = callApi(urn_cachepage, RequestFactory.HttpMethod.POST);
+          logger.debug("cacheTrackPage status " + cacheTrackPage);
+        } catch (IOException e) {
+          logAPIError(INCREMENT_METERING_COUNT_ERROR, e, urn_cachepage, "POST", "");
+          return e.getMessage();
+        }
+      }
       return out.status;
     } catch (IOException e) {
       logAPIError(METERING_LIMIT_ERROR, e, urn, "GET", content);

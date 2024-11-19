@@ -212,7 +212,7 @@ public class Proxy extends HttpServlet {
       long stopTime = System.currentTimeMillis();
       long elapsedTime = stopTime - startTime;
       if (elapsedTime >= PROXY_REQUEST_THRESHOLD * 1000) {
-        logger.debug(LOG_MARKER + " Request to proxy server " + servletRequest.getRequestURI().toString() + " takes " + elapsedTime + " ms to response " + LOG_MARKER);
+        // logger.debug(LOG_MARKER + " Request to proxy server " + servletRequest.getRequestURI().toString() + " takes " + elapsedTime + " ms to response " + LOG_MARKER);
       }
       // logAllServletResponseHeaders(servletResponse);
     } catch (RuntimeException e) {
