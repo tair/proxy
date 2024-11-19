@@ -151,13 +151,13 @@ public abstract class AbstractRequest implements IRequest {
 
     String pathInfo = servletRequest.getPathInfo();
     if (pathInfo != null) {
-      logger.debug("Path info: " + pathInfo);
+      // logger.debug("Path info: " + pathInfo);
       uri.append(encodeUriQuery(pathInfo));
     }
 
     // Handle the query string & fragment
     String queryString = servletRequest.getQueryString();
-    logger.debug("Query string: " + queryString);
+    // logger.debug("Query string: " + queryString);
     String fragment = null;
     // split off fragment from queryString, updating queryString if found
     if (queryString != null) {
@@ -179,7 +179,7 @@ public abstract class AbstractRequest implements IRequest {
     }
 
     String rewrittenUri = uri.toString();
-    logger.debug("Rewrote servlet URI as " + rewrittenUri);
+    // logger.debug("Rewrote servlet URI as " + rewrittenUri);
     return rewrittenUri;
   }
 
@@ -212,10 +212,11 @@ public abstract class AbstractRequest implements IRequest {
     // Content length and Transfer encoding indicate request has a body.
     if (hasEntity(servletRequest)) {
       // Content type is either form or non-form
-      if (servletRequest.getContentType().contains("application/x-www-form-urlencoded")) {
+      String contentType = servletRequest.getContentType();
+      if (contentType != null && contentType.contains("application/x-www-form-urlencoded")) {
         entity = encodeFormEntity(servletRequest);
       } else {
-        logger.debug("Creating entity by copying");
+        // logger.debug("Creating entity by copying");
         // Copy the entity from the request body directly.
         entity =
           new InputStreamEntity(servletRequest.getInputStream(),
@@ -233,7 +234,7 @@ public abstract class AbstractRequest implements IRequest {
    */
   private UrlEncodedFormEntity encodeFormEntity(HttpServletRequest servletRequest)
       throws UnsupportedEncodingException {
-    logger.debug("Creating encoded form entity");
+    // logger.debug("Creating encoded form entity");
     // Extract the parameter map and create a new form entity.
     Map<String, String[]> map = servletRequest.getParameterMap();
     List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>();
@@ -244,7 +245,7 @@ public abstract class AbstractRequest implements IRequest {
         nameValuePairs.add(new BasicNameValuePair(name, array[i]));
       }
     }
-    logger.debug("Encoded " + nameValuePairs.size() + " form parameters");
+    // logger.debug("Encoded " + nameValuePairs.size() + " form parameters");
     return new UrlEncodedFormEntity(nameValuePairs);
   }
 }

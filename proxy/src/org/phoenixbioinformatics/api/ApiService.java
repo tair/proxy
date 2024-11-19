@@ -19,7 +19,6 @@ import org.apache.http.message.BasicNameValuePair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.phoenixbioinformatics.http.RequestFactory;
-import org.phoenixbioinformatics.properties.ProxyProperties;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -70,6 +69,7 @@ public class ApiService extends AbstractApiService {
     public String status;
     public String userIdentifier;
     public String ip;
+    public String orgId;
     public String isPaidContent;
     public String redirectUri;
   }
@@ -95,29 +95,74 @@ public class ApiService extends AbstractApiService {
     public String partnerId;
     public String sourceUri;
     public String targetUri;
+    public Boolean allowRedirect;
+    public Boolean allowCredential;
+    public Boolean allowBucket;
+    SubMap sub;
 
-    private PartnerOutput(String pId, String sUri, String tUri) {
+    private class SubMap {
+      String path;
+      Boolean allowRedirect;
+      Boolean allowCredential;
+      Boolean allowBucket;
+    }
+
+    private PartnerOutput(String pId, String sUri, String tUri, Boolean allowRedirect, Boolean allowCredential, Boolean allowBucket) {
       this.partnerId = pId;
       this.sourceUri = sUri;
       this.targetUri = tUri;
+      this.allowRedirect = allowRedirect;
+      this.allowCredential = allowCredential;
+      this.allowBucket = allowBucket;
     }
 
-    public static PartnerOutput createInstance(String sourceUri) {
+    public static PartnerOutput createInstance(String sourceUri, String uriPath) {
       // set as default values
       String partnerId = DEFAULT_PARTNER_ID;
       String targetUri = ProxyProperties.getProperty("default.uri");
+      Boolean allowRedirect = true;
+      Boolean allowCredential = false;
+      Boolean allowBucket = false;
       String mapContent = ProxyProperties.getProperty("partner.map");
       if (mapContent != null) {
         try {
           Gson parser = new Gson();
-          Type type = new TypeToken<HashMap<String, HashMap<String, String>>>(){}.getType();
-          HashMap<String, HashMap<String, String>> map = parser.fromJson(mapContent, type);
-          HashMap<String, String> partnerInfo = map.get(sourceUri);
+          Type type = new TypeToken<HashMap<String, PartnerOutput>>(){}.getType();
+          HashMap<String, PartnerOutput> map = parser.fromJson(mapContent, type);
+          PartnerOutput partnerInfo = map.get(sourceUri);
           if (partnerInfo != null) {
-            partnerId = partnerInfo.get("partnerId");
-            targetUri = partnerInfo.get("targetUri");
+            partnerId = partnerInfo.partnerId;
+            targetUri = partnerInfo.targetUri;
+            // start with "default value" of the current partner
+            if (partnerInfo.allowRedirect != null){
+              allowRedirect = partnerInfo.allowRedirect;
+            }
+            if (partnerInfo.allowCredential != null){
+              allowCredential = partnerInfo.allowCredential;
+            }
+            if (partnerInfo.allowBucket != null){
+              allowBucket = partnerInfo.allowBucket;
+            }
+            // match the uriPath with special pattern
+            if (partnerInfo.sub != null) {
+              if (partnerInfo.sub.path != null
+                && uriPath.contains(partnerInfo.sub.path)) {
+                if (partnerInfo.sub.allowRedirect != null) {
+                  allowRedirect = partnerInfo.sub.allowRedirect;
+                }
+                if (partnerInfo.sub.allowCredential != null) {
+                  allowCredential = partnerInfo.sub.allowCredential;
+                }
+                if (partnerInfo.sub.allowBucket != null) {
+                  allowBucket = partnerInfo.sub.allowBucket;
+                }
+              }
+            }
+            // assume allowRedirect and allowCredential 
+            // allowRedirect = allowRedirectStr.equals("T") || allowRedirectStr.equals("true") || allowRedirectStr.equals("True");
+            // allowCredential = allowCredentialStr.equals("T") || allowCredentialStr.equals("true") || allowCredentialStr.equals("True");
           } else {
-            logger.info("No partner mapping info for " + sourceUri + ". Use default partner info.");
+            // logger.info("No partner mapping info for " + sourceUri + ". Use default partner info.");
           }
         } catch (Exception e) {
           logger.info("Failed to load partner info map. Use default partner info.");
@@ -125,9 +170,11 @@ public class ApiService extends AbstractApiService {
       } else {
         logger.info("Partner info map is undefined. Use default partner info.");
       }
-      return new PartnerOutput(partnerId, sourceUri, targetUri);
+      return new PartnerOutput(partnerId, sourceUri, targetUri, allowRedirect, allowCredential, allowBucket);
     }
   }
+
+
   
   /**
    * Data transfer object for partner detail API output data
@@ -235,7 +282,7 @@ public class ApiService extends AbstractApiService {
    * Creates a page view log entry
    */
   public static void createPageView(String ip, String ipListString, String uri, String partyId,
-                                    String sessionId, String partnerId, String isPaidContent, String meterStatus, String token) {
+                                    String sessionId, String partnerId, String isPaidContent, String meterStatus) {
     String urn = PAGE_VIEWS_URN + "/";
     Date curDate = new Date();
     SimpleDateFormat format = new SimpleDateFormat();
@@ -255,11 +302,10 @@ public class ApiService extends AbstractApiService {
     params.add(new BasicNameValuePair("partnerId", partnerId));
     params.add(new BasicNameValuePair("isPaidContent", isPaidContent));
     params.add(new BasicNameValuePair("meterStatus", meterStatus));
-    
-    String content = null;
 
+    String content = null;
     try {
-    	  content = callApi(urn, RequestFactory.HttpMethod.POST, "token="+token, params);
+    	  content = callApi(urn, RequestFactory.HttpMethod.POST, "", params);
     } catch (Exception e) {
       logAPIError(LOGGING_ERROR, e, urn, "POST", content);
       StringBuilder builder = new StringBuilder("[parameters: ");
@@ -290,7 +336,7 @@ public class ApiService extends AbstractApiService {
     /*
     String urn = PARTNERS_URN + "/?partnerId=" + partnerId;
     try {
-      String content = callApi(urn, RequestFactory.HttpMethod.GET);// GET partners/ is an open request, we don't pass a token here
+      String content = callApi(urn, RequestFactory.HttpMethod.GET);
       Gson gson = new Gson();
       Type type = new TypeToken<List<PartnerDetailOutput>>() {
       }.getType();
@@ -325,7 +371,7 @@ public class ApiService extends AbstractApiService {
    * @param uri URI of client's request
    * @return unique identifier for the partner corresponding to the request URI
    */
-  public static PartnerOutput getPartnerInfo(String uri) {
+  public static PartnerOutput getPartnerInfo(String sourceHost, String uriPath) {
     // PWL-551: hard code partner info
     /*
     String urn = PARTNERS_URN + PATTERNS_URI + "?sourceUri=" + uri;
@@ -353,7 +399,7 @@ public class ApiService extends AbstractApiService {
       return null;
     }
     */
-    return PartnerOutput.createInstance(uri);
+    return PartnerOutput.createInstance(sourceHost, uriPath);
   }
 
   /**
@@ -367,13 +413,12 @@ public class ApiService extends AbstractApiService {
    *          resource
    * @param partnerId unique identifier for the partner that owns the requested
    *          resource
-   * @param token the JSON web token generated by the API
    * @return String indicating the access status (OK, NeedSubscription,
    *         NeedLogin) or an error message
    */
   public static AccessOutput checkAccess(String url, String loginKey,
                                          String partnerId, String credentialId,
-                                         String remoteIpList, String token) {
+                                         String remoteIpList) {
     try {
       url = URLEncoder.encode(url, "UTF-8");
     } catch (UnsupportedEncodingException e) {
@@ -383,12 +428,12 @@ public class ApiService extends AbstractApiService {
     String urn =
       AUTHORIZATION_URN + "/access/?partnerId=" + partnerId + "&url=" + url
           + "&ipList=" + remoteIpList;
+    // logger.debug("check access " + urn);
     String content = null;
     try {
       content =
         callApi(urn, RequestFactory.HttpMethod.GET, "secretKey=" + loginKey
                                                     + ";credentialId=" + credentialId
-                                                    + ";token=" + token
                                                     + ";");
       Gson gson = new Gson();
       return gson.fromJson(content, AccessOutput.class);
@@ -402,13 +447,52 @@ public class ApiService extends AbstractApiService {
   }
 
   /**
+   * Checks if client has PPV Units available based on his credentialId.
+   * 
+   * @param credentialId client's Party ID.
+   * @return String indicating client's metering status. (OK, Warn, Blocked)
+   */
+  public static String checkRemainingUnits(String credentialId, String partnerId, String fullUri) {
+    String urn_trackpage = "/subscriptions/track_page/?party_id=" + credentialId + "&uri=" + fullUri;
+
+    try {
+      String trackPageStatus = callApi(urn_trackpage, RequestFactory.HttpMethod.POST);
+      Gson gson = new Gson();
+      CheckMeteringLimitOutput out =
+        gson.fromJson(trackPageStatus, CheckMeteringLimitOutput.class);
+      logger.debug("checkTrackPage status " + out.status);
+      if(out.status.equals("Cached")) {
+        return out.status;
+      }
+    } catch (IOException e) {
+      logAPIError(INCREMENT_METERING_COUNT_ERROR, e, urn_trackpage, "POST", "");
+      return e.getMessage();
+    }
+
+    String urn = "/subscriptions/limit/?party_id=" + credentialId + "&partner_id=" + partnerId + "&uri=" + fullUri;
+    String content = null;
+
+    try {
+      logger.debug("checking remaining units for user: " + credentialId + " with " + fullUri);
+      content = callApi(urn, RequestFactory.HttpMethod.GET);
+      Gson gson = new Gson();
+      CheckMeteringLimitOutput out =
+        gson.fromJson(content, CheckMeteringLimitOutput.class);
+      logger.debug("checkRemainingUnits status " + out.status);
+      return out.status;
+    } catch (IOException e) {
+      logAPIError(METERING_LIMIT_ERROR, e, urn, "GET", content);
+      return e.getMessage();
+    }
+  }
+
+  /**
    * Retrieves the metering of the client based on the client's IP address.
    * 
    * @param ip client's IP address.
    * @return String indicating client's metering status. (OK, Warn, Blocked)
    */
-
-  public static String checkMeteringLimit(String ip, String partnerId, String fullUri, String token) {
+  public static String checkMeteringLimit(String ip, String partnerId, String fullUri) {
     try {
       fullUri = URLEncoder.encode(fullUri, "UTF-8");
     } catch (UnsupportedEncodingException e) {
@@ -419,7 +503,7 @@ public class ApiService extends AbstractApiService {
     String content = null;
 
     try {
-    	  content = callApi(urn, RequestFactory.HttpMethod.GET, "token=" + token + ";");
+      content = callApi(urn, RequestFactory.HttpMethod.GET);
       Gson gson = new Gson();
       CheckMeteringLimitOutput out =
         gson.fromJson(content, CheckMeteringLimitOutput.class);
@@ -440,13 +524,13 @@ public class ApiService extends AbstractApiService {
    * @return String indicating the access status (OK, NeedSubscription,
    *         NeedLogin)
    */
-  public static String incrementMeteringCount(String ip, String partnerId, String token) {
+  public static String incrementMeteringCount(String ip, String partnerId) {
     String urn =
       METERS_URN + "/ip/" + ip + "/increment/?partnerId=" + partnerId;
     String content = null;
 
-    try {	
-    	  content = callApi(urn, RequestFactory.HttpMethod.POST, "token=" + token);
+    try {
+      content = callApi(urn, RequestFactory.HttpMethod.POST);
       Gson gson = new Gson();
       IncrementMeteringCountOutput out =
         gson.fromJson(content, IncrementMeteringCountOutput.class);
@@ -459,17 +543,23 @@ public class ApiService extends AbstractApiService {
     }
   }
 
-public static void sendMeteringEmail(String remoteIp, String partnerId, String credentialId) {
-		String to = "andrey@arabidopsis.org";//ProxyProperties.getProperty("mail.to");
-		String from = ProxyProperties.getProperty("mail.from");
-		String content = "partnerId:"+partnerId+" is about to exceed the limit for remoteIp:"+remoteIp+" credentialId:"+credentialId;
-		String subject = "partnerId:"+partnerId+" is about to exceed the limit for remoteIp:"+remoteIp;
-		
-		logger.debug("Sending email to " + to + " from " + from + ". Subject: " + subject );
-		logger.debug("Content: " + content);
-		
-		EmailUtility.send(to, from, subject, content);	
-}
+  public static String decrementUnits(String credentialId, String partnerId, String fullUri) {
+    String urn = "/subscriptions/decrement/?party_id=" + credentialId + "&partner_id=" + partnerId + "&uri=" + fullUri;
+    String content = null;
+
+    try {
+      content = callApi(urn, RequestFactory.HttpMethod.POST);
+      Gson gson = new Gson();
+      IncrementMeteringCountOutput out =
+        gson.fromJson(content, IncrementMeteringCountOutput.class);
+      String message = out.message;
+      logger.debug("Decrement message " + message);
+      return message;
+    } catch (IOException e) {
+      logAPIError(INCREMENT_METERING_COUNT_ERROR, e, urn, "POST", content);
+      return e.getMessage();
+    }
+  }
   
   private static void logAPIError(String msg, Exception e, String urn, String method, String content) {
 	  logger.debug(msg, e);

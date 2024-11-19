@@ -132,6 +132,38 @@ public class HttpHostFactory {
     return id;
   }
 
+  /**
+   * Get whether the domain allows redirect when
+   * hit redirect criteria
+   */
+  public Boolean getAllowRedirect() {
+    Boolean allowRedirect = true;
+    if (partnerPattern != null) {
+      allowRedirect = partnerPattern.getAllowRedirect();
+    }
+    return allowRedirect;
+  }
+
+  /**
+   * Get whether the domain allows other request to set
+   * credential/cookie for it
+   */
+  public Boolean getAllowCredential() {
+    Boolean allowCredential = false;
+    if (partnerPattern != null) {
+      allowCredential = partnerPattern.getAllowCredential();
+    }
+    return allowCredential;
+  }
+
+  public Boolean getAllowBucket() {
+    Boolean allowBucket = false;
+    if (partnerPattern != null) {
+      allowBucket = partnerPattern.getAllowBucket();
+    }
+    return allowBucket;
+  }
+
   // Unit test getters
 
   /**
