@@ -162,7 +162,7 @@ public class ApiService extends AbstractApiService {
             // allowRedirect = allowRedirectStr.equals("T") || allowRedirectStr.equals("true") || allowRedirectStr.equals("True");
             // allowCredential = allowCredentialStr.equals("T") || allowCredentialStr.equals("true") || allowCredentialStr.equals("True");
           } else {
-            logger.info("No partner mapping info for " + sourceUri + ". Use default partner info.");
+            // logger.info("No partner mapping info for " + sourceUri + ". Use default partner info.");
           }
         } catch (Exception e) {
           logger.info("Failed to load partner info map. Use default partner info.");
