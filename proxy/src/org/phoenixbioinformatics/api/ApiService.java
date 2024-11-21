@@ -479,7 +479,7 @@ public class ApiService extends AbstractApiService {
       CheckMeteringLimitOutput out =
         gson.fromJson(content, CheckMeteringLimitOutput.class);
       logger.debug("checkRemainingUnits status " + out.status);
-      if(!out.status.equals("Block")) {
+      if(!out.status.equals("Block") && !out.status.equals("BlackListBlock")) {
         String urn_cachepage = "/subscriptions/track_page/?party_id=" + credentialId + "&uri=" + fullUri;
         try {
           String cacheTrackPage = callApi(urn_cachepage, RequestFactory.HttpMethod.POST);
