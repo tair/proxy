@@ -764,7 +764,7 @@ public class Proxy extends HttpServlet {
       StringBuilder uriBuilder = new StringBuilder(uiUri);
       
       if(allowBucket) {
-        logger.debug("Inside Bucket System");
+        // logger.debug("Inside Bucket System");
         //// New code for bucket
         if(credentialId == null) {
           unauthorizedErrorMsg = "Blocked from paid content due to no login";
