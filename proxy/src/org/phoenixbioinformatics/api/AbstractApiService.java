@@ -90,10 +90,10 @@ public abstract class AbstractApiService {
     // CloseableHttpClient client = HttpClientBuilder.create().build();
     // To remove ssl certificate errors
     CloseableHttpClient client = HttpClients.custom()
-      .setSSLHostnameVerifier(NoopHostnameVerifier.INSTANCE)
-      .setSSLContext(SSLContexts.custom()
+      .setSslcontext(SSLContexts.custom()
           .loadTrustMaterial(null, new TrustSelfSignedStrategy())
           .build())
+      .setSSLHostnameVerifier(NoopHostnameVerifier.INSTANCE)
       .build();
 
     // debug statement.
