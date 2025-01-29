@@ -2,6 +2,8 @@ package org.phoenixbioinformatics.api;
 
 
 import java.io.IOException;
+import java.security.KeyManagementException;
+import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.util.List;
 import javax.net.ssl.SSLContext;
@@ -92,14 +94,16 @@ public abstract class AbstractApiService {
     // To remove ssl certificate errors
      CloseableHttpClient client;
       try {
+          SSLContext sslContext = SSLContexts.custom()
+                  .loadTrustMaterial(null, new TrustSelfSignedStrategy())
+                  .build();
+
           client = HttpClients.custom()
-                  .setSslcontext(SSLContexts.custom()
-                          .loadTrustMaterial(null, new TrustSelfSignedStrategy())
-                          .build())
+                  .setSslcontext(sslContext)
                   .setSSLHostnameVerifier(NoopHostnameVerifier.INSTANCE)
                   .build();
-      } catch (NoSuchAlgorithmException e) {
-          throw new IOException("SSL setup failed", e);
+      } catch (NoSuchAlgorithmException | KeyStoreException | KeyManagementException e) {
+          throw new IOException("Error setting up SSL context", e);
       }
 
     // debug statement.
