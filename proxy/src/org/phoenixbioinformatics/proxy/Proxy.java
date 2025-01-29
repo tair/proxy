@@ -1481,7 +1481,13 @@ public class Proxy extends HttpServlet {
       }
     } catch (IOException e) {
       // warn and ignore, probably the client has closed or something
-      logger.warn(OUTPUT_STREAM_IO_WARN, e);
+      // Extracting the "Caused by" line and logging the function name
+      Throwable cause = e.getCause();
+      if (cause != null) {
+          logger.warn("Exception in copyResponseEntity: Caused by: " + cause.getClass().getName() + ": " + cause.getMessage());
+      } else {
+          logger.warn("Exception in copyResponseEntity: " + e.getClass().getName() + ": " + e.getMessage());
+      }
     } finally {
       closeQuietly(input);
       closeQuietly(output);
