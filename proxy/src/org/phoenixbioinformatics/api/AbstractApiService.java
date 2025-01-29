@@ -81,8 +81,16 @@ public abstract class AbstractApiService {
     }
 
     request.addHeader("Cookie", "apiKey=" + API_KEY + ";" + cookieString);
-    CloseableHttpClient client = HttpClientBuilder.create().build();
-    // debug statement. TODO: remove in final produce to reduce spam
+    // CloseableHttpClient client = HttpClientBuilder.create().build();
+    // To remove ssl certificate errors
+    CloseableHttpClient client = HttpClients.custom()
+      .setSSLHostnameVerifier(NoopHostnameVerifier.INSTANCE)
+      .setSSLContext(SSLContexts.custom()
+          .loadTrustMaterial(null, new TrustSelfSignedStrategy())
+          .build())
+      .build();
+
+    // debug statement.
     // logger.debug("Making " + methodString + " request: " + API_URL + urn);
     response = client.execute(request);
 
