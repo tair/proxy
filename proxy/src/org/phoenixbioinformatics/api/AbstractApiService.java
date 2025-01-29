@@ -2,6 +2,7 @@ package org.phoenixbioinformatics.api;
 
 
 import java.io.IOException;
+import java.security.NoSuchAlgorithmException;
 import java.util.List;
 import javax.net.ssl.SSLContext;
 
@@ -89,12 +90,17 @@ public abstract class AbstractApiService {
     request.addHeader("Cookie", "apiKey=" + API_KEY + ";" + cookieString);
     // CloseableHttpClient client = HttpClientBuilder.create().build();
     // To remove ssl certificate errors
-    CloseableHttpClient client = HttpClients.custom()
-      .setSslcontext(SSLContexts.custom()
-          .loadTrustMaterial(null, new TrustSelfSignedStrategy())
-          .build())
-      .setSSLHostnameVerifier(NoopHostnameVerifier.INSTANCE)
-      .build();
+     CloseableHttpClient client;
+      try {
+          client = HttpClients.custom()
+                  .setSslcontext(SSLContexts.custom()
+                          .loadTrustMaterial(null, new TrustSelfSignedStrategy())
+                          .build())
+                  .setSSLHostnameVerifier(NoopHostnameVerifier.INSTANCE)
+                  .build();
+      } catch (NoSuchAlgorithmException e) {
+          throw new IOException("SSL setup failed", e);
+      }
 
     // debug statement.
     // logger.debug("Making " + methodString + " request: " + API_URL + urn);
