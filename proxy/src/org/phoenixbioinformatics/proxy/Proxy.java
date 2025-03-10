@@ -145,6 +145,7 @@ public class Proxy extends HttpServlet {
   private static final String METER_WARNING_CODE = "Warning";
   private static final String METER_BLOCK_CODE = "Block"; // PW-646
   private static final String METER_BLACK_LIST_BLOCK_CODE = "BlackListBlock"; // PW-287
+  private static final String METER_CACHED_CODE = "Cached";
   private static final String OK_CODE = "OK";
   private static final String NOT_OK_CODE = "NOT OK";
   
@@ -153,6 +154,7 @@ public class Proxy extends HttpServlet {
   private static final String METER_BLACK_LIST_STATUS_CODE = "M";
   private static final String METER_BLOCK_STATUS_CODE = "B";
   private static final String METER_NOT_METERED_STATUS_CODE = "N";
+  private static final String METER_NEED_LOGIN_STATUS_CODE = "L";
   
   // Paid content codes
   private static final String IS_PAID_CONTENT = "T";
@@ -203,16 +205,16 @@ public class Proxy extends HttpServlet {
                          HttpServletResponse servletResponse)
       throws ServletException, IOException {
     try {
-      logAllServletRequestHeaders(servletRequest);
+      // logAllServletRequestHeaders(servletRequest);
       // PWL-625: Add measure to method duration
       long startTime = System.currentTimeMillis();
       handleProxyRequest(servletRequest, servletResponse);
       long stopTime = System.currentTimeMillis();
       long elapsedTime = stopTime - startTime;
       if (elapsedTime >= PROXY_REQUEST_THRESHOLD * 1000) {
-        logger.debug(LOG_MARKER + " Request to proxy server " + servletRequest.getRequestURI().toString() + " takes " + elapsedTime + " ms to response " + LOG_MARKER);
+        // logger.debug(LOG_MARKER + " Request to proxy server " + servletRequest.getRequestURI().toString() + " takes " + elapsedTime + " ms to response " + LOG_MARKER);
       }
-      logAllServletResponseHeaders(servletResponse);
+      // logAllServletResponseHeaders(servletResponse);
     } catch (RuntimeException e) {
       // Log unchecked exception here and don't propagate.
       logger.error(RUNTIME_EXCEPTION_ERROR, e);
@@ -245,10 +247,10 @@ public class Proxy extends HttpServlet {
     Boolean allowCredential = hostFactory.getAllowCredential();
     setCORSHeader(servletRequest, servletResponse, origins, allowCredential);
     if (servletRequest.getMethod().equals(METHOD_OPTIONS)) {
-      logger.debug("Getting options...");
+      // logger.debug("Getting options...");
       handleOptionsRequest(servletRequest, servletResponse, origins);
     } else if (action != null && action.equals("setCookies")) {
-      logger.debug("Setting cookies...");
+      // logger.debug("Setting cookies...");
       handleSetCookieRequest(servletRequest,
                              servletResponse,
                              origins,
@@ -257,8 +259,8 @@ public class Proxy extends HttpServlet {
       // Get the complete URI including original domain and query string.
       String uri = servletRequest.getRequestURI().toString();
       String queryString = servletRequest.getQueryString();
-      logger.debug("\n==========\nIncoming URI: " + uri + " with query string "
-                   + queryString + "\n==========");
+      // logger.debug("\n==========\nIncoming URI: " + uri + " with query string "
+      //              + queryString + "\n==========");
       try {
         HttpHost sourceHost = hostFactory.getSourceHost();
 
@@ -280,10 +282,10 @@ public class Proxy extends HttpServlet {
         if (cookies != null) {
           for (Cookie c : Arrays.asList(cookies)) {
             String cookieName = c.getName();
-            logger.debug("Processing cookie " + cookieName + " with value "
-                         + c.getValue());
-            logger.debug("Processing cookie " + cookieName + " with value "
-                    + c.getValue());
+            // logger.debug("Processing cookie " + cookieName + " with value "
+            //              + c.getValue());
+            // logger.debug("Processing cookie " + cookieName + " with value "
+            //         + c.getValue());
             if (cookieName.equals(SECRET_KEY_COOKIE)) {
               secretKey = c.getValue();
             } else if (cookieName.equals(CREDENTIAL_ID_COOKIE)) {
@@ -306,7 +308,7 @@ public class Proxy extends HttpServlet {
         ArrayList<String> remoteIpList = getIpAddressList(servletRequest);
         String ipListString = String.join(",", remoteIpList);
         //log all the ips that are detected for testing
-        logger.debug("Ip Address Detected: " + ipListString);
+        // logger.debug("Ip Address Detected: " + ipListString);
         
 
         String remoteIp = remoteIpList.get(0);
@@ -317,8 +319,8 @@ public class Proxy extends HttpServlet {
         	String isPaidContent = NOT_PAID_CONTENT;
           String redirectUri = null;
 
-        logger.info("checkAccess API parameters: " + fullRequestUri + ", " + partnerId
-                    + ", " + secretKey + ", " + credentialId + ", " + remoteIp);
+        // logger.info("checkAccess API parameters: " + fullRequestUri + ", " + partnerId
+        //             + ", " + secretKey + ", " + credentialId + ", " + remoteIp);
 
         try {
           ApiService.AccessOutput accessOutput =
@@ -328,12 +330,15 @@ public class Proxy extends HttpServlet {
                                    credentialId,
                                    ipListString);
           auth = accessOutput.status;
+          if(accessOutput.isPaidContent == "T") {
+            logger.debug("checkAccess for url: " + fullRequestUri + "; status:" + auth + ", isPaid:" + accessOutput.isPaidContent);
+          }
           remoteIp = accessOutput.ip;
           orgId = accessOutput.orgId;
           userIdentifier.append(accessOutput.userIdentifier);
           isPaidContent = accessOutput.isPaidContent;
           redirectUri = accessOutput.redirectUri;
-          logger.debug("userIdentifier: " + userIdentifier.toString());
+          // logger.debug("userIdentifier: " + userIdentifier.toString());
         } catch (Exception e) {
           // Problem making the API call, continue with "Not OK" default status
           // Problem already logged
@@ -359,7 +364,7 @@ public class Proxy extends HttpServlet {
                 null); // fragment
               targetRedirectUri = targetUri.toString();
             }
-            logger.debug("Redirect uri updated from " + fullRequestUri + " to " + targetRedirectUri);
+            // logger.debug("Redirect uri updated from " + fullRequestUri + " to " + targetRedirectUri);
           } catch (URISyntaxException e) {
             logger.warn("cannot parse redirectUri: " + redirectUri + ". ", e);
           }
@@ -442,7 +447,7 @@ public class Proxy extends HttpServlet {
     builder.append(targetHost.toString());
     builder.append(", partner id=");
     builder.append(partnerId);
-    logger.debug(builder.toString());
+    // logger.debug(builder.toString());
   }
 
   /**
@@ -458,7 +463,7 @@ public class Proxy extends HttpServlet {
                           String sessionId, String partnerId, String isPaidContent, String meterStatus) {
     // Log a page view for "real" URIs, exclude embedded images, js, etc.
     if (!isEmbeddedFile(uri)) {
-      logger.debug("Creating page view for URI " + uri);
+      // logger.debug("Creating page view for URI " + uri);
       ApiService.createPageView(ip, ipListString, uri, credentialId, sessionId, partnerId, isPaidContent, meterStatus);
     }
   }
@@ -472,7 +477,7 @@ public class Proxy extends HttpServlet {
                           String responseHeaders, String contentType) throws IOException{
     // Log a page view for "real" URIs, exclude embedded images, js, etc.
     if (!isEmbeddedFile(uri)) {
-      logger.debug("Creating sqs page view for URI " + uri);
+      // logger.debug("Creating sqs page view for URI " + uri);
       CloseableHttpResponse response = null;
       HttpPost request = null;
       request = new HttpPost(API_GATEWAY_SQS_LOGGING_URL);
@@ -514,7 +519,7 @@ public class Proxy extends HttpServlet {
         logger.debug("Status creating sqs page view is not OK: " + status);
         throw new IOException("Bad status code: " + String.valueOf(status));
       } else {
-        logger.debug("Status creating sqs page view is OK: " + status);
+        // logger.debug("Status creating sqs page view is OK: " + status);
       }
     }
   }
@@ -549,6 +554,10 @@ public class Proxy extends HttpServlet {
                                  String sessionId, String isPaidContent, String auth,
                                  String targetRedirectUri, Boolean allowRedirect)
       throws IOException, UnsupportedHttpMethodException, ServletException {
+
+        HttpHostFactory hostFactory = getHostFactory(servletRequest);
+        Boolean allowBucket = hostFactory.getAllowBucket();
+        // logger.info("authorizeAndProxy: "+ allowBucket);
     // Determine whether to proxy the request.
     if (authorizeProxyRequest(secretKey,
                               partnerId,
@@ -563,7 +572,7 @@ public class Proxy extends HttpServlet {
                               isPaidContent,
                               auth, 
                               targetRedirectUri,
-                              allowRedirect)) {
+                              allowRedirect, allowBucket)) {
       // Authorized by the API, so proceed.
 
       ProxyRequest proxyRequest =
@@ -575,17 +584,17 @@ public class Proxy extends HttpServlet {
       HttpUriRequest uriRequest =
         RequestFactory.getUriRequest(servletRequest, targetUri);
 
-      logger.debug("Proxying request from " + proxyRequest.getIp() + "-->\""
-                   + uriRequest.getRequestLine().getUri() + "\"");
+      // logger.debug("Proxying request from " + proxyRequest.getIp() + "-->\""
+      //              + uriRequest.getRequestLine().getUri() + "\"");
 
-      logger.debug("userIdentifier before configureProxyRequest(): "
-                   + userIdentifier.toString());
+      // logger.debug("userIdentifier before configureProxyRequest(): "
+      //              + userIdentifier.toString());
       configureProxyRequest(servletRequest,
                             proxyRequest,
                             uriRequest,
                             userIdentifier.toString());
-      logger.debug("userIdentifier after configureProxyRequest(): "
-                   + userIdentifier.toString());
+      // logger.debug("userIdentifier after configureProxyRequest(): "
+      //              + userIdentifier.toString());
       // Proxy, using the sourceHost as the "original" host.
       proxy(servletRequest.getSession(),
             servletResponse,
@@ -594,12 +603,12 @@ public class Proxy extends HttpServlet {
             partnerId,
             userIdentifier.toString());
       try {
-        sqsLogRequest(fullRequestUri, remoteIp, orgId, ipListString, credentialId, sessionId, partnerId, isPaidContent, "N", String.valueOf(servletResponse.getStatus()), getAllServletResponseHeaders(servletResponse), servletResponse.getContentType());
+        sqsLogRequest(fullRequestUri, remoteIp, orgId, ipListString, credentialId, sessionId, partnerId, isPaidContent, METER_NOT_METERED_STATUS_CODE, String.valueOf(servletResponse.getStatus()), getAllServletResponseHeaders(servletResponse), servletResponse.getContentType());
       }catch(Exception e){
         logger.debug("sqs logging error");
       }
       //logRequest(fullRequestUri, remoteIp, ipListString, credentialId, sessionId, partnerId, isPaidContent, "N");
-      logger.debug("userIdentifier after proxy(): " + userIdentifier.toString());
+      // logger.debug("userIdentifier after proxy(): " + userIdentifier.toString());
     }
   }
 
@@ -642,7 +651,7 @@ public class Proxy extends HttpServlet {
           || fullRequestUri.endsWith(".wsgi")
           || fullRequestUri.endsWith(".ico");
     if (embedded) {
-      logger.debug("URI " + fullRequestUri + " has embedded-file extension");
+      // logger.debug("URI " + fullRequestUri + " has embedded-file extension");
     }
     return embedded;
   }
@@ -676,7 +685,7 @@ public class Proxy extends HttpServlet {
                                         HttpServletResponse servletResponse,
                                         String ipListString, String sessionId, 
                                         String isPaidContent, String auth,
-                                        String targetRedirectUri, Boolean allowRedirect)
+                                        String targetRedirectUri, Boolean allowRedirect, Boolean allowBucket)
       throws IOException {
 
     if (isEmbeddedFile(fullUri)) {
@@ -703,7 +712,7 @@ public class Proxy extends HttpServlet {
         builder.append(sourceHost.getPort());
       }
       uiUri = builder.toString();
-      logger.debug("Using source host as UI URI: " + sourceHost);
+      // logger.debug("Using source host as UI URI: " + sourceHost);
     }
     // BIOCYC-569 this is specifically for biocyc's brg-files.ai.sri.com
     // Generally we load uiUri from properties file
@@ -719,9 +728,15 @@ public class Proxy extends HttpServlet {
       partner.getUiMeterUri() + "?exceed=exceeded&partnerId=" + partnerId;
     String meterBlacklistUri =
       partner.getUiMeterUri() + "?exceed=blacklisted&partnerId=" + partnerId;
+    String bucketUnitsUrl =
+      partner.getUiMeterUri() + "?exceed=outofunits&partnerId=" + partnerId;
+    String bucketWarningUri =
+      partner.getUiMeterUri() + "?exceed=abouttorunout&partnerId=" + partnerId;
+    String bucketNoLoginUrl =
+      partner.getUiMeterUri() + "?exceed=nologin&partnerId=" + partnerId;
 
     // logger.debug("UI URI set to: " + uiUri);
-    logger.debug("login URI set to: " + loginUri);
+    // logger.debug("login URI set to: " + loginUri);
     // logger.debug("meter warning URI set to: " + meterWarningUri);
     // logger.debug("meter blocking URI set to: " + meterBlockingUri);
     // logger.debug("meter blacklist blocking URI set to: " +
@@ -740,65 +755,130 @@ public class Proxy extends HttpServlet {
     if (auth.equals(OK_CODE)) {
       // grant access
       authorized = true;
-      logger.info("Party " + credentialId + " authorized for free content "
-                  + fullUri + " at partner " + partnerId);
+      logger.info("OK_CODE URL: " + fullUri);
     } else if (auth.equals(NEED_SUBSCRIPTION_CODE)) {
       // check metering status and redirect or proxy as appropriate
-      logger.info("Party " + credentialId
-                  + " needs to subscribe to see paid content " + fullUri
-                  + " at partner " + partnerId);
+      logger.info("NEED_SUBSCRIPTION_CODE\nURL: " + fullUri + "\n" +
+            "Party: " + credentialId +",Action: Bucket Needed" +",Partner: " + partnerId);
+
       StringBuilder uriBuilder = new StringBuilder(uiUri);
-
-      try {
-        String meter =
-          ApiService.checkMeteringLimit(remoteIp, partnerId, fullUri);
-
-        if (meter.equals(OK_CODE)) {
-          logger.info("Allowed free access to content by metering");
-          authorized = true;
-          ApiService.incrementMeteringCount(remoteIp, partnerId);
-
-        } else if (meter.equals(METER_WARNING_CODE)) {
-          unauthorizedErrorMsg = "Warned to subscribe by meter limit";
-          logger.info(unauthorizedErrorMsg);
+      
+      if(allowBucket) {
+        // logger.debug("Inside Bucket System");
+        //// New code for bucket
+        if(credentialId == null) {
+          unauthorizedErrorMsg = "Blocked from paid content due to no login";
+          logger.debug(unauthorizedErrorMsg);
           authorized = false;
-          uriBuilder.append(meterWarningUri);
+          uriBuilder.append(bucketNoLoginUrl);
           unauthorizedRedirectUri = uriBuilder.toString();
           uriBuilder.append(PARAM_PREFIX);
           uriBuilder.append(redirectQueryString);
           redirectUri = uriBuilder.toString();
-          meterStatus = METER_WARNING_STATUS_CODE;
-          ApiService.incrementMeteringCount(remoteIp, partnerId);
-        } else if (meter.equals(METER_BLACK_LIST_BLOCK_CODE)) {
-          // PW-287
-          unauthorizedErrorMsg = "Blocked from no-metered-access content";
-          logger.info(unauthorizedErrorMsg);
-          authorized = false;
-          uriBuilder.append(meterBlacklistUri);
-          unauthorizedRedirectUri = uriBuilder.toString();
-          uriBuilder.append(PARAM_PREFIX);
-          uriBuilder.append(redirectQueryString);
-          redirectUri = uriBuilder.toString();
-          meterStatus = METER_BLACK_LIST_STATUS_CODE;
-        } else if (meter.equals(METER_BLOCK_CODE)) {
-          unauthorizedErrorMsg = "Blocked from paid content by meter limit";
-          logger.info(unauthorizedErrorMsg);
-          authorized = false;
-          uriBuilder.append(meterBlockingUri);
-          unauthorizedRedirectUri = uriBuilder.toString();
-          uriBuilder.append(PARAM_PREFIX);
-          uriBuilder.append(redirectQueryString);
-          redirectUri = uriBuilder.toString();
-          meterStatus = METER_BLOCK_STATUS_CODE;
+          meterStatus = METER_NEED_LOGIN_STATUS_CODE;
         } else {
-          // PWL-646: Bypass and allow free access for unexpected status such as 404
-          logger.info("Check meter limit returned with unexpected code: " + meter + ". Bypassing proxy/paywall - allowing free access to content.");
+          try {
+            String meter = ApiService.checkRemainingUnits(credentialId, partnerId, fullUri);
+            if (meter.equals(OK_CODE)) {
+              logger.debug("Allowed access to content by using bucket: " + fullUri);
+              authorized = true;
+              ApiService.decrementUnits(credentialId, partnerId, fullUri);
+
+            } else if (meter.equals(METER_WARNING_CODE)) {
+              unauthorizedErrorMsg = "Warned that bucket is about to run out of units";
+              logger.info(unauthorizedErrorMsg);
+              authorized = false;
+              uriBuilder.append(bucketWarningUri);
+              unauthorizedRedirectUri = uriBuilder.toString();
+              uriBuilder.append(PARAM_PREFIX);
+              uriBuilder.append(redirectQueryString);
+              redirectUri = uriBuilder.toString();
+              meterStatus = METER_WARNING_STATUS_CODE;
+              ApiService.decrementUnits(credentialId, partnerId, fullUri);
+            } else if (meter.equals(METER_BLACK_LIST_BLOCK_CODE)) {
+              // PW-287
+              unauthorizedErrorMsg = "Blocked from premium content (>1 usage units)";
+              logger.info(unauthorizedErrorMsg);
+              logger.debug(redirectQueryString);
+              authorized = false;
+              uriBuilder.append(bucketUnitsUrl);
+              unauthorizedRedirectUri = uriBuilder.toString();
+              uriBuilder.append(PARAM_PREFIX);
+              uriBuilder.append(redirectQueryString);
+              redirectUri = uriBuilder.toString();
+              meterStatus = METER_BLACK_LIST_STATUS_CODE;
+            } else if (meter.equals(METER_BLOCK_CODE)) {
+              unauthorizedErrorMsg = "Blocked from paid content by meter limit (1 usage units)";
+              logger.info(unauthorizedErrorMsg);
+              authorized = false;
+              uriBuilder.append(bucketUnitsUrl);
+              unauthorizedRedirectUri = uriBuilder.toString();
+              uriBuilder.append(PARAM_PREFIX);
+              uriBuilder.append(redirectQueryString);
+              redirectUri = uriBuilder.toString();
+              meterStatus = METER_BLOCK_STATUS_CODE;
+            } else if (meter.equals(METER_CACHED_CODE)) {
+              logger.debug("Allowed access to cached content, units not decremented: " + fullUri);
+              authorized = true;
+            } else {
+              // PWL-646: Bypass and allow free access for unexpected status such as 404
+              logger.info("Check meter limit returned with unexpected code: " + meter + ". Bypassing proxy/paywall - allowing free access to content.");
+              authorized = true;
+            }
+          } catch (Exception e) {
+            // PWL-556: Bypass and allow free access
+            logger.info("Check meter limit for bucket failed. Bypassing proxy/paywall - allowing free access to content.");
+            authorized = true;
+          }
+        }
+      } else {
+        logger.info("Inside IP-Metering System");
+        try {
+          String meter = ApiService.checkMeteringLimit(remoteIp, partnerId, fullUri);
+          if (meter.equals(OK_CODE)) {
+            logger.info("Allowed free access to content by metering");
+            authorized = true;
+            ApiService.incrementMeteringCount(remoteIp, partnerId);
+
+          } else if (meter.equals(METER_WARNING_CODE)) {
+            unauthorizedErrorMsg = "Warned to subscribe by meter limit";
+            logger.info(unauthorizedErrorMsg);
+            authorized = false;
+            uriBuilder.append(meterWarningUri);
+            unauthorizedRedirectUri = uriBuilder.toString();
+            uriBuilder.append(PARAM_PREFIX);
+            uriBuilder.append(redirectQueryString);
+            redirectUri = uriBuilder.toString();
+            meterStatus = METER_WARNING_STATUS_CODE;
+            ApiService.incrementMeteringCount(remoteIp, partnerId);
+          } else if (meter.equals(METER_BLACK_LIST_BLOCK_CODE)) {
+            // PW-287
+            unauthorizedErrorMsg = "Blocked from no-metered-access content";
+            logger.info(unauthorizedErrorMsg);
+            authorized = false;
+            uriBuilder.append(meterBlacklistUri);
+            unauthorizedRedirectUri = uriBuilder.toString();
+            uriBuilder.append(PARAM_PREFIX);
+            uriBuilder.append(redirectQueryString);
+            redirectUri = uriBuilder.toString();
+            meterStatus = METER_BLACK_LIST_STATUS_CODE;
+          } else if (meter.equals(METER_BLOCK_CODE)) {
+            unauthorizedErrorMsg = "Blocked from paid content by meter limit";
+            logger.info(unauthorizedErrorMsg);
+            authorized = false;
+            uriBuilder.append(meterBlockingUri);
+            redirectUri = uriBuilder.toString();
+            meterStatus = METER_BLOCK_STATUS_CODE;
+          } else {
+            // PWL-646: Bypass and allow free access for unexpected status such as 404
+            logger.info("Check meter limit returned with unexpected code: " + meter + ". Bypassing proxy/paywall - allowing free access to content.");
+            authorized = true;
+          }
+        } catch (Exception e) {
+          // PWL-556: Bypass and allow free access
+          logger.info("Check meter limit failed. Bypassing proxy/paywall - allowing free access to content.");
           authorized = true;
         }
-      } catch (Exception e) {
-        // PWL-556: Bypass and allow free access
-        logger.info("Check meter limit failed. Bypassing proxy/paywall - allowing free access to content.");
-        authorized = true;
       }
     } else if (auth.equals(NEED_LOGIN_CODE)) {
       // force user to log in
@@ -813,9 +893,10 @@ public class Proxy extends HttpServlet {
 
     if (!authorized) {
       // One or another status requires a redirect.
-      logger.info("Party " + credentialId + " not authorized for " + fullUri
-                  + " at partner " + partnerId + ", redirecting to "
-                  + redirectUri);
+      logger.info("URL: " + fullUri +
+            "\nParty: " + credentialId  + ", Action: Not authorized, Partner: " + partnerId +
+            "\nRedirecting to: " + redirectUri);
+
       try {
         sqsLogRequest(fullUri, remoteIp, orgId, ipListString, credentialId, sessionId, partnerId, isPaidContent, meterStatus, String.valueOf(servletResponse.getStatus()),getAllServletResponseHeaders(servletResponse), servletResponse.getContentType());
       }catch(Exception e){
@@ -882,21 +963,21 @@ public class Proxy extends HttpServlet {
    */
   public String getRedirectQueryString(String redirectUri, String uiUri) {
 
-    logger.debug("Full URI to use for redirect: " + redirectUri);
+    // logger.debug("Full URI to use for redirect: " + redirectUri);
 
     String transformedUri = redirectUri;
 
     if (uiUri.toLowerCase().contains("https://")
         && redirectUri.toLowerCase().contains("http://")) {
       transformedUri = transformedUri.replaceFirst("http", "https");
-      logger.debug("Transformed URI to which to redirect:"
-                 + transformedUri);
+      // logger.debug("Transformed URI to which to redirect:"
+      //            + transformedUri);
     }
 
     try {
       transformedUri = URLEncoder.encode(transformedUri, UTF_8);
 
-      logger.debug("Transformed and encoded URI for redirect: " + transformedUri);
+      // logger.debug("Transformed and encoded URI for redirect: " + transformedUri);
 
     } catch (UnsupportedEncodingException e) {
       // Log and ignore, use un-encoded redirect URI
@@ -946,7 +1027,7 @@ public class Proxy extends HttpServlet {
     // Execute the request on the proxied server. Ignore returned string.
     // TODO: try adding host as first param, see if it does the right thing.
     // client.execute(host, request, responseHandler, localContext);
-    logAllUriRequestHeaders(request);
+    // logAllUriRequestHeaders(request);
 
     // PWL-625: Add measure to method duration
     long startTime = System.currentTimeMillis();
@@ -954,13 +1035,13 @@ public class Proxy extends HttpServlet {
     long stopTime = System.currentTimeMillis();
     long elapsedTime = stopTime - startTime;
     if (elapsedTime >= CONTENT_REQUEST_THRESHOLD * 1000) {
-      logger.debug(LOG_MARKER + "Request to content server " + request.getRequestLine().getUri() + " takes " + elapsedTime + " ms to response " + LOG_MARKER);
+      // logger.debug(LOG_MARKER + "Request to content server " + request.getRequestLine().getUri() + " takes " + elapsedTime + " ms to response " + LOG_MARKER);
     }
 
     // Put the cookie store with any returned session cookie into the session.
     cookieStore = localContext.getCookieStore();
     try {
-      logger.debug("Cookie store after proxying: " + cookieStore.toString());
+      // logger.debug("Cookie store after proxying: " + cookieStore.toString());
       session.setAttribute(COOKIES_ATTRIBUTE, localContext.getCookieStore());
     } catch (IllegalStateException e) {
       // invalid session after logout, ignore
@@ -990,7 +1071,7 @@ public class Proxy extends HttpServlet {
     // Create a local HTTP context to contain the cookie store.
     HttpClientContext localContext = HttpClientContext.create();
 
-    logAllCookiesInStore(cookieStore);
+    // logAllCookiesInStore(cookieStore);
 
     // Bind custom cookie store to the local context
     localContext.setCookieStore(cookieStore);
@@ -1045,12 +1126,12 @@ public class Proxy extends HttpServlet {
                      final ProxyRequest proxyRequest, final HttpHost host,
                      final String partnerId, final String userIdentifier)
       throws ServletException {
-    logger.info("Proxying " + proxyRequest.getMethod()
-                + " URI from IP address " + proxyRequest.getIp() + ": "
-                + proxyRequest.getCurrentUri() + "-->"
-                + proxyRequest.getRequestToProxy().getRequestLine().getUri()
-                + " with host " + host.toString() + " and user identifier "
-                + userIdentifier);
+    // logger.info("Proxying " + proxyRequest.getMethod()
+    //             + " URI from IP address " + proxyRequest.getIp() + ": "
+    //             + proxyRequest.getCurrentUri() + "-->"
+    //             + proxyRequest.getRequestToProxy().getRequestLine().getUri()
+    //             + " with host " + host.toString() + " and user identifier "
+    //             + userIdentifier);
 
     // Create a custom response handler to ensure all resources get freed.
     // Note: ignore the returned response, it is always null.
@@ -1060,8 +1141,8 @@ public class Proxy extends HttpServlet {
       public String handleResponse(final HttpResponse proxyResponse)
           throws ClientProtocolException, IOException {
         int statusCode = proxyResponse.getStatusLine().getStatusCode();
-        logger.debug("Proxy returned status " + statusCode + " for URI "
-                     + proxyRequest.getCurrentUri());
+        // logger.debug("Proxy returned status " + statusCode + " for URI "
+        //              + proxyRequest.getCurrentUri());
 
         handleResponseHeaders(servletResponse,
                               proxyResponse,
@@ -1214,7 +1295,7 @@ public class Proxy extends HttpServlet {
         closeable.close();
       } catch (IOException e) {
         // Don't propagate the exception.
-        logger.warn(CLOSE_DATA_SOURCE_ERROR + e.getMessage(), e);
+        // logger.warn(CLOSE_DATA_SOURCE_ERROR + e.getMessage(), e);
       }
     }
   }
@@ -1250,10 +1331,10 @@ public class Proxy extends HttpServlet {
     // PW-165, add ".arabidopsis.org" domain cookie
     addCookie(servletResponse, secretKeyCookie, partnerId, null);
 
-    logger.debug("Setting cookies: credentialId = "
-                 + credentialIdCookie.getValue() + "; secretKey = "
-                 + secretKeyCookie.getValue());
-    logAllServletResponseHeaders(servletResponse);
+    // logger.debug("Setting cookies: credentialId = "
+    //              + credentialIdCookie.getValue() + "; secretKey = "
+    //              + secretKeyCookie.getValue());
+    // logAllServletResponseHeaders(servletResponse);
   }
 
   /**
@@ -1300,7 +1381,7 @@ public class Proxy extends HttpServlet {
           setAllowCredentialHeader(servletResponse);
         } else if (origin == null) {
           // a common case for users accesing via their proxy
-          logger.debug("Attempted API access from non-allowed origin: null");
+          // logger.debug("Attempted API access from non-allowed origin: null");
           servletResponse.setHeader("Access-Control-Allow-Origin",
                                   "*");
           // not setting allow credential header since it conflicts with
@@ -1308,12 +1389,12 @@ public class Proxy extends HttpServlet {
           // assuming users from such origin is using institutional subscription
         } else {
           // for anything else, deny it
-          logger.debug("Attempted API access from non-allowed origin: " + origin);
+          // logger.debug("Attempted API access from non-allowed origin: " + origin);
           servletResponse.setHeader("Access-Control-Allow-Origin",
                                   origins.iterator().next());
         }
       } else {
-        logger.debug("Attempted access from non-allowed origin: {}", origin);
+        // logger.debug("Attempted access from non-allowed origin: {}", origin);
         // Include an origin to provide a clear browser error
         servletResponse.setHeader("Access-Control-Allow-Origin",
                                   origins.iterator().next());
@@ -1625,7 +1706,7 @@ public class Proxy extends HttpServlet {
         // Check for the password change signal from the partner (the value of
         // the
         // special header carries the new secret key).
-        logger.debug("Request to reset secret key: " + header.getValue());
+        // logger.debug("Request to reset secret key: " + header.getValue());
 
         Cookie secretKeyCookie =
           new Cookie(SECRET_KEY_COOKIE, header.getValue());

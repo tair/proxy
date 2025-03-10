@@ -83,12 +83,13 @@ public abstract class AbstractApiService {
     request.addHeader("Cookie", "apiKey=" + API_KEY + ";" + cookieString);
     CloseableHttpClient client = HttpClientBuilder.create().build();
     // debug statement. TODO: remove in final produce to reduce spam
-    logger.debug("Making " + methodString + " request: " + API_URL + urn);
+    // logger.debug("Making " + methodString + " request: " + API_URL + urn);
     response = client.execute(request);
 
     int status = response.getStatusLine().getStatusCode();
     if (status != HttpStatus.SC_OK && status != HttpStatus.SC_CREATED) {
       logger.debug("Status code is not OK: " + status);
+      logger.debug("API Url: " + API_URL);
       throw new IOException("Bad status code: " + String.valueOf(status));
     }
     String content = EntityUtils.toString(response.getEntity());

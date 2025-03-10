@@ -40,4 +40,11 @@ public interface IPartnerPattern {
    * @return the boolean for whether the domain allow set credential
    */
   Boolean getAllowCredential();
+
+   /**
+   * Get whether the partner's site allows metering using the bucket system instead of IP-based subscriptions
+   *
+   * @return the boolean for whether the bucket system is allowed
+   */
+  Boolean getAllowBucket();
 }
