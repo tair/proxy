@@ -123,6 +123,8 @@ public class Proxy extends HttpServlet {
   private static final String TOMCAT_SESSION_COOKIE = "JSESSIONID";
   /** name of PHP session cookie, for MorphoBank integration */
   private static final String PHP_SESSION_COOKIE = "PHPSESSID";
+  /** name of Morphobank auth cookie to forward through proxy */
+  private static final String AUTHORIZATION_COOKIE = "authorization";
   /** name of the Phoenix party id cookie */
   private static final String CREDENTIAL_ID_COOKIE = "credentialId";
   /** name of the Phoenix secret key cookie */
@@ -1427,6 +1429,22 @@ public class Proxy extends HttpServlet {
   }
 
   /**
+   * Determine whether a Set-Cookie header value sets a cookie with the given name.
+   * This checks the cookie name portion before the first '=' character, case-insensitively.
+   */
+  private static boolean containsCookieName(String setCookieHeaderValue, String cookieName) {
+    if (setCookieHeaderValue == null || cookieName == null) {
+      return false;
+    }
+    int idx = setCookieHeaderValue.indexOf('=');
+    if (idx <= 0) {
+      return false;
+    }
+    String name = setCookieHeaderValue.substring(0, idx).trim();
+    return name.equalsIgnoreCase(cookieName);
+  }
+
+  /**
    * Copy proxied response headers back to the servlet client. Skip any
    * hop-by-hop headers or cookies. Stripping cookies ensures that no cookies
    * set between the Proxy and Target servers affects the cookies sent from
@@ -1443,12 +1461,13 @@ public class Proxy extends HttpServlet {
       if (ProxyRequest.hopByHopHeaders.containsHeader(name)) {
         continue;
       } else if (name.equals("Set-Cookie")) {
-        // MBANK-20: Set PHP session ID for MorphoBank
-        if (value != null) {
-          int startIndex = value.indexOf(PHP_SESSION_COOKIE);
-          if (startIndex != -1) {
-            response.addHeader(name, value);
-          }
+        // Forward only selected cookies to client
+        // Allow existing PHPSESSID and Morphobank authorization cookie
+        if (value != null && (
+              value.indexOf(PHP_SESSION_COOKIE) != -1 ||
+              containsCookieName(value, AUTHORIZATION_COOKIE)
+            )) {
+          response.addHeader(name, value);
         }
         continue;
       } else if (name.equals("Access-Control-Allow-Origin")) {
