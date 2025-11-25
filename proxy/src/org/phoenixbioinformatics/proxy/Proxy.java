@@ -391,8 +391,9 @@ public class Proxy extends HttpServlet {
                           targetRedirectUri,
                           allowRedirect);
       } catch (ServletException | UnsupportedHttpMethodException | IOException e) {
-        // Log checked exceptions here, then ignore.
-        logger.error(REQUEST_HANDLING_ERROR, e);
+        // Log checked exceptions with request context
+        logger.error("Proxy error for request: uri={}, targetHost={}, remoteIp={}, partnerId={}", 
+                     fullRequestUri, targetHost, remoteIp, hostFactory.getPartnerId(), e);
       }
     }
   }
@@ -1258,11 +1259,28 @@ public class Proxy extends HttpServlet {
                           responseHandler,
                           userIdentifier);
     } catch (IOException e) {
-      // Syntax error or other problem handling the URI, package into servlet
-      // exception
-      throw new ServletException(REQUEST_HANDLING_ERROR, e);
+      // Log detailed error information before wrapping in ServletException
+      String targetUri = proxyRequest.getRequestToProxy() != null 
+          ? proxyRequest.getRequestToProxy().getRequestLine().getUri() 
+          : "unknown";
+      String targetHost = host != null ? host.toHostString() : "unknown";
+      String sourceUri = proxyRequest.getCurrentUri();
+      String rootCause = getRootCauseMessage(e);
+      
+      logger.error("Failed to proxy request: sourceUri={}, targetHost={}, targetUri={}, error={}", 
+                   sourceUri, targetHost, targetUri, rootCause, e);
+      
+      throw new ServletException(REQUEST_HANDLING_ERROR + 
+          " [sourceUri=" + sourceUri + ", targetHost=" + targetHost + ", cause=" + rootCause + "]", e);
     } catch (Exception e) {
-      throw new ServletException(e);
+      String targetHost = host != null ? host.toHostString() : "unknown";
+      String sourceUri = proxyRequest.getCurrentUri();
+      
+      logger.error("Unexpected error proxying request: sourceUri={}, targetHost={}, error={}", 
+                   sourceUri, targetHost, e.getMessage(), e);
+      
+      throw new ServletException(REQUEST_HANDLING_ERROR + 
+          " [sourceUri=" + sourceUri + ", targetHost=" + targetHost + "]", e);
     }
 
     // Don't do anything here, possible redirect already sent
@@ -1743,5 +1761,29 @@ public class Proxy extends HttpServlet {
       }
       response.addCookie(cookie);
     }
+  }
+
+  /**
+   * Extract the root cause message from a potentially nested exception chain.
+   * This helps identify the actual error (e.g., "Connection timed out") rather 
+   * than the wrapper exception message.
+   *
+   * @param e the exception to analyze
+   * @return a descriptive message including the root cause type and message
+   */
+  private String getRootCauseMessage(Throwable e) {
+    Throwable rootCause = e;
+    while (rootCause.getCause() != null && rootCause.getCause() != rootCause) {
+      rootCause = rootCause.getCause();
+    }
+    String rootCauseType = rootCause.getClass().getSimpleName();
+    String rootCauseMsg = rootCause.getMessage();
+    
+    // For connection-related errors, include the immediate cause for more context
+    if (e.getCause() != null && !e.getCause().equals(rootCause)) {
+      String immediateCauseType = e.getCause().getClass().getSimpleName();
+      return immediateCauseType + ": " + rootCauseType + " - " + rootCauseMsg;
+    }
+    return rootCauseType + " - " + rootCauseMsg;
   }
 }
