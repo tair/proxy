@@ -391,9 +391,12 @@ public class Proxy extends HttpServlet {
                           targetRedirectUri,
                           allowRedirect);
       } catch (ServletException | UnsupportedHttpMethodException | IOException e) {
-        // Log checked exceptions with request context
-        logger.error("Proxy error for request: uri={}, targetHost={}, remoteIp={}, partnerId={}", 
-                     fullRequestUri, targetHost, remoteIp, hostFactory.getPartnerId(), e);
+        // Log checked exceptions with available context (variables inside try block are not accessible here)
+        logger.error("Proxy error for request: path={}, partnerId={}, error={}", 
+                     servletRequest.getPathInfo(), 
+                     hostFactory.getPartnerId(), 
+                     getRootCauseMessage(e), 
+                     e);
       }
     }
   }
