@@ -391,12 +391,11 @@ public class Proxy extends HttpServlet {
                           targetRedirectUri,
                           allowRedirect);
       } catch (ServletException | UnsupportedHttpMethodException | IOException e) {
-        // Log checked exceptions with available context (variables inside try block are not accessible here)
+        // Log checked exceptions with available context (no stack trace - just the summary)
         logger.error("Proxy error for request: path={}, partnerId={}, error={}", 
                      servletRequest.getPathInfo(), 
                      hostFactory.getPartnerId(), 
-                     getRootCauseMessage(e), 
-                     e);
+                     getRootCauseMessage(e));
       }
     }
   }
@@ -1271,19 +1270,20 @@ public class Proxy extends HttpServlet {
       String rootCause = getRootCauseMessage(e);
       
       logger.error("Failed to proxy request: sourceUri={}, targetHost={}, targetUri={}, error={}", 
-                   sourceUri, targetHost, targetUri, rootCause, e);
+                   sourceUri, targetHost, targetUri, rootCause);
       
       throw new ServletException(REQUEST_HANDLING_ERROR + 
           " [sourceUri=" + sourceUri + ", targetHost=" + targetHost + ", cause=" + rootCause + "]", e);
     } catch (Exception e) {
       String targetHost = host != null ? host.toHostString() : "unknown";
       String sourceUri = proxyRequest.getCurrentUri();
+      String rootCause = getRootCauseMessage(e);
       
       logger.error("Unexpected error proxying request: sourceUri={}, targetHost={}, error={}", 
-                   sourceUri, targetHost, e.getMessage(), e);
+                   sourceUri, targetHost, rootCause);
       
       throw new ServletException(REQUEST_HANDLING_ERROR + 
-          " [sourceUri=" + sourceUri + ", targetHost=" + targetHost + "]", e);
+          " [sourceUri=" + sourceUri + ", targetHost=" + targetHost + ", cause=" + rootCause + "]", e);
     }
 
     // Don't do anything here, possible redirect already sent
