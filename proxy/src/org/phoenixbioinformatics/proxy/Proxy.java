@@ -41,6 +41,7 @@ import org.apache.http.HttpHost;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.ClientProtocolException;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.CookieStore;
 import org.apache.http.client.ResponseHandler;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
@@ -199,6 +200,13 @@ public class Proxy extends HttpServlet {
   //sqs api url
   private static final String API_GATEWAY_SQS_LOGGING_URL =
     ProxyProperties.getProperty("sqs.uri");
+
+  // Extended timeout configuration for slow endpoints (in milliseconds)
+  private static final String AI_SUMMARY_PATH = "/detail/locus/ai-summary";
+  private static final int AI_SUMMARY_CONNECTION_TIMEOUT_MS = 
+    Integer.parseInt(ProxyProperties.getProperty("proxy.ai.summary.connection.timeout.ms", "30000"));
+  private static final int AI_SUMMARY_SOCKET_TIMEOUT_MS = 
+    Integer.parseInt(ProxyProperties.getProperty("proxy.ai.summary.socket.timeout.ms", "300000"));
 
   @Override
   protected void service(HttpServletRequest servletRequest,
@@ -1026,7 +1034,22 @@ public class Proxy extends HttpServlet {
       createLocalContextWithCookiesAndTarget(host,
                                              cookieStore,
                                              request.getURI().getHost());
-    client = HttpClientBuilder.create().disableContentCompression().disableRedirectHandling().build();
+    // Check if this is an AI summary request that needs extended timeouts
+    String requestUri = request.getURI().getPath();
+    HttpClientBuilder clientBuilder = HttpClientBuilder.create()
+        .disableContentCompression()
+        .disableRedirectHandling();
+    
+    if (requestUri != null && requestUri.contains(AI_SUMMARY_PATH)) {
+      RequestConfig extendedTimeoutConfig = RequestConfig.custom()
+          .setConnectTimeout(AI_SUMMARY_CONNECTION_TIMEOUT_MS)
+          .setSocketTimeout(AI_SUMMARY_SOCKET_TIMEOUT_MS)
+          .build();
+      clientBuilder.setDefaultRequestConfig(extendedTimeoutConfig);
+      logger.debug("Using extended timeout for AI summary request: " + requestUri);
+    }
+    
+    client = clientBuilder.build();
     // Execute the request on the proxied server. Ignore returned string.
     // TODO: try adding host as first param, see if it does the right thing.
     // client.execute(host, request, responseHandler, localContext);
