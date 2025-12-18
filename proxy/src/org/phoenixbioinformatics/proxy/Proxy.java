@@ -194,6 +194,9 @@ public class Proxy extends HttpServlet {
   private static final int PROXY_REQUEST_THRESHOLD = 5;
   private static final int CONTENT_REQUEST_THRESHOLD = 5;
   private static final String LOG_MARKER = "@@@@@@@@";
+  
+  // Distinct marker for proxy origin logging
+  private static final String PROXY_ORIGIN_MARKER = "####PROXY_ORIGIN####";
 
   private static final String METHOD_OPTIONS = "OPTIONS";
   private static final String METHOD_GET = "GET";
@@ -1368,8 +1371,12 @@ public class Proxy extends HttpServlet {
                             List<String> origins,
                             Boolean allowCredential) {
     String origin = servletRequest.getHeader("Origin");
+    
+    // Log requests from proxy origins for monitoring
+    boolean isInAllowList = origins.contains(origin);
+    logProxyOriginRequest(origin, servletRequest, isInAllowList);
 
-    if (origins.contains(origin)) {
+    if (isInAllowList) {
       servletResponse.setHeader("Access-Control-Allow-Origin", origin);
       if (allowCredential) {
         setAllowCredentialHeader(servletResponse);
@@ -1425,6 +1432,65 @@ public class Proxy extends HttpServlet {
         return true;
     } catch (Exception e) {
         return false;
+    }
+  }
+
+  /**
+   * Check if the origin appears to be from a proxy site and log it.
+   * Proxy sites typically have 'www-arabidopsis-org' in their origin URL
+   * (e.g., www-arabidopsis-org.libproxy.berkeley.edu).
+   * 
+   * @param origin the Origin header value from the request
+   * @param servletRequest the HTTP request for additional context
+   * @return true if the origin appears to be from a proxy site
+   */
+  private boolean isProxyOrigin(String origin) {
+    if (origin == null) {
+      return false;
+    }
+    // Proxy sites typically transform "www.arabidopsis.org" to "www-arabidopsis-org"
+    return origin.toLowerCase().contains("www-arabidopsis-org");
+  }
+
+  /**
+   * Log requests that appear to be coming from proxy sites.
+   * These logs are marked with a distinct marker for easy identification.
+   * 
+   * @param origin the Origin header value from the request
+   * @param servletRequest the HTTP request for additional context
+   * @param isInAllowList whether the origin is in the allowed origins list
+   */
+  private void logProxyOriginRequest(String origin, 
+                                     HttpServletRequest servletRequest,
+                                     boolean isInAllowList) {
+    if (isProxyOrigin(origin)) {
+      String method = servletRequest.getMethod();
+      String requestUri = servletRequest.getRequestURI();
+      String queryString = servletRequest.getQueryString();
+      String remoteAddr = servletRequest.getRemoteAddr();
+      String xForwardedFor = servletRequest.getHeader(X_FORWARDED_FOR);
+      
+      StringBuilder logMessage = new StringBuilder();
+      logMessage.append(PROXY_ORIGIN_MARKER)
+                .append(" Proxy origin request detected")
+                .append(" | Origin: ").append(origin)
+                .append(" | InAllowList: ").append(isInAllowList)
+                .append(" | Method: ").append(method)
+                .append(" | URI: ").append(requestUri);
+      
+      if (queryString != null) {
+        logMessage.append("?").append(queryString);
+      }
+      
+      logMessage.append(" | RemoteAddr: ").append(remoteAddr);
+      
+      if (xForwardedFor != null) {
+        logMessage.append(" | X-Forwarded-For: ").append(xForwardedFor);
+      }
+      
+      logMessage.append(" ").append(PROXY_ORIGIN_MARKER);
+      
+      logger.info(logMessage.toString());
     }
   }
 
