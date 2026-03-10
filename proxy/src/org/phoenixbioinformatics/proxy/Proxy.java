@@ -63,6 +63,7 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.entity.ContentType;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.phoenixbioinformatics.api.AbstractApiService;
 import org.phoenixbioinformatics.api.ApiService;
 import org.phoenixbioinformatics.http.ApiPartnerImpl;
 import org.phoenixbioinformatics.http.ApiPartnerPatternImpl;
@@ -1888,6 +1889,7 @@ public class Proxy extends HttpServlet {
     }
     try { PROXY_CLIENT.close(); } catch (IOException e) { logger.warn("Error closing PROXY_CLIENT", e); }
     try { SQS_CLIENT.close(); } catch (IOException e) { logger.warn("Error closing SQS_CLIENT", e); }
+    AbstractApiService.shutdown();
     super.destroy();
   }
 }

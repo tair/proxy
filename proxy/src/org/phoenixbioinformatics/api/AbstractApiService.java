@@ -118,4 +118,16 @@ public abstract class AbstractApiService {
       }
     }
   }
+
+  /**
+   * Shuts down the API client and connection manager.
+   * Should be called during application shutdown.
+   */
+  public static void shutdown() {
+    try {
+      API_CLIENT.close();
+    } catch (IOException e) {
+      logger.warn("Error closing API_CLIENT", e);
+    }
+  }
 }
