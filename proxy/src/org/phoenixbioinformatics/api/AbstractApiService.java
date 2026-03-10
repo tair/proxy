@@ -55,6 +55,24 @@ public abstract class AbstractApiService {
     .build();
 
   /**
+   * Shuts down the shared API HTTP client and connection manager. Call this on
+   * servlet destroy (e.g. from Proxy.destroy()) to avoid classloader leaks on
+   * undeploy/hot-redeploy. Safe to call multiple times.
+   */
+  public static void shutdown() {
+    try {
+      API_CLIENT.close();
+    } catch (IOException e) {
+      logger.warn("Error closing API_CLIENT", e);
+    }
+    try {
+      API_CONN_MANAGER.close();
+    } catch (IOException e) {
+      logger.warn("Error closing API_CONN_MANAGER", e);
+    }
+  }
+
+  /**
    * This method handles the call to API service without using cookie and a form
    * for post params
    */

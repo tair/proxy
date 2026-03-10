@@ -1886,6 +1886,7 @@ public class Proxy extends HttpServlet {
       SQS_EXECUTOR.shutdownNow();
       Thread.currentThread().interrupt();
     }
+    org.phoenixbioinformatics.api.AbstractApiService.shutdown();
     try { PROXY_CLIENT.close(); } catch (IOException e) { logger.warn("Error closing PROXY_CLIENT", e); }
     try { SQS_CLIENT.close(); } catch (IOException e) { logger.warn("Error closing SQS_CLIENT", e); }
     super.destroy();
