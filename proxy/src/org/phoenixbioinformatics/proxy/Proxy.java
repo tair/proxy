@@ -23,6 +23,9 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 
 import javax.servlet.ServletException;
@@ -41,6 +44,7 @@ import org.apache.http.HttpHost;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.ClientProtocolException;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.CookieStore;
 import org.apache.http.client.ResponseHandler;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
@@ -51,6 +55,7 @@ import org.apache.http.client.protocol.HttpClientContext;
 import org.apache.http.impl.client.BasicCookieStore;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.util.EntityUtils;
 import org.apache.http.NameValuePair;
 import org.apache.http.message.BasicNameValuePair;
@@ -194,6 +199,9 @@ public class Proxy extends HttpServlet {
   private static final int PROXY_REQUEST_THRESHOLD = 5;
   private static final int CONTENT_REQUEST_THRESHOLD = 5;
   private static final String LOG_MARKER = "@@@@@@@@";
+  
+  // Distinct marker for proxy origin logging
+  private static final String PROXY_ORIGIN_MARKER = "####PROXY_ORIGIN####";
 
   private static final String METHOD_OPTIONS = "OPTIONS";
   private static final String METHOD_GET = "GET";
@@ -201,6 +209,46 @@ public class Proxy extends HttpServlet {
   //sqs api url
   private static final String API_GATEWAY_SQS_LOGGING_URL =
     ProxyProperties.getProperty("sqs.uri");
+
+  // Shared connection-pooled HttpClient for proxying to backend servers
+  private static final PoolingHttpClientConnectionManager PROXY_CONN_MANAGER =
+    new PoolingHttpClientConnectionManager();
+  static {
+    PROXY_CONN_MANAGER.setMaxTotal(200);
+    PROXY_CONN_MANAGER.setDefaultMaxPerRoute(50);
+    PROXY_CONN_MANAGER.setValidateAfterInactivity(5000);
+  }
+  private static final RequestConfig PROXY_REQUEST_CONFIG = RequestConfig.custom()
+    .setConnectTimeout(10000)
+    .setSocketTimeout(60000)
+    .setConnectionRequestTimeout(5000)
+    .build();
+  private static final CloseableHttpClient PROXY_CLIENT = HttpClientBuilder.create()
+    .setConnectionManager(PROXY_CONN_MANAGER)
+    .setDefaultRequestConfig(PROXY_REQUEST_CONFIG)
+    .disableContentCompression()
+    .disableRedirectHandling()
+    .build();
+
+  // Shared connection-pooled HttpClient for SQS logging
+  private static final PoolingHttpClientConnectionManager SQS_CONN_MANAGER =
+    new PoolingHttpClientConnectionManager();
+  static {
+    SQS_CONN_MANAGER.setMaxTotal(20);
+    SQS_CONN_MANAGER.setDefaultMaxPerRoute(10);
+    SQS_CONN_MANAGER.setValidateAfterInactivity(5000);
+  }
+  private static final RequestConfig SQS_REQUEST_CONFIG = RequestConfig.custom()
+    .setConnectTimeout(5000)
+    .setSocketTimeout(10000)
+    .setConnectionRequestTimeout(3000)
+    .build();
+  private static final CloseableHttpClient SQS_CLIENT = HttpClientBuilder.create()
+    .setConnectionManager(SQS_CONN_MANAGER)
+    .setDefaultRequestConfig(SQS_REQUEST_CONFIG)
+    .build();
+
+  private static final ExecutorService SQS_EXECUTOR = Executors.newFixedThreadPool(4);
 
   @Override
   protected void service(HttpServletRequest servletRequest,
@@ -513,15 +561,19 @@ public class Proxy extends HttpServlet {
               ContentType.APPLICATION_JSON);
       request.setEntity(requestEntity);
 
-      CloseableHttpClient client = HttpClientBuilder.create().build();
-      response = client.execute(request);
-
-      int status = response.getStatusLine().getStatusCode();
-      if (status != HttpStatus.SC_OK && status != HttpStatus.SC_CREATED) {
-        logger.debug("Status creating sqs page view is not OK: " + status);
-        throw new IOException("Bad status code: " + String.valueOf(status));
-      } else {
-        // logger.debug("Status creating sqs page view is OK: " + status);
+      try {
+        response = SQS_CLIENT.execute(request);
+        int status = response.getStatusLine().getStatusCode();
+        if (status != HttpStatus.SC_OK && status != HttpStatus.SC_CREATED) {
+          logger.debug("Status creating sqs page view is not OK: " + status);
+          EntityUtils.consumeQuietly(response.getEntity());
+          throw new IOException("Bad status code: " + String.valueOf(status));
+        }
+        EntityUtils.consumeQuietly(response.getEntity());
+      } finally {
+        if (response != null) {
+          response.close();
+        }
       }
     }
   }
@@ -604,13 +656,16 @@ public class Proxy extends HttpServlet {
             sourceHost,
             partnerId,
             userIdentifier.toString());
-      try {
-        sqsLogRequest(fullRequestUri, remoteIp, orgId, ipListString, credentialId, sessionId, partnerId, isPaidContent, METER_NOT_METERED_STATUS_CODE, String.valueOf(servletResponse.getStatus()), getAllServletResponseHeaders(servletResponse), servletResponse.getContentType());
-      }catch(Exception e){
-        logger.debug("sqs logging error");
-      }
-      //logRequest(fullRequestUri, remoteIp, ipListString, credentialId, sessionId, partnerId, isPaidContent, "N");
-      // logger.debug("userIdentifier after proxy(): " + userIdentifier.toString());
+      final String sqsStatusCode = String.valueOf(servletResponse.getStatus());
+      final String sqsResponseHeaders = getAllServletResponseHeaders(servletResponse);
+      final String sqsContentType = servletResponse.getContentType();
+      SQS_EXECUTOR.submit(() -> {
+        try {
+          sqsLogRequest(fullRequestUri, remoteIp, orgId, ipListString, credentialId, sessionId, partnerId, isPaidContent, METER_NOT_METERED_STATUS_CODE, sqsStatusCode, sqsResponseHeaders, sqsContentType);
+        } catch (Exception e) {
+          logger.warn("sqs logging error for URI: " + fullRequestUri, e);
+        }
+      });
     }
   }
 
@@ -899,12 +954,17 @@ public class Proxy extends HttpServlet {
             "\nParty: " + credentialId  + ", Action: Not authorized, Partner: " + partnerId +
             "\nRedirecting to: " + redirectUri);
 
-      try {
-        sqsLogRequest(fullUri, remoteIp, orgId, ipListString, credentialId, sessionId, partnerId, isPaidContent, meterStatus, String.valueOf(servletResponse.getStatus()),getAllServletResponseHeaders(servletResponse), servletResponse.getContentType());
-      }catch(Exception e){
-        logger.debug("sqs logging error");
-      }
-      //logRequest(fullUri, remoteIp, ipListString, credentialId, sessionId, partnerId, isPaidContent, meterStatus);
+      final String sqsMeterStatus = meterStatus;
+      final String sqsStatusCode2 = String.valueOf(servletResponse.getStatus());
+      final String sqsResponseHeaders2 = getAllServletResponseHeaders(servletResponse);
+      final String sqsContentType2 = servletResponse.getContentType();
+      SQS_EXECUTOR.submit(() -> {
+        try {
+          sqsLogRequest(fullUri, remoteIp, orgId, ipListString, credentialId, sessionId, partnerId, isPaidContent, sqsMeterStatus, sqsStatusCode2, sqsResponseHeaders2, sqsContentType2);
+        } catch (Exception e) {
+          logger.warn("sqs logging error for URI: " + fullUri, e);
+        }
+      });
       if (allowRedirect) {
         servletResponse.sendRedirect(redirectUri + "&remoteIp=" +remoteIp);
       } else {
@@ -1016,7 +1076,6 @@ public class Proxy extends HttpServlet {
                                    ResponseHandler<String> responseHandler,
                                    String userIdentifier)
       throws ClientProtocolException, IOException {
-    CloseableHttpClient client = null;
     // Get cookie store from session if it's there. This gets stored in the
     // proxy server session to maintain the session from the back-end server.
     CookieStore cookieStore =
@@ -1025,15 +1084,10 @@ public class Proxy extends HttpServlet {
       createLocalContextWithCookiesAndTarget(host,
                                              cookieStore,
                                              request.getURI().getHost());
-    client = HttpClientBuilder.create().disableContentCompression().disableRedirectHandling().build();
-    // Execute the request on the proxied server. Ignore returned string.
-    // TODO: try adding host as first param, see if it does the right thing.
-    // client.execute(host, request, responseHandler, localContext);
-    // logAllUriRequestHeaders(request);
 
     // PWL-625: Add measure to method duration
     long startTime = System.currentTimeMillis();
-    client.execute(request, responseHandler, localContext);
+    PROXY_CLIENT.execute(request, responseHandler, localContext);
     long stopTime = System.currentTimeMillis();
     long elapsedTime = stopTime - startTime;
     if (elapsedTime >= CONTENT_REQUEST_THRESHOLD * 1000) {
@@ -1368,8 +1422,12 @@ public class Proxy extends HttpServlet {
                             List<String> origins,
                             Boolean allowCredential) {
     String origin = servletRequest.getHeader("Origin");
+    
+    // Log requests from proxy origins for monitoring
+    boolean isInAllowList = origins.contains(origin);
+    logProxyOriginRequest(origin, servletRequest, isInAllowList);
 
-    if (origins.contains(origin)) {
+    if (isInAllowList) {
       servletResponse.setHeader("Access-Control-Allow-Origin", origin);
       if (allowCredential) {
         setAllowCredentialHeader(servletResponse);
@@ -1425,6 +1483,65 @@ public class Proxy extends HttpServlet {
         return true;
     } catch (Exception e) {
         return false;
+    }
+  }
+
+  /**
+   * Check if the origin appears to be from a proxy site and log it.
+   * Proxy sites typically have 'www-arabidopsis-org' in their origin URL
+   * (e.g., www-arabidopsis-org.libproxy.berkeley.edu).
+   * 
+   * @param origin the Origin header value from the request
+   * @param servletRequest the HTTP request for additional context
+   * @return true if the origin appears to be from a proxy site
+   */
+  private boolean isProxyOrigin(String origin) {
+    if (origin == null) {
+      return false;
+    }
+    // Proxy sites typically transform "www.arabidopsis.org" to "www-arabidopsis-org"
+    return origin.toLowerCase().contains("www-arabidopsis-org");
+  }
+
+  /**
+   * Log requests that appear to be coming from proxy sites.
+   * These logs are marked with a distinct marker for easy identification.
+   * 
+   * @param origin the Origin header value from the request
+   * @param servletRequest the HTTP request for additional context
+   * @param isInAllowList whether the origin is in the allowed origins list
+   */
+  private void logProxyOriginRequest(String origin, 
+                                     HttpServletRequest servletRequest,
+                                     boolean isInAllowList) {
+    if (isProxyOrigin(origin)) {
+      String method = servletRequest.getMethod();
+      String requestUri = servletRequest.getRequestURI();
+      String queryString = servletRequest.getQueryString();
+      String remoteAddr = servletRequest.getRemoteAddr();
+      String xForwardedFor = servletRequest.getHeader(X_FORWARDED_FOR);
+      
+      StringBuilder logMessage = new StringBuilder();
+      logMessage.append(PROXY_ORIGIN_MARKER)
+                .append(" Proxy origin request detected")
+                .append(" | Origin: ").append(origin)
+                .append(" | InAllowList: ").append(isInAllowList)
+                .append(" | Method: ").append(method)
+                .append(" | URI: ").append(requestUri);
+      
+      if (queryString != null) {
+        logMessage.append("?").append(queryString);
+      }
+      
+      logMessage.append(" | RemoteAddr: ").append(remoteAddr);
+      
+      if (xForwardedFor != null) {
+        logMessage.append(" | X-Forwarded-For: ").append(xForwardedFor);
+      }
+      
+      logMessage.append(" ").append(PROXY_ORIGIN_MARKER);
+      
+      logger.info(logMessage.toString());
     }
   }
 
@@ -1756,5 +1873,22 @@ public class Proxy extends HttpServlet {
       }
       response.addCookie(cookie);
     }
+  }
+
+  @Override
+  public void destroy() {
+    SQS_EXECUTOR.shutdown();
+    try {
+      if (!SQS_EXECUTOR.awaitTermination(5, TimeUnit.SECONDS)) {
+        SQS_EXECUTOR.shutdownNow();
+      }
+    } catch (InterruptedException e) {
+      SQS_EXECUTOR.shutdownNow();
+      Thread.currentThread().interrupt();
+    }
+    org.phoenixbioinformatics.api.AbstractApiService.shutdown();
+    try { PROXY_CLIENT.close(); } catch (IOException e) { logger.warn("Error closing PROXY_CLIENT", e); }
+    try { SQS_CLIENT.close(); } catch (IOException e) { logger.warn("Error closing SQS_CLIENT", e); }
+    super.destroy();
   }
 }
