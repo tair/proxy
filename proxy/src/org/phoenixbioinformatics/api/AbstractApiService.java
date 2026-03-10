@@ -67,7 +67,7 @@ public abstract class AbstractApiService {
     }
     try {
       API_CONN_MANAGER.close();
-    } catch (IOException e) {
+    } catch (Exception e) {
       logger.warn("Error closing API_CONN_MANAGER", e);
     }
   }
