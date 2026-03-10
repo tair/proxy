@@ -1967,6 +1967,8 @@ public class Proxy extends HttpServlet {
     try { PROXY_CONN_MANAGER.close(); } catch (Exception e) { logger.warn("Error closing PROXY_CONN_MANAGER", e); }
     try { SQS_CONN_MANAGER.close(); } catch (Exception e) { logger.warn("Error closing SQS_CONN_MANAGER", e); }
     super.destroy();
+  }
+
   /**
    * Extract the root cause message from a potentially nested exception chain.
    * This helps identify the actual error (e.g., "Connection timed out") rather 
