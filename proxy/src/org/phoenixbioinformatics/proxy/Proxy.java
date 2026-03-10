@@ -659,13 +659,21 @@ public class Proxy extends HttpServlet {
       final String sqsStatusCode = String.valueOf(servletResponse.getStatus());
       final String sqsResponseHeaders = getAllServletResponseHeaders(servletResponse);
       final String sqsContentType = servletResponse.getContentType();
+      final String sqsFullRequestUri = fullRequestUri;
+      final String sqsRemoteIp = remoteIp;
+      final String sqsOrgId = orgId;
+      final String sqsIpListString = ipListString;
+      final String sqsCredentialId = credentialId;
+      final String sqsSessionId = sessionId;
+      final String sqsPartnerId = partnerId;
+      final String sqsIsPaidContent = isPaidContent;
       SQS_EXECUTOR.submit(new Runnable() {
         @Override
         public void run() {
           try {
-            sqsLogRequest(fullRequestUri, remoteIp, orgId, ipListString, credentialId, sessionId, partnerId, isPaidContent, METER_NOT_METERED_STATUS_CODE, sqsStatusCode, sqsResponseHeaders, sqsContentType);
+            sqsLogRequest(sqsFullRequestUri, sqsRemoteIp, sqsOrgId, sqsIpListString, sqsCredentialId, sqsSessionId, sqsPartnerId, sqsIsPaidContent, METER_NOT_METERED_STATUS_CODE, sqsStatusCode, sqsResponseHeaders, sqsContentType);
           } catch (Exception e) {
-            logger.warn("sqs logging error for URI: " + fullRequestUri, e);
+            logger.warn("sqs logging error for URI: " + sqsFullRequestUri, e);
           }
         }
       });
@@ -961,13 +969,21 @@ public class Proxy extends HttpServlet {
       final String sqsStatusCode2 = String.valueOf(servletResponse.getStatus());
       final String sqsResponseHeaders2 = getAllServletResponseHeaders(servletResponse);
       final String sqsContentType2 = servletResponse.getContentType();
+      final String sqsFullUri = fullUri;
+      final String sqsRemoteIp2 = remoteIp;
+      final String sqsOrgId2 = orgId;
+      final String sqsIpListString2 = ipListString;
+      final String sqsCredentialId2 = credentialId;
+      final String sqsSessionId2 = sessionId;
+      final String sqsPartnerId2 = partnerId;
+      final String sqsIsPaidContent2 = isPaidContent;
       SQS_EXECUTOR.submit(new Runnable() {
         @Override
         public void run() {
           try {
-            sqsLogRequest(fullUri, remoteIp, orgId, ipListString, credentialId, sessionId, partnerId, isPaidContent, sqsMeterStatus, sqsStatusCode2, sqsResponseHeaders2, sqsContentType2);
+            sqsLogRequest(sqsFullUri, sqsRemoteIp2, sqsOrgId2, sqsIpListString2, sqsCredentialId2, sqsSessionId2, sqsPartnerId2, sqsIsPaidContent2, sqsMeterStatus, sqsStatusCode2, sqsResponseHeaders2, sqsContentType2);
           } catch (Exception e) {
-            logger.warn("sqs logging error for URI: " + fullUri, e);
+            logger.warn("sqs logging error for URI: " + sqsFullUri, e);
           }
         }
       });
