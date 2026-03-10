@@ -659,11 +659,14 @@ public class Proxy extends HttpServlet {
       final String sqsStatusCode = String.valueOf(servletResponse.getStatus());
       final String sqsResponseHeaders = getAllServletResponseHeaders(servletResponse);
       final String sqsContentType = servletResponse.getContentType();
-      SQS_EXECUTOR.submit(() -> {
-        try {
-          sqsLogRequest(fullRequestUri, remoteIp, orgId, ipListString, credentialId, sessionId, partnerId, isPaidContent, METER_NOT_METERED_STATUS_CODE, sqsStatusCode, sqsResponseHeaders, sqsContentType);
-        } catch (Exception e) {
-          logger.warn("sqs logging error for URI: " + fullRequestUri, e);
+      SQS_EXECUTOR.submit(new Runnable() {
+        @Override
+        public void run() {
+          try {
+            sqsLogRequest(fullRequestUri, remoteIp, orgId, ipListString, credentialId, sessionId, partnerId, isPaidContent, METER_NOT_METERED_STATUS_CODE, sqsStatusCode, sqsResponseHeaders, sqsContentType);
+          } catch (Exception e) {
+            logger.warn("sqs logging error for URI: " + fullRequestUri, e);
+          }
         }
       });
     }
@@ -958,11 +961,14 @@ public class Proxy extends HttpServlet {
       final String sqsStatusCode2 = String.valueOf(servletResponse.getStatus());
       final String sqsResponseHeaders2 = getAllServletResponseHeaders(servletResponse);
       final String sqsContentType2 = servletResponse.getContentType();
-      SQS_EXECUTOR.submit(() -> {
-        try {
-          sqsLogRequest(fullUri, remoteIp, orgId, ipListString, credentialId, sessionId, partnerId, isPaidContent, sqsMeterStatus, sqsStatusCode2, sqsResponseHeaders2, sqsContentType2);
-        } catch (Exception e) {
-          logger.warn("sqs logging error for URI: " + fullUri, e);
+      SQS_EXECUTOR.submit(new Runnable() {
+        @Override
+        public void run() {
+          try {
+            sqsLogRequest(fullUri, remoteIp, orgId, ipListString, credentialId, sessionId, partnerId, isPaidContent, sqsMeterStatus, sqsStatusCode2, sqsResponseHeaders2, sqsContentType2);
+          } catch (Exception e) {
+            logger.warn("sqs logging error for URI: " + fullUri, e);
+          }
         }
       });
       if (allowRedirect) {
