@@ -261,15 +261,14 @@ public class Proxy extends HttpServlet {
   protected void service(HttpServletRequest servletRequest,
                          HttpServletResponse servletResponse)
       throws ServletException, IOException {
+    RequestTimer timer = new RequestTimer();
     try {
       // logAllServletRequestHeaders(servletRequest);
       // PWL-625: Add measure to method duration
-      long startTime = System.currentTimeMillis();
-      handleProxyRequest(servletRequest, servletResponse);
-      long stopTime = System.currentTimeMillis();
-      long elapsedTime = stopTime - startTime;
-      if (elapsedTime >= PROXY_REQUEST_THRESHOLD * 1000) {
-        // logger.debug(LOG_MARKER + " Request to proxy server " + servletRequest.getRequestURI().toString() + " takes " + elapsedTime + " ms to response " + LOG_MARKER);
+      handleProxyRequest(servletRequest, servletResponse, timer);
+      long total = timer.totalMs();
+      if (total >= 200) {
+        logger.info("TIMING " + servletRequest.getRequestURI() + " " + timer.summary());
       }
       // logAllServletResponseHeaders(servletResponse);
     } catch (RuntimeException e) {
@@ -289,7 +288,8 @@ public class Proxy extends HttpServlet {
    * @throws InvalidPartnerException when the API returns no partner
    */
   private void handleProxyRequest(HttpServletRequest servletRequest,
-                                  HttpServletResponse servletResponse)
+                                  HttpServletResponse servletResponse,
+                                  RequestTimer timer)
       throws InvalidPartnerException {
 
     // skips proxy if the request is a simple OPTIONS or set cookie request
@@ -303,6 +303,7 @@ public class Proxy extends HttpServlet {
     HttpHostFactory hostFactory = getHostFactory(servletRequest);
     Boolean allowCredential = hostFactory.getAllowCredential();
     setCORSHeader(servletRequest, servletResponse, origins, allowCredential);
+    timer.mark("setup");
     if (servletRequest.getMethod().equals(METHOD_OPTIONS)) {
       // logger.debug("Getting options...");
       handleOptionsRequest(servletRequest, servletResponse, origins);
@@ -364,6 +365,7 @@ public class Proxy extends HttpServlet {
                        servletRequest.getQueryString());
         ArrayList<String> remoteIpList = getIpAddressList(servletRequest);
         String ipListString = String.join(",", remoteIpList);
+        timer.mark("ipResolve");
         //log all the ips that are detected for testing
         // logger.debug("Ip Address Detected: " + ipListString);
         
@@ -403,6 +405,7 @@ public class Proxy extends HttpServlet {
           logger.info("Check access failed. Bypassing proxy/paywall - allowing free access to content. Set userIdentifier to null.");
           userIdentifier.append(NULL_VALUE);
         }
+        timer.mark("checkAccess");
 
         // PWL-716: for non-GET request whose metered pattern has redirectUri value, use redirectUri to 
         // replace original request path if hits metering/blacklist/login request
@@ -446,7 +449,9 @@ public class Proxy extends HttpServlet {
                           isPaidContent,
                           auth,
                           targetRedirectUri,
-                          allowRedirect);
+                          allowRedirect,
+                          hostFactory.getAllowBucket(),
+                          timer);
       } catch (ServletException | UnsupportedHttpMethodException | IOException e) {
         // Log checked exceptions with available context (no stack trace - just the summary)
         logger.error("Proxy error for request: path={}, partnerId={}, error={}", 
@@ -616,12 +621,10 @@ public class Proxy extends HttpServlet {
                                  String credentialId, String secretKey, 
                                  StringBuilder userIdentifier, String ipListString,
                                  String sessionId, String isPaidContent, String auth,
-                                 String targetRedirectUri, Boolean allowRedirect)
+                                 String targetRedirectUri, Boolean allowRedirect,
+                                 Boolean allowBucket, RequestTimer timer)
       throws IOException, UnsupportedHttpMethodException, ServletException {
 
-        HttpHostFactory hostFactory = getHostFactory(servletRequest);
-        Boolean allowBucket = hostFactory.getAllowBucket();
-        // logger.info("authorizeAndProxy: "+ allowBucket);
     // Determine whether to proxy the request.
     if (authorizeProxyRequest(secretKey,
                               partnerId,
@@ -636,7 +639,7 @@ public class Proxy extends HttpServlet {
                               isPaidContent,
                               auth, 
                               targetRedirectUri,
-                              allowRedirect, allowBucket)) {
+                              allowRedirect, allowBucket, timer)) {
       // Authorized by the API, so proceed.
 
       ProxyRequest proxyRequest =
@@ -657,6 +660,7 @@ public class Proxy extends HttpServlet {
                             proxyRequest,
                             uriRequest,
                             userIdentifier.toString());
+      timer.mark("buildRequest");
       // logger.debug("userIdentifier after configureProxyRequest(): "
       //              + userIdentifier.toString());
       // Proxy, using the sourceHost as the "original" host.
@@ -665,7 +669,8 @@ public class Proxy extends HttpServlet {
             proxyRequest,
             sourceHost,
             partnerId,
-            userIdentifier.toString());
+            userIdentifier.toString(),
+            timer);
       final String sqsStatusCode = String.valueOf(servletResponse.getStatus());
       final String sqsResponseHeaders = getAllServletResponseHeaders(servletResponse);
       final String sqsContentType = servletResponse.getContentType();
@@ -763,7 +768,8 @@ public class Proxy extends HttpServlet {
                                         HttpServletResponse servletResponse,
                                         String ipListString, String sessionId, 
                                         String isPaidContent, String auth,
-                                        String targetRedirectUri, Boolean allowRedirect, Boolean allowBucket)
+                                        String targetRedirectUri, Boolean allowRedirect, Boolean allowBucket,
+                                        RequestTimer timer)
       throws IOException {
 
     if (isEmbeddedFile(fullUri)) {
@@ -771,6 +777,7 @@ public class Proxy extends HttpServlet {
       return true;
     }
 
+    timer.mark("authorize");
     // PW-373 PW-376
     // Get partner information
     ApiPartnerImpl partner = new ApiPartnerImpl();
@@ -855,6 +862,7 @@ public class Proxy extends HttpServlet {
           redirectUri = uriBuilder.toString();
           meterStatus = METER_NEED_LOGIN_STATUS_CODE;
         } else {
+          timer.mark("metering");
           try {
             String meter = ApiService.checkRemainingUnits(credentialId, partnerId, fullUri);
             if (meter.equals(OK_CODE)) {
@@ -911,6 +919,7 @@ public class Proxy extends HttpServlet {
         }
       } else {
         logger.info("Inside IP-Metering System");
+        timer.mark("metering");
         try {
           String meter = ApiService.checkMeteringLimit(remoteIp, partnerId, fullUri);
           if (meter.equals(OK_CODE)) {
@@ -1016,6 +1025,7 @@ public class Proxy extends HttpServlet {
       }
     }
 
+    timer.mark("authorize");
     return authorized;
   }
 
@@ -1229,7 +1239,8 @@ public class Proxy extends HttpServlet {
   private void proxy(final HttpSession session,
                      final HttpServletResponse servletResponse,
                      final ProxyRequest proxyRequest, final HttpHost host,
-                     final String partnerId, final String userIdentifier)
+                     final String partnerId, final String userIdentifier,
+                     final RequestTimer timer)
       throws ServletException {
     // logger.info("Proxying " + proxyRequest.getMethod()
     //             + " URI from IP address " + proxyRequest.getIp() + ": "
@@ -1245,6 +1256,7 @@ public class Proxy extends HttpServlet {
       @Override
       public String handleResponse(final HttpResponse proxyResponse)
           throws ClientProtocolException, IOException {
+        timer.mark("backendCall");
         int statusCode = proxyResponse.getStatusLine().getStatusCode();
         // logger.debug("Proxy returned status " + statusCode + " for URI "
         //              + proxyRequest.getCurrentUri());
@@ -1281,6 +1293,7 @@ public class Proxy extends HttpServlet {
               // Ensure entity content is fully consumed and any stream is
               // closed.
               EntityUtils.consume(proxyResponse.getEntity());
+              timer.mark("responseCopy");
             } else {
               respond(proxyResponse, statusCode);
             }
@@ -1345,6 +1358,7 @@ public class Proxy extends HttpServlet {
           throws IOException {
         servletResponse.setStatus(statusCode);
         copyProxyResponseToServletResponse(servletResponse, proxyResponse);
+        timer.mark("responseCopy");
       }
     };
 
