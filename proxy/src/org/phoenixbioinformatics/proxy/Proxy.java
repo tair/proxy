@@ -249,6 +249,12 @@ public class Proxy extends HttpServlet {
     .build();
 
   private static final ExecutorService SQS_EXECUTOR = Executors.newFixedThreadPool(4);
+  // Extended timeout configuration for slow endpoints (in milliseconds)
+  private static final String AI_SUMMARY_PATH = "/detail/locus/ai-summary";
+  private static final int AI_SUMMARY_CONNECTION_TIMEOUT_MS = 
+    Integer.parseInt(ProxyProperties.getProperty("proxy.ai.summary.connection.timeout.ms", "30000"));
+  private static final int AI_SUMMARY_SOCKET_TIMEOUT_MS = 
+    Integer.parseInt(ProxyProperties.getProperty("proxy.ai.summary.socket.timeout.ms", "300000"));
 
   @Override
   protected void service(HttpServletRequest servletRequest,
@@ -441,8 +447,11 @@ public class Proxy extends HttpServlet {
                           targetRedirectUri,
                           allowRedirect);
       } catch (ServletException | UnsupportedHttpMethodException | IOException e) {
-        // Log checked exceptions here, then ignore.
-        logger.error(REQUEST_HANDLING_ERROR, e);
+        // Log checked exceptions with available context (no stack trace - just the summary)
+        logger.error("Proxy error for request: path={}, partnerId={}, error={}", 
+                     servletRequest.getPathInfo(), 
+                     hostFactory.getPartnerId(), 
+                     getRootCauseMessage(e));
       }
     }
   }
@@ -1106,6 +1115,26 @@ public class Proxy extends HttpServlet {
       createLocalContextWithCookiesAndTarget(host,
                                              cookieStore,
                                              request.getURI().getHost());
+    // Check if this is an AI summary request that needs extended timeouts
+    String requestUri = request.getURI().getPath();
+    HttpClientBuilder clientBuilder = HttpClientBuilder.create()
+        .disableContentCompression()
+        .disableRedirectHandling();
+    
+    if (requestUri != null && requestUri.contains(AI_SUMMARY_PATH)) {
+      RequestConfig extendedTimeoutConfig = RequestConfig.custom()
+          .setConnectTimeout(AI_SUMMARY_CONNECTION_TIMEOUT_MS)
+          .setSocketTimeout(AI_SUMMARY_SOCKET_TIMEOUT_MS)
+          .build();
+      clientBuilder.setDefaultRequestConfig(extendedTimeoutConfig);
+      logger.debug("Using extended timeout for AI summary request: " + requestUri);
+    }
+    
+    client = clientBuilder.build();
+    // Execute the request on the proxied server. Ignore returned string.
+    // TODO: try adding host as first param, see if it does the right thing.
+    // client.execute(host, request, responseHandler, localContext);
+    // logAllUriRequestHeaders(request);
 
     // PWL-625: Add measure to method duration
     long startTime = System.currentTimeMillis();
@@ -1336,11 +1365,29 @@ public class Proxy extends HttpServlet {
                           responseHandler,
                           userIdentifier);
     } catch (IOException e) {
-      // Syntax error or other problem handling the URI, package into servlet
-      // exception
-      throw new ServletException(REQUEST_HANDLING_ERROR, e);
+      // Log detailed error information before wrapping in ServletException
+      String targetUri = proxyRequest.getRequestToProxy() != null 
+          ? proxyRequest.getRequestToProxy().getRequestLine().getUri() 
+          : "unknown";
+      String targetHost = host != null ? host.toHostString() : "unknown";
+      String sourceUri = proxyRequest.getCurrentUri();
+      String rootCause = getRootCauseMessage(e);
+      
+      logger.error("Failed to proxy request: sourceUri={}, targetHost={}, targetUri={}, error={}", 
+                   sourceUri, targetHost, targetUri, rootCause);
+      
+      throw new ServletException(REQUEST_HANDLING_ERROR + 
+          " [sourceUri=" + sourceUri + ", targetHost=" + targetHost + ", cause=" + rootCause + "]", e);
     } catch (Exception e) {
-      throw new ServletException(e);
+      String targetHost = host != null ? host.toHostString() : "unknown";
+      String sourceUri = proxyRequest.getCurrentUri();
+      String rootCause = getRootCauseMessage(e);
+      
+      logger.error("Unexpected error proxying request: sourceUri={}, targetHost={}, error={}", 
+                   sourceUri, targetHost, rootCause);
+      
+      throw new ServletException(REQUEST_HANDLING_ERROR + 
+          " [sourceUri=" + sourceUri + ", targetHost=" + targetHost + ", cause=" + rootCause + "]", e);
     }
 
     // Don't do anything here, possible redirect already sent
@@ -1639,7 +1686,13 @@ public class Proxy extends HttpServlet {
       }
     } catch (IOException e) {
       // warn and ignore, probably the client has closed or something
-      logger.warn(OUTPUT_STREAM_IO_WARN, e);
+      // Extracting the "Caused by" line and logging the function name
+      Throwable cause = e.getCause();
+      if (cause != null) {
+          logger.warn("Exception in copyResponseEntity: Caused by: " + cause.getClass().getName() + ": " + cause.getMessage());
+      } else {
+          logger.warn("Exception in copyResponseEntity: " + e.getClass().getName() + ": " + e.getMessage());
+      }
     } finally {
       closeQuietly(input);
       closeQuietly(output);
@@ -1914,5 +1967,27 @@ public class Proxy extends HttpServlet {
     try { PROXY_CONN_MANAGER.close(); } catch (Exception e) { logger.warn("Error closing PROXY_CONN_MANAGER", e); }
     try { SQS_CONN_MANAGER.close(); } catch (Exception e) { logger.warn("Error closing SQS_CONN_MANAGER", e); }
     super.destroy();
+  /**
+   * Extract the root cause message from a potentially nested exception chain.
+   * This helps identify the actual error (e.g., "Connection timed out") rather 
+   * than the wrapper exception message.
+   *
+   * @param e the exception to analyze
+   * @return a descriptive message including the root cause type and message
+   */
+  private String getRootCauseMessage(Throwable e) {
+    Throwable rootCause = e;
+    while (rootCause.getCause() != null && rootCause.getCause() != rootCause) {
+      rootCause = rootCause.getCause();
+    }
+    String rootCauseType = rootCause.getClass().getSimpleName();
+    String rootCauseMsg = rootCause.getMessage();
+    
+    // For connection-related errors, include the immediate cause for more context
+    if (e.getCause() != null && !e.getCause().equals(rootCause)) {
+      String immediateCauseType = e.getCause().getClass().getSimpleName();
+      return immediateCauseType + ": " + rootCauseType + " - " + rootCauseMsg;
+    }
+    return rootCauseType + " - " + rootCauseMsg;
   }
 }
