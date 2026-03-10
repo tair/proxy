@@ -49,6 +49,7 @@ import org.apache.http.client.CookieStore;
 import org.apache.http.client.ResponseHandler;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.protocol.HttpClientContext;
@@ -1117,20 +1118,17 @@ public class Proxy extends HttpServlet {
                                              request.getURI().getHost());
     // Check if this is an AI summary request that needs extended timeouts
     String requestUri = request.getURI().getPath();
-    HttpClientBuilder clientBuilder = HttpClientBuilder.create()
-        .disableContentCompression()
-        .disableRedirectHandling();
-    
     if (requestUri != null && requestUri.contains(AI_SUMMARY_PATH)) {
       RequestConfig extendedTimeoutConfig = RequestConfig.custom()
           .setConnectTimeout(AI_SUMMARY_CONNECTION_TIMEOUT_MS)
           .setSocketTimeout(AI_SUMMARY_SOCKET_TIMEOUT_MS)
           .build();
-      clientBuilder.setDefaultRequestConfig(extendedTimeoutConfig);
+      if (request instanceof HttpRequestBase) {
+        ((HttpRequestBase) request).setConfig(extendedTimeoutConfig);
+      }
       logger.debug("Using extended timeout for AI summary request: " + requestUri);
     }
-    
-    client = clientBuilder.build();
+
     // Execute the request on the proxied server. Ignore returned string.
     // TODO: try adding host as first param, see if it does the right thing.
     // client.execute(host, request, responseHandler, localContext);
