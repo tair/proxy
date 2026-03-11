@@ -11,8 +11,10 @@ import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpUriRequest;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.util.EntityUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -34,6 +36,41 @@ public abstract class AbstractApiService {
   /** logger for this class */
   private static final Logger logger =
     LogManager.getLogger(AbstractApiService.class);
+
+  private static final PoolingHttpClientConnectionManager API_CONN_MANAGER =
+    new PoolingHttpClientConnectionManager();
+  static {
+    API_CONN_MANAGER.setMaxTotal(200);
+    API_CONN_MANAGER.setDefaultMaxPerRoute(50);
+    API_CONN_MANAGER.setValidateAfterInactivity(5000);
+  }
+  private static final RequestConfig API_REQUEST_CONFIG = RequestConfig.custom()
+    .setConnectTimeout(10000)
+    .setSocketTimeout(30000)
+    .setConnectionRequestTimeout(5000)
+    .build();
+  private static final CloseableHttpClient API_CLIENT = HttpClientBuilder.create()
+    .setConnectionManager(API_CONN_MANAGER)
+    .setDefaultRequestConfig(API_REQUEST_CONFIG)
+    .build();
+
+  /**
+   * Shuts down the shared API HTTP client and connection manager. Call this on
+   * servlet destroy (e.g. from Proxy.destroy()) to avoid classloader leaks on
+   * undeploy/hot-redeploy. Safe to call multiple times.
+   */
+  public static void shutdown() {
+    try {
+      API_CLIENT.close();
+    } catch (IOException e) {
+      logger.warn("Error closing API_CLIENT", e);
+    }
+    try {
+      API_CONN_MANAGER.close();
+    } catch (Exception e) {
+      logger.warn("Error closing API_CONN_MANAGER", e);
+    }
+  }
 
   /**
    * This method handles the call to API service without using cookie and a form
@@ -81,19 +118,22 @@ public abstract class AbstractApiService {
     }
 
     request.addHeader("Cookie", "apiKey=" + API_KEY + ";" + cookieString);
-    CloseableHttpClient client = HttpClientBuilder.create().build();
-    // debug statement. TODO: remove in final produce to reduce spam
-    // logger.debug("Making " + methodString + " request: " + API_URL + urn);
-    response = client.execute(request);
 
-    int status = response.getStatusLine().getStatusCode();
-    if (status != HttpStatus.SC_OK && status != HttpStatus.SC_CREATED) {
-      logger.debug("Status code is not OK: " + status);
-      logger.debug("API Url: " + API_URL);
-      throw new IOException("Bad status code: " + String.valueOf(status));
+    try {
+      response = API_CLIENT.execute(request);
+      int status = response.getStatusLine().getStatusCode();
+      if (status != HttpStatus.SC_OK && status != HttpStatus.SC_CREATED) {
+        logger.debug("Status code is not OK: " + status);
+        logger.debug("API Url: " + API_URL);
+        EntityUtils.consumeQuietly(response.getEntity());
+        throw new IOException("Bad status code: " + String.valueOf(status));
+      }
+      String content = EntityUtils.toString(response.getEntity());
+      return content;
+    } finally {
+      if (response != null) {
+        response.close();
+      }
     }
-    String content = EntityUtils.toString(response.getEntity());
-
-    return content;
   }
 }

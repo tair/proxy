@@ -23,6 +23,9 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 
 import javax.servlet.ServletException;
@@ -41,6 +44,7 @@ import org.apache.http.HttpHost;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.ClientProtocolException;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.CookieStore;
 import org.apache.http.client.ResponseHandler;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
@@ -51,6 +55,7 @@ import org.apache.http.client.protocol.HttpClientContext;
 import org.apache.http.impl.client.BasicCookieStore;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.util.EntityUtils;
 import org.apache.http.NameValuePair;
 import org.apache.http.message.BasicNameValuePair;
@@ -204,6 +209,52 @@ public class Proxy extends HttpServlet {
   //sqs api url
   private static final String API_GATEWAY_SQS_LOGGING_URL =
     ProxyProperties.getProperty("sqs.uri");
+
+  // Shared connection-pooled HttpClient for proxying to backend servers
+  private static final PoolingHttpClientConnectionManager PROXY_CONN_MANAGER =
+    new PoolingHttpClientConnectionManager();
+  static {
+    PROXY_CONN_MANAGER.setMaxTotal(200);
+    PROXY_CONN_MANAGER.setDefaultMaxPerRoute(50);
+    PROXY_CONN_MANAGER.setValidateAfterInactivity(5000);
+  }
+  private static final RequestConfig PROXY_REQUEST_CONFIG = RequestConfig.custom()
+    .setConnectTimeout(10000)
+    .setSocketTimeout(60000)
+    .setConnectionRequestTimeout(5000)
+    .build();
+  private static final CloseableHttpClient PROXY_CLIENT = HttpClientBuilder.create()
+    .setConnectionManager(PROXY_CONN_MANAGER)
+    .setDefaultRequestConfig(PROXY_REQUEST_CONFIG)
+    .disableContentCompression()
+    .disableRedirectHandling()
+    .build();
+
+  // Shared connection-pooled HttpClient for SQS logging
+  private static final PoolingHttpClientConnectionManager SQS_CONN_MANAGER =
+    new PoolingHttpClientConnectionManager();
+  static {
+    SQS_CONN_MANAGER.setMaxTotal(20);
+    SQS_CONN_MANAGER.setDefaultMaxPerRoute(10);
+    SQS_CONN_MANAGER.setValidateAfterInactivity(5000);
+  }
+  private static final RequestConfig SQS_REQUEST_CONFIG = RequestConfig.custom()
+    .setConnectTimeout(5000)
+    .setSocketTimeout(10000)
+    .setConnectionRequestTimeout(3000)
+    .build();
+  private static final CloseableHttpClient SQS_CLIENT = HttpClientBuilder.create()
+    .setConnectionManager(SQS_CONN_MANAGER)
+    .setDefaultRequestConfig(SQS_REQUEST_CONFIG)
+    .build();
+
+  private static final ExecutorService SQS_EXECUTOR = Executors.newFixedThreadPool(4);
+  // Extended timeout configuration for slow endpoints (in milliseconds)
+  private static final String AI_SUMMARY_PATH = "/detail/locus/ai-summary";
+  private static final int AI_SUMMARY_CONNECTION_TIMEOUT_MS = 
+    Integer.parseInt(ProxyProperties.getProperty("proxy.ai.summary.connection.timeout.ms", "30000"));
+  private static final int AI_SUMMARY_SOCKET_TIMEOUT_MS = 
+    Integer.parseInt(ProxyProperties.getProperty("proxy.ai.summary.socket.timeout.ms", "300000"));
 
   @Override
   protected void service(HttpServletRequest servletRequest,
@@ -396,8 +447,11 @@ public class Proxy extends HttpServlet {
                           targetRedirectUri,
                           allowRedirect);
       } catch (ServletException | UnsupportedHttpMethodException | IOException e) {
-        // Log checked exceptions here, then ignore.
-        logger.error(REQUEST_HANDLING_ERROR, e);
+        // Log checked exceptions with available context (no stack trace - just the summary)
+        logger.error("Proxy error for request: path={}, partnerId={}, error={}", 
+                     servletRequest.getPathInfo(), 
+                     hostFactory.getPartnerId(), 
+                     getRootCauseMessage(e));
       }
     }
   }
@@ -516,15 +570,19 @@ public class Proxy extends HttpServlet {
               ContentType.APPLICATION_JSON);
       request.setEntity(requestEntity);
 
-      CloseableHttpClient client = HttpClientBuilder.create().build();
-      response = client.execute(request);
-
-      int status = response.getStatusLine().getStatusCode();
-      if (status != HttpStatus.SC_OK && status != HttpStatus.SC_CREATED) {
-        logger.debug("Status creating sqs page view is not OK: " + status);
-        throw new IOException("Bad status code: " + String.valueOf(status));
-      } else {
-        // logger.debug("Status creating sqs page view is OK: " + status);
+      try {
+        response = SQS_CLIENT.execute(request);
+        int status = response.getStatusLine().getStatusCode();
+        if (status != HttpStatus.SC_OK && status != HttpStatus.SC_CREATED) {
+          logger.debug("Status creating sqs page view is not OK: " + status);
+          EntityUtils.consumeQuietly(response.getEntity());
+          throw new IOException("Bad status code: " + String.valueOf(status));
+        }
+        EntityUtils.consumeQuietly(response.getEntity());
+      } finally {
+        if (response != null) {
+          response.close();
+        }
       }
     }
   }
@@ -607,13 +665,27 @@ public class Proxy extends HttpServlet {
             sourceHost,
             partnerId,
             userIdentifier.toString());
-      try {
-        sqsLogRequest(fullRequestUri, remoteIp, orgId, ipListString, credentialId, sessionId, partnerId, isPaidContent, METER_NOT_METERED_STATUS_CODE, String.valueOf(servletResponse.getStatus()), getAllServletResponseHeaders(servletResponse), servletResponse.getContentType());
-      }catch(Exception e){
-        logger.debug("sqs logging error");
-      }
-      //logRequest(fullRequestUri, remoteIp, ipListString, credentialId, sessionId, partnerId, isPaidContent, "N");
-      // logger.debug("userIdentifier after proxy(): " + userIdentifier.toString());
+      final String sqsStatusCode = String.valueOf(servletResponse.getStatus());
+      final String sqsResponseHeaders = getAllServletResponseHeaders(servletResponse);
+      final String sqsContentType = servletResponse.getContentType();
+      final String sqsFullRequestUri = fullRequestUri;
+      final String sqsRemoteIp = remoteIp;
+      final String sqsOrgId = orgId;
+      final String sqsIpListString = ipListString;
+      final String sqsCredentialId = credentialId;
+      final String sqsSessionId = sessionId;
+      final String sqsPartnerId = partnerId;
+      final String sqsIsPaidContent = isPaidContent;
+      SQS_EXECUTOR.submit(new Runnable() {
+        @Override
+        public void run() {
+          try {
+            sqsLogRequest(sqsFullRequestUri, sqsRemoteIp, sqsOrgId, sqsIpListString, sqsCredentialId, sqsSessionId, sqsPartnerId, sqsIsPaidContent, METER_NOT_METERED_STATUS_CODE, sqsStatusCode, sqsResponseHeaders, sqsContentType);
+          } catch (Exception e) {
+            logger.warn("sqs logging error for URI: " + sqsFullRequestUri, e);
+          }
+        }
+      });
     }
   }
 
@@ -902,12 +974,28 @@ public class Proxy extends HttpServlet {
             "\nParty: " + credentialId  + ", Action: Not authorized, Partner: " + partnerId +
             "\nRedirecting to: " + redirectUri);
 
-      try {
-        sqsLogRequest(fullUri, remoteIp, orgId, ipListString, credentialId, sessionId, partnerId, isPaidContent, meterStatus, String.valueOf(servletResponse.getStatus()),getAllServletResponseHeaders(servletResponse), servletResponse.getContentType());
-      }catch(Exception e){
-        logger.debug("sqs logging error");
-      }
-      //logRequest(fullUri, remoteIp, ipListString, credentialId, sessionId, partnerId, isPaidContent, meterStatus);
+      final String sqsMeterStatus = meterStatus;
+      final String sqsStatusCode2 = String.valueOf(servletResponse.getStatus());
+      final String sqsResponseHeaders2 = getAllServletResponseHeaders(servletResponse);
+      final String sqsContentType2 = servletResponse.getContentType();
+      final String sqsFullUri = fullUri;
+      final String sqsRemoteIp2 = remoteIp;
+      final String sqsOrgId2 = orgId;
+      final String sqsIpListString2 = ipListString;
+      final String sqsCredentialId2 = credentialId;
+      final String sqsSessionId2 = sessionId;
+      final String sqsPartnerId2 = partnerId;
+      final String sqsIsPaidContent2 = isPaidContent;
+      SQS_EXECUTOR.submit(new Runnable() {
+        @Override
+        public void run() {
+          try {
+            sqsLogRequest(sqsFullUri, sqsRemoteIp2, sqsOrgId2, sqsIpListString2, sqsCredentialId2, sqsSessionId2, sqsPartnerId2, sqsIsPaidContent2, sqsMeterStatus, sqsStatusCode2, sqsResponseHeaders2, sqsContentType2);
+          } catch (Exception e) {
+            logger.warn("sqs logging error for URI: " + sqsFullUri, e);
+          }
+        }
+      });
       if (allowRedirect) {
         servletResponse.sendRedirect(redirectUri + "&remoteIp=" +remoteIp);
       } else {
@@ -1019,7 +1107,6 @@ public class Proxy extends HttpServlet {
                                    ResponseHandler<String> responseHandler,
                                    String userIdentifier)
       throws ClientProtocolException, IOException {
-    CloseableHttpClient client = null;
     // Get cookie store from session if it's there. This gets stored in the
     // proxy server session to maintain the session from the back-end server.
     CookieStore cookieStore =
@@ -1028,15 +1115,35 @@ public class Proxy extends HttpServlet {
       createLocalContextWithCookiesAndTarget(host,
                                              cookieStore,
                                              request.getURI().getHost());
-    client = HttpClientBuilder.create().disableContentCompression().disableRedirectHandling().build();
-    // Execute the request on the proxied server. Ignore returned string.
-    // TODO: try adding host as first param, see if it does the right thing.
-    // client.execute(host, request, responseHandler, localContext);
-    // logAllUriRequestHeaders(request);
+    // Check if this is an AI summary request that needs extended timeouts
+    String requestUri = request.getURI().getPath();
+    boolean isAiSummary = requestUri != null && requestUri.contains(AI_SUMMARY_PATH);
+    CloseableHttpClient httpClient;
+
+    if (isAiSummary) {
+      RequestConfig extendedTimeoutConfig = RequestConfig.custom()
+          .setConnectTimeout(AI_SUMMARY_CONNECTION_TIMEOUT_MS)
+          .setSocketTimeout(AI_SUMMARY_SOCKET_TIMEOUT_MS)
+          .build();
+      httpClient = HttpClientBuilder.create()
+          .disableContentCompression()
+          .disableRedirectHandling()
+          .setDefaultRequestConfig(extendedTimeoutConfig)
+          .build();
+      logger.debug("Using extended timeout for AI summary request: " + requestUri);
+    } else {
+      httpClient = PROXY_CLIENT;
+    }
 
     // PWL-625: Add measure to method duration
     long startTime = System.currentTimeMillis();
-    client.execute(request, responseHandler, localContext);
+    try {
+      httpClient.execute(request, responseHandler, localContext);
+    } finally {
+      if (isAiSummary) {
+        httpClient.close();
+      }
+    }
     long stopTime = System.currentTimeMillis();
     long elapsedTime = stopTime - startTime;
     if (elapsedTime >= CONTENT_REQUEST_THRESHOLD * 1000) {
@@ -1263,11 +1370,29 @@ public class Proxy extends HttpServlet {
                           responseHandler,
                           userIdentifier);
     } catch (IOException e) {
-      // Syntax error or other problem handling the URI, package into servlet
-      // exception
-      throw new ServletException(REQUEST_HANDLING_ERROR, e);
+      // Log detailed error information before wrapping in ServletException
+      String targetUri = proxyRequest.getRequestToProxy() != null 
+          ? proxyRequest.getRequestToProxy().getRequestLine().getUri() 
+          : "unknown";
+      String targetHost = host != null ? host.toHostString() : "unknown";
+      String sourceUri = proxyRequest.getCurrentUri();
+      String rootCause = getRootCauseMessage(e);
+      
+      logger.error("Failed to proxy request: sourceUri={}, targetHost={}, targetUri={}, error={}", 
+                   sourceUri, targetHost, targetUri, rootCause);
+      
+      throw new ServletException(REQUEST_HANDLING_ERROR + 
+          " [sourceUri=" + sourceUri + ", targetHost=" + targetHost + ", cause=" + rootCause + "]", e);
     } catch (Exception e) {
-      throw new ServletException(e);
+      String targetHost = host != null ? host.toHostString() : "unknown";
+      String sourceUri = proxyRequest.getCurrentUri();
+      String rootCause = getRootCauseMessage(e);
+      
+      logger.error("Unexpected error proxying request: sourceUri={}, targetHost={}, error={}", 
+                   sourceUri, targetHost, rootCause);
+      
+      throw new ServletException(REQUEST_HANDLING_ERROR + 
+          " [sourceUri=" + sourceUri + ", targetHost=" + targetHost + ", cause=" + rootCause + "]", e);
     }
 
     // Don't do anything here, possible redirect already sent
@@ -1566,7 +1691,13 @@ public class Proxy extends HttpServlet {
       }
     } catch (IOException e) {
       // warn and ignore, probably the client has closed or something
-      logger.warn(OUTPUT_STREAM_IO_WARN, e);
+      // Extracting the "Caused by" line and logging the function name
+      Throwable cause = e.getCause();
+      if (cause != null) {
+          logger.warn("Exception in copyResponseEntity: Caused by: " + cause.getClass().getName() + ": " + cause.getMessage());
+      } else {
+          logger.warn("Exception in copyResponseEntity: " + e.getClass().getName() + ": " + e.getMessage());
+      }
     } finally {
       closeQuietly(input);
       closeQuietly(output);
@@ -1822,5 +1953,46 @@ public class Proxy extends HttpServlet {
       }
       response.addCookie(cookie);
     }
+  }
+
+  @Override
+  public void destroy() {
+    SQS_EXECUTOR.shutdown();
+    try {
+      if (!SQS_EXECUTOR.awaitTermination(5, TimeUnit.SECONDS)) {
+        SQS_EXECUTOR.shutdownNow();
+      }
+    } catch (InterruptedException e) {
+      SQS_EXECUTOR.shutdownNow();
+      Thread.currentThread().interrupt();
+    }
+    org.phoenixbioinformatics.api.AbstractApiService.shutdown();
+    try { PROXY_CLIENT.close(); } catch (IOException e) { logger.warn("Error closing PROXY_CLIENT", e); }
+    try { SQS_CLIENT.close(); } catch (IOException e) { logger.warn("Error closing SQS_CLIENT", e); }
+    try { PROXY_CONN_MANAGER.close(); } catch (Exception e) { logger.warn("Error closing PROXY_CONN_MANAGER", e); }
+    try { SQS_CONN_MANAGER.close(); } catch (Exception e) { logger.warn("Error closing SQS_CONN_MANAGER", e); }
+    super.destroy();
+  /**
+   * Extract the root cause message from a potentially nested exception chain.
+   * This helps identify the actual error (e.g., "Connection timed out") rather 
+   * than the wrapper exception message.
+   *
+   * @param e the exception to analyze
+   * @return a descriptive message including the root cause type and message
+   */
+  private String getRootCauseMessage(Throwable e) {
+    Throwable rootCause = e;
+    while (rootCause.getCause() != null && rootCause.getCause() != rootCause) {
+      rootCause = rootCause.getCause();
+    }
+    String rootCauseType = rootCause.getClass().getSimpleName();
+    String rootCauseMsg = rootCause.getMessage();
+    
+    // For connection-related errors, include the immediate cause for more context
+    if (e.getCause() != null && !e.getCause().equals(rootCause)) {
+      String immediateCauseType = e.getCause().getClass().getSimpleName();
+      return immediateCauseType + ": " + rootCauseType + " - " + rootCauseMsg;
+    }
+    return rootCauseType + " - " + rootCauseMsg;
   }
 }
