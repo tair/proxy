@@ -2,17 +2,10 @@ package org.phoenixbioinformatics.api;
 
 
 import java.io.IOException;
-import java.security.KeyManagementException;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
 import java.util.List;
-import javax.net.ssl.SSLContext;
 
 import org.apache.http.HttpStatus;
 import org.apache.http.NameValuePair;
-import org.apache.http.conn.ssl.NoopHostnameVerifier;
-import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
-import org.apache.http.conn.ssl.TrustSelfSignedStrategy;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -22,8 +15,6 @@ import org.apache.http.client.config.RequestConfig;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
-import org.apache.http.impl.client.HttpClients;
-import org.apache.http.ssl.SSLContexts;
 import org.apache.http.util.EntityUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -127,25 +118,6 @@ public abstract class AbstractApiService {
     }
 
     request.addHeader("Cookie", "apiKey=" + API_KEY + ";" + cookieString);
-    // CloseableHttpClient client = HttpClientBuilder.create().build();
-    // To remove ssl certificate errors
-     CloseableHttpClient client;
-      try {
-          SSLContext sslContext = SSLContexts.custom()
-                  .loadTrustMaterial(null, new TrustSelfSignedStrategy())
-                  .build();
-
-          client = HttpClients.custom()
-                  .setSslcontext(sslContext)
-                  .setSSLHostnameVerifier(NoopHostnameVerifier.INSTANCE)
-                  .build();
-      } catch (NoSuchAlgorithmException | KeyStoreException | KeyManagementException e) {
-          throw new IOException("Error setting up SSL context", e);
-      }
-
-    // debug statement.
-    // logger.debug("Making " + methodString + " request: " + API_URL + urn);
-    response = client.execute(request);
 
     try {
       response = API_CLIENT.execute(request);

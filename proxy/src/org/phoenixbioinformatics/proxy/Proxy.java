@@ -1117,28 +1117,33 @@ public class Proxy extends HttpServlet {
                                              request.getURI().getHost());
     // Check if this is an AI summary request that needs extended timeouts
     String requestUri = request.getURI().getPath();
-    HttpClientBuilder clientBuilder = HttpClientBuilder.create()
-        .disableContentCompression()
-        .disableRedirectHandling();
-    
-    if (requestUri != null && requestUri.contains(AI_SUMMARY_PATH)) {
+    boolean isAiSummary = requestUri != null && requestUri.contains(AI_SUMMARY_PATH);
+    CloseableHttpClient httpClient;
+
+    if (isAiSummary) {
       RequestConfig extendedTimeoutConfig = RequestConfig.custom()
           .setConnectTimeout(AI_SUMMARY_CONNECTION_TIMEOUT_MS)
           .setSocketTimeout(AI_SUMMARY_SOCKET_TIMEOUT_MS)
           .build();
-      clientBuilder.setDefaultRequestConfig(extendedTimeoutConfig);
+      httpClient = HttpClientBuilder.create()
+          .disableContentCompression()
+          .disableRedirectHandling()
+          .setDefaultRequestConfig(extendedTimeoutConfig)
+          .build();
       logger.debug("Using extended timeout for AI summary request: " + requestUri);
+    } else {
+      httpClient = PROXY_CLIENT;
     }
-    
-    client = clientBuilder.build();
-    // Execute the request on the proxied server. Ignore returned string.
-    // TODO: try adding host as first param, see if it does the right thing.
-    // client.execute(host, request, responseHandler, localContext);
-    // logAllUriRequestHeaders(request);
 
     // PWL-625: Add measure to method duration
     long startTime = System.currentTimeMillis();
-    PROXY_CLIENT.execute(request, responseHandler, localContext);
+    try {
+      httpClient.execute(request, responseHandler, localContext);
+    } finally {
+      if (isAiSummary) {
+        httpClient.close();
+      }
+    }
     long stopTime = System.currentTimeMillis();
     long elapsedTime = stopTime - startTime;
     if (elapsedTime >= CONTENT_REQUEST_THRESHOLD * 1000) {
